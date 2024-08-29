@@ -9,26 +9,25 @@ namespace OCASI {
         uint32_t Width, Height;
         uint8_t Channels = 0;
         std::vector<char> Data;
-    }
+    };
 
     class Image 
     {
     public:
         Image() = default;
         Image(const Path& path);
-        Image(const std::vector<char>& imageData, uint8_t channels);
+        Image(const std::vector<char>& imageData, uint8_t channels, uint32_t width, uint32_t height);
 
         // If the image is not a memory image, it's data can be loaded with this function;
         ImageData LoadImageFromDisk();
 
         bool IsMemoryImage() { return m_MemoryImage; }
-        std::vector<char>& GetImageData() { return m_ImageData; }
-        uint8_t GetChannels() { return m_Channels; }
+        const ImageData& GetImageData() { return m_ImageData; }
 
         std::filesystem::path& GetImagePath() { return m_ImagePath; }
     private:
         bool m_MemoryImage;
-        ImageData m_Data;
+        ImageData m_ImageData;
 
         Path m_ImagePath;
     };

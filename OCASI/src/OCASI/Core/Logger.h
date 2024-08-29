@@ -10,9 +10,9 @@ namespace OCASI {
     public:
         static void Init();
 
-        static std::shared<spdlog::logger> GetLogger() { return m_Logger; }
+        static std::shared_ptr<spdlog::logger> GetLogger() { return s_Logger; }
     private:
-        static std::shared<spdlog::logger> m_Logger;    
+        static std::shared_ptr<spdlog::logger> s_Logger;    
     };
 }
 

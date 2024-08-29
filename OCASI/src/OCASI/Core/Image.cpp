@@ -16,9 +16,15 @@ namespace OCASI {
         : m_ImagePath(path), m_MemoryImage(false) 
     {}
 
-    Image::Image(const std::vector<char>& imageData, uint8_t channels)
-        : m_Data({imageData, channels}), m_MemoryImage(true)
-    {}
+    Image::Image(const std::vector<char>& imageData, uint8_t channels, uint32_t width, uint32_t height)
+        : m_MemoryImage(true)
+    {
+        m_ImageData = {};
+        m_ImageData.Data = imageData;
+        m_ImageData.Channels = channels;
+        m_ImageData.Width = width;
+        m_ImageData.Height = height;
+    }
 
     ImageData Image::LoadImageFromDisk()
     {
@@ -31,7 +37,11 @@ namespace OCASI {
         stbi_set_flip_vertically_on_load(true);
 
         ImageData outData = {};
-        stbi_uc* data = stbi_load(m_ImagePath.string().c_str(), &outData.Width, &outData.Height, &outData.Channels, 4);
+        int width, height, channels;
+        stbi_uc* data = stbi_load(m_ImagePath.string().c_str(), &width, &height, &channels, 4);
+        outData.Width = width;
+        outData.Height = height;
+        outData.Channels = channels;
 
         if(data)
         {

@@ -1,13 +1,13 @@
 #include "Importer.h"
 
 #include "OCASI/Core/BaseImporter.h"
+#include "OCASI/Importers/ObjImporter.h"
 
-#include <unorderd_map>
+#include <unordered_map>
 
 namespace OCASI {
 
     std::unordered_map<std::string, std::shared_ptr<BaseImporter>> FileExtensionToImporter;
-
 
     void Importer::Init()
     {
@@ -16,14 +16,14 @@ namespace OCASI {
 
     }
 
-    std::shared<Scene> Importer::Load3DFile(const Path &path)
+    std::shared_ptr<Scene> Importer::Load3DFile(const Path &path)
     {
-        if(FileExtensionImporter.at(path.extension()) == nullptr)
+        if(FileExtensionToImporter.find(path.extension().string()) == FileExtensionToImporter.end())
         {
-            OCASI_LOG_ERROR("Supplied file with unsopported file extension: {}", path.extension());
+            OCASI_LOG_ERROR("Supplied file with unsopported file extension: {}", path.extension().string());
             return nullptr;
         }
 
-        return FileExtensionImporter[path.extension()].Load3DFile(path);
+        return FileExtensionToImporter[path.extension().string()]->Load3DFile(path);
     }
 }

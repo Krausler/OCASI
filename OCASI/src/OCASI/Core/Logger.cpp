@@ -4,11 +4,11 @@
 
 namespace OCASI {
 
-    spdlog::logger Logger::m_Logger;
+    std::shared_ptr<spdlog::logger> Logger::s_Logger;
 
     void Logger::Init()
     {
 		spdlog::set_pattern("%^[%T] %n: %v%$");
-        m_Logger = spdlog::stdout_color_mt("OCASI");
+        s_Logger = spdlog::stdout_color_mt("OCASI");
     }
 }
