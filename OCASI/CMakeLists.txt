@@ -7,14 +7,19 @@ add_library(OCASI STATIC
     "src/OCASI/Core/Logger.cpp"
     "src/OCASI/Core/Logger.h"
     "src/OCASI/Core/Mesh.h"
-    "src/OCASI/Core/StringUtil.h"
-    "src/OCASI/Core/StringUtil.cpp"
-    "src/OCASI/Core/Material.h"
+        "src/OCASI/Core/Material.h"
     "src/OCASI/Core/Scene.h"
     "src/OCASI/Core/Image.h"
     "src/OCASI/Core/Image.cpp"
-    "src/OCASI/Importers/ObjImporter.cpp"
-    "src/OCASI/Importers/ObjImporter.h"
+    "src/OCASI/Importers/OBJ/ObjImporter.cpp"
+    "src/OCASI/Importers/OBJ/ObjImporter.h"
+        src/OCASI/Importers/OBJ/OBJModel.h
+        src/OCASI/Core/FileUtil.cpp
+        src/OCASI/Core/FileUtil.h
+        src/OCASI/Importers/OBJ/ObjFileParser.cpp
+        src/OCASI/Importers/OBJ/ObjFileParser.h
+        src/OCASI/Core/StringUtil.cpp
+        src/OCASI/Core/StringUtil.h
 )
 
 target_include_directories(OCASI PUBLIC

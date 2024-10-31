@@ -1,14 +1,12 @@
-#include "OCASI/Core/Logger.h"
-#include "OCASI/Core/StringUtil.h"
 
-#include <iostream>
+#include "OCASI/Core/Importer.h"
+#include "iostream"
 
 int main()
 {
-    OCASI::Logger::Init();
+    OCASI::Importer::Init();
+    std::filesystem::current_path("C:/Lauri/Dev/C++/Projekte/OCASI/Tester");
+    OCASI::Importer::Load3DFile("Resources/TestObject.obj");
     
-    auto ss = OCASI::Split("27//2/  ", '/');
-
-    for(auto s : ss)
-        std::cout << "'" << s << "'" << std::endl;
+    std::cout << std::filesystem::current_path().string() << std::endl;
 }

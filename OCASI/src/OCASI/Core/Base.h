@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 #include <string>
-#include <stdint.h>
+#include <cstdint>
 #include <filesystem>
 
 using Path = std::filesystem::path;

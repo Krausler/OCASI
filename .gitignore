@@ -1,5 +1,5 @@
 # Build Files
-build
+cmake-build-debug
 
 #VSCode
 .vscode

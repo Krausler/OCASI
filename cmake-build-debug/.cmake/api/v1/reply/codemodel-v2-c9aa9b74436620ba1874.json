@@ -1,0 +1,101 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						2
+					],
+					"jsonFile" : "directory-.-Debug-d0094a50bb2071803777.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"projectIndex" : 0,
+					"source" : "."
+				},
+				{
+					"build" : "OCASI",
+					"jsonFile" : "directory-OCASI-Debug-7e48456c85363362e5d9.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "OCASI",
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"build" : "Tester",
+					"jsonFile" : "directory-Tester-Debug-8d5d1895eb321756578d.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "Tester",
+					"targetIndexes" : 
+					[
+						1
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0,
+						1,
+						2
+					],
+					"name" : "Octopus Asset Importer",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 1,
+					"id" : "OCASI::@22857cfa931b62f09c16",
+					"jsonFile" : "target-OCASI-Debug-c6cd9378ae8043f81487.json",
+					"name" : "OCASI",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "Tester::@9af287883fc10626b147",
+					"jsonFile" : "target-Tester-Debug-b2cde36815aff83fbba3.json",
+					"name" : "Tester",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "C:/Lauri/Dev/C++/Projekte/OCASI/cmake-build-debug",
+		"source" : "C:/Lauri/Dev/C++/Projekte/OCASI"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 6
+	}
+}

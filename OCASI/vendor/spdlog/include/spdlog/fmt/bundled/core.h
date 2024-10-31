@@ -3236,7 +3236,7 @@ FMT_INLINE auto format_to(OutputIt out, format_string<T...> fmt, T&&... args)
 }
 
 template <typename OutputIt> struct format_to_n_result {
-  /** Iterator past the end of the output range. */
+  /** FileDataIterator past the end of the output range. */
   OutputIt out;
   /** Total (not truncated) output size. */
   size_t size;

@@ -1,0 +1,8 @@
+C:/Lauri/Dev/C++/Projekte/OCASI/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Lauri/Dev/C++/Projekte/OCASI/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+C:/Lauri/Dev/C++/Projekte/OCASI/cmake-build-debug/OCASI/CMakeFiles/OCASI.dir
+C:/Lauri/Dev/C++/Projekte/OCASI/cmake-build-debug/OCASI/CMakeFiles/edit_cache.dir
+C:/Lauri/Dev/C++/Projekte/OCASI/cmake-build-debug/OCASI/CMakeFiles/rebuild_cache.dir
+C:/Lauri/Dev/C++/Projekte/OCASI/cmake-build-debug/Tester/CMakeFiles/Tester.dir
+C:/Lauri/Dev/C++/Projekte/OCASI/cmake-build-debug/Tester/CMakeFiles/edit_cache.dir
+C:/Lauri/Dev/C++/Projekte/OCASI/cmake-build-debug/Tester/CMakeFiles/rebuild_cache.dir

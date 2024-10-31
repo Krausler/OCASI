@@ -5,20 +5,38 @@
 
 namespace OCASI {
 
-    constexpr uint32_t INVALID_PARENT_ID = -1;
+    const uint8_t TEXTURE_COORDINATE_ARRAY_SIZE = 5;
+
+    enum class FaceType
+    {
+        None = 0,
+        Point = 1,
+        Line = 2,
+        Triangle = 3,
+        Quad = 4
+    };
+
+    enum class Dimension
+    {
+        None = 0,
+        _1D = 1,
+        _2D = 2,
+        _3D = 3
+    };
 
     struct Mesh 
     {
         std::string Name = "";
 
-        std::vector<glm::vec3> Positions;
+        std::vector<glm::vec3> Vertices;
         std::vector<glm::vec3> Normals;
-        std::vector<glm::vec2> TexCoords;
+        std::array<std::vector<glm::vec2>, TEXTURE_COORDINATE_ARRAY_SIZE> TexCoords;
         std::vector<glm::vec3> Tangents; // Optional
 
         std::vector<uint32_t> Indices;
+        FaceType FaceType;
+        Dimension Dimension;
 
-        uint32_t Parent = -1;
         bool HasTexCoords;
         bool HasNormals;
         bool HasTangents = false;

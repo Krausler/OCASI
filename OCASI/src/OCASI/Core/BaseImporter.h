@@ -7,6 +7,7 @@ namespace OCASI {
     class BaseImporter 
     {
     public:
-        virtual std::shared_ptr<Scene> Load3DFile(const Path& path) = 0;
+        virtual std::shared_ptr<Scene> Load3DFile() = 0;
+        virtual bool CanLoad() = 0;
     };
 }

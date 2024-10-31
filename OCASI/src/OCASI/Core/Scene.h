@@ -5,18 +5,34 @@
 
 namespace OCASI {
 
-    struct ObjectGroupingInfo
+    constexpr size_t INVALID_ID = -1;
+
+    struct Node
     {
-        std::string Name;
-        std::vector<uint32_t> MeshIndices;
+        Node()
+        {
+        }
+
+        Node(const Node& other)
+        {
+            Parent = other.Parent;
+            Children = other.Children;
+            MeshIndex = other.MeshIndex;
+            MaterialIndex = other.MeshIndex;
+        }
+
+        std::shared_ptr<Node> Parent;
+        std::vector<std::shared_ptr<Node>> Children;
+
+        size_t MeshIndex = INVALID_ID;
+        size_t MaterialIndex = INVALID_ID;
     };
 
     struct Scene
     {
         std::vector<Mesh> Meshes;
-        // A mesh's material is at the mesh's index in the mesh vector
         std::vector<Material> Materials;
-        std::vector<ObjectGroupingInfo> ObjectGroupingInfo;
+        std::vector<std::shared_ptr<Node>> RootNodes;
     };
 
 }

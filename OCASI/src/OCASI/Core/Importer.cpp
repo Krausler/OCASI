@@ -1,29 +1,37 @@
 #include "Importer.h"
 
 #include "OCASI/Core/BaseImporter.h"
-#include "OCASI/Importers/ObjImporter.h"
+#include "OCASI/Importers/OBJ/ObjImporter.h"
 
 #include <unordered_map>
 
-namespace OCASI {
+#define CAN_LOAD(x, fName) if(!x.CanLoad()) { OCASI_LOG_ERROR("Can't load file as CanLoad() for {} did not succeed.", fName); return nullptr; }
 
-    std::unordered_map<std::string, std::shared_ptr<BaseImporter>> FileExtensionToImporter;
+namespace OCASI {
 
     void Importer::Init()
     {
         Logger::Init();
-        FileExtensionToImporter[".obj"] = std::make_shared<ObjImporter>();
-
     }
 
     std::shared_ptr<Scene> Importer::Load3DFile(const Path &path)
     {
-        if(FileExtensionToImporter.find(path.extension().string()) == FileExtensionToImporter.end())
+        FileReader reader(path);
+        if(!reader)
         {
-            OCASI_LOG_ERROR("Supplied file with unsopported file extension: {}", path.extension().string());
+            OCASI_LOG_ERROR("Requested file does not exist. Verify the 3D model path.");
+            OCASI_FAIL("Requested file does not exist. Verify the 3D model path.");
             return nullptr;
         }
 
-        return FileExtensionToImporter[path.extension().string()]->Load3DFile(path);
+        std::string fExtension = reader.GetPath().extension().string();
+
+        if(fExtension == ".obj")
+        {
+            ObjImporter importer(reader);
+            CAN_LOAD(importer, path.string());
+            return importer.Load3DFile();
+        }
+
     }
 }

@@ -1,7 +1,7 @@
 #include "StringUtil.h"
 
 namespace OCASI::Util {
-    
+
     std::vector<std::string> Split(const std::string& target, char token)
     {
         std::vector<std::string> result;
@@ -20,7 +20,7 @@ namespace OCASI::Util {
         {
             result.push_back(target.substr(lastIndex));
         }
-        
+
         return result;
     }
 
@@ -44,7 +44,9 @@ namespace OCASI::Util {
         {
             result.push_back(target.substr(lastIndex));
         }
-        
+
         return result;
     }
+
 }
+
