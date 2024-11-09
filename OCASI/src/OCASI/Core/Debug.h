@@ -17,6 +17,6 @@
 #define OCASI_ASSERT(x)
 #define OCASI_ASSERT_MSG(x, msg)
 
-#define OCASI_FAIL(msg)
+#define OCASI_FAIL(msg) OCASI_LOG_ERROR(msg)
 
 #endif

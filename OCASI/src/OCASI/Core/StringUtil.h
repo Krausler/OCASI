@@ -12,7 +12,7 @@ namespace OCASI::Util {
         {
             for (char token : tokens)
             {
-                if (*it == token)
+                if (it == end || *it == token)
                 {
                     std::string result(iter, it);
                     iter = it;
@@ -29,7 +29,7 @@ namespace OCASI::Util {
         OCASI_ASSERT(iter != end);
         for (auto it = iter; it != end; it++)
         {
-            if (*it == token)
+            if (it == end || *it == token)
             {
                 std::string result(iter, it);
                 iter = it;
@@ -39,14 +39,23 @@ namespace OCASI::Util {
         return {};
     }
 
+    // Skips the first character, if it equals the searched token
     template<class Iterator>
     std::string GetToNextTokenOrEndOfIterator(Iterator& iter, const Iterator& end, char token)
     {
-        OCASI_ASSERT(iter != end);
+        if (iter == end)
+        {
+            OCASI_FAIL("iter == end. invalid");
+            return {};
+        }
+
+        if(*iter == token)
+            iter++;
+
         Iterator it = iter;
         while (true)
         {
-            if ( it == end || *it == token)
+            if (it == end || *it == token)
             {
                 std::string result(iter, it);
                 iter = it;
@@ -54,7 +63,6 @@ namespace OCASI::Util {
             }
             it++;
         }
-        return {};
     }
 
     template<class Iterator>

@@ -9,6 +9,8 @@ namespace OCASI {
     {
     public:
         static void Init();
+        static void SetFileFormatPattern(const std::string& fileFormatName);
+        static void ResetPattern();
 
         static std::shared_ptr<spdlog::logger> GetLogger() { return s_Logger; }
     private:
@@ -16,7 +18,7 @@ namespace OCASI {
     };
 }
 
-#define FROMAT(x, ...) fmt::format(x, __VA_ARGS__)
+#define FORMAT(x, ...) fmt::format(x, __VA_ARGS__)
 
 #define OCASI_LOG_TRACE(...) OCASI::Logger::GetLogger()->trace(__VA_ARGS__)
 #define OCASI_LOG_DEBUG(...) OCASI::Logger::GetLogger()->debug(__VA_ARGS__)

@@ -24,5 +24,10 @@ message("Octopus Asset Importer: Build Configuration: ${CMAKE_BUILD_TYPE}")
 
 set(CMAKE_CXX_STANDARD 20)
 
+
+if(MSVC)
+  add_compile_options("/utf-8")
+endif()
+
 add_subdirectory(OCASI)
 add_subdirectory(Tester)

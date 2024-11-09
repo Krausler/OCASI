@@ -16,6 +16,16 @@ namespace OCASI {
         Quad = 4
     };
 
+    inline FaceType operator|(const FaceType& t, const FaceType& t2)
+    {
+        return static_cast<FaceType>(static_cast<uint32_t>(t) | static_cast<uint32_t>(t2));
+    }
+
+    inline bool operator&(const FaceType& t, const FaceType& t2)
+    {
+        return static_cast<uint32_t>(t) & static_cast<uint32_t>(t2);
+    }
+
     enum class Dimension
     {
         None = 0,

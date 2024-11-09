@@ -12,12 +12,12 @@
 
 namespace OCASI {
 
-    Image::Image(const Path& path)
-        : m_ImagePath(path), m_MemoryImage(false) 
+    Image::Image(const Path& path, const ImageSettings& settings)
+        : m_ImagePath(path), m_Settings(settings)
     {}
 
-    Image::Image(const std::vector<char>& imageData, uint8_t channels, uint32_t width, uint32_t height)
-        : m_MemoryImage(true)
+    Image::Image(const std::vector<char>& imageData, uint8_t channels, uint32_t width, uint32_t height, const ImageSettings& settings)
+        : m_MemoryImage(true), m_Settings(settings)
     {
         m_ImageData = {};
         m_ImageData.Data = imageData;
@@ -25,6 +25,10 @@ namespace OCASI {
         m_ImageData.Width = width;
         m_ImageData.Height = height;
     }
+
+    Image::Image(const ImageData& data, const ImageSettings& settings)
+        : m_ImageData(data), m_Settings(settings)
+    {}
 
     ImageData Image::LoadImageFromDisk()
     {
@@ -46,7 +50,7 @@ namespace OCASI {
         if(data)
         {
             uint32_t size = outData.Width * outData.Height * outData.Channels;
-            outData.Data.resize(size);   
+            outData.Data.resize(size);
             for(uint32_t i = 0; i < outData.Width * outData.Height * outData.Channels; i++)
             {
                 outData.Data[i] = data[i];

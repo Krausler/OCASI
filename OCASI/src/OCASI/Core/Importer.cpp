@@ -1,6 +1,5 @@
 #include "Importer.h"
 
-#include "OCASI/Core/BaseImporter.h"
 #include "OCASI/Importers/OBJ/ObjImporter.h"
 
 #include <unordered_map>
@@ -25,13 +24,17 @@ namespace OCASI {
         }
 
         std::string fExtension = reader.GetPath().extension().string();
-
+        std::shared_ptr<Scene> result = nullptr;
         if(fExtension == ".obj")
         {
+            Logger::SetFileFormatPattern("OBJ");
             ObjImporter importer(reader);
             CAN_LOAD(importer, path.string());
-            return importer.Load3DFile();
+            result = importer.Load3DFile();
         }
+        Logger::ResetPattern();
+        OCASI_ASSERT(result);
 
+        return nullptr;
     }
 }
