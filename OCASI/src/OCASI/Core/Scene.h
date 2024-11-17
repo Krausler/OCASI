@@ -5,7 +5,7 @@
 
 namespace OCASI {
 
-    constexpr size_t INVALID_ID = -1;
+    const size_t INVALID_ID = -1;
 
     struct Node
     {
@@ -28,7 +28,7 @@ namespace OCASI {
         size_t MaterialIndex = INVALID_ID;
     };
 
-    struct Scene
+    struct Asset
     {
         std::vector<Mesh> Meshes;
         std::vector<Material> Materials;

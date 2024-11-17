@@ -244,10 +244,19 @@ namespace OCASI::OBJ {
     {
         m_Begin++;
 
+        // Checking whether the current mesh attached to the object has already got faces.
+        // When it doesn't it does not make sense to create a new object and mesh.
+        if (m_CurrentObject)
+        {
+            Mesh &m = m_OBJModel->Meshes.at(m_CurrentObject->Mesh);
+            if (m.Faces.empty())
+                return;
+        }
+
         std::string name = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
         Object& o = m_OBJModel->Objects.emplace_back();
         o.Name = name;
-        o.ParentMesh = m_OBJModel->Meshes.size();
+        o.Mesh = m_OBJModel->Meshes.size();
         m_CurrentObject = &o;
         CreateMesh(name);
     }
@@ -258,6 +267,9 @@ namespace OCASI::OBJ {
 
         if (m_CurrentObject)
         {
+            Mesh& m = m_OBJModel->Meshes.at(m_CurrentObject->Mesh);
+            if (m.Faces.empty())
+                return;
             m_CurrentObject->Children.push_back(m_OBJModel->Meshes.size());
         }
         CreateMesh(Util::GetToNextSpaceOrEndOfLine<FileDataIterator>(m_Begin, m_End));

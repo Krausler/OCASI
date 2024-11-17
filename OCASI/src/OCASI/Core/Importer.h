@@ -7,7 +7,7 @@ namespace OCASI {
     {
     public:
         static void Init();
-        
-        static std::shared_ptr<Scene> Load3DFile(const Path& path);
+
+        static std::shared_ptr<Asset> Load3DFile(const Path& path);
     };
 }

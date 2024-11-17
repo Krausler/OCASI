@@ -102,7 +102,7 @@ namespace OCASI::OBJ {
     {
         std::string Name;
 
-        uint32_t ParentMesh;
+        uint32_t Mesh;
         std::vector<uint32_t> Children;
     };
 

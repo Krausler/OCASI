@@ -24,6 +24,7 @@ add_library(OCASI STATIC
         src/OCASI/Importers/OBJ/MtlParser.h
         src/OCASI/Importers/GLTF2/GLTFImporter.cpp
         src/OCASI/Importers/GLTF2/GLTFImporter.h
+        src/OCASI/Importers/GLTF2/Asset.h
 )
 
 target_include_directories(OCASI PUBLIC
@@ -34,8 +35,10 @@ target_include_directories(OCASI PUBLIC
         vendor/glaze/include
 )
 
+add_subdirectory(vendor/glaze)
+
 target_link_libraries(OCASI PUBLIC
-        vendor/glaze
+        glaze::glaze
 )
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")

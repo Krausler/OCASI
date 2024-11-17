@@ -9,6 +9,9 @@ namespace OCASI {
 
     struct Material
     {
+        // The materials name
+        std::string Name;
+
         // Albedo: Deprecated way of specifying an objects color
         glm::vec3 AlbedoColour;
         std::unique_ptr<Image> AlbedoTexture = nullptr;

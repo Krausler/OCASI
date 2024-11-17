@@ -10,7 +10,7 @@ int main()
 
     OCASI_LOG_ERROR("hi");
     std::filesystem::current_path("C:/Lauri/Dev/C++/Projekte/OCASI/Tester");
-    OCASI::Importer::Load3DFile("Resources/Mushroom_smartUVs_01.obj");
+    auto scene = OCASI::Importer::Load3DFile("Resources/Mushroom_smartUVs_01.obj");
 
     std::cout << std::filesystem::current_path().string() << std::endl;
 
