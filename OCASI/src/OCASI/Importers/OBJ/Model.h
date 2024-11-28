@@ -69,7 +69,7 @@ namespace OCASI::OBJ {
         float Anisotropy = 0.0f;                    // Anisotropy (an)
         float AnisotropyRotation = 0.0f;            // Anisotropy rotation angle (anR)
 
-        std::array<std::string, MAX_TEXTURE_COUNT> Textures = {}; // Textures (map_{Value}) using TextureType as an index
+        std::array<std::string, MAX_TEXTURE_COUNT> Textures = {}; // Textures (map_{Values}) using TextureType as an index
         std::array<bool, MAX_TEXTURE_COUNT> TextureClamps = {}; // Specifies whether a texture is clamped
         float BumpMapMultiplier = 1.0f;
     };

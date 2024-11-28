@@ -7,19 +7,6 @@ namespace OCASI::OBJ {
 
     constexpr size_t INVALID_ID = -1;
 
-    struct Vertex
-    {
-        size_t VertexIndex = INVALID_ID;
-        size_t TextureCoordinateIndex = INVALID_ID;
-        size_t NormalIndex = INVALID_ID;
-        // The index in the indices array where the vertex is referenced
-        size_t IndicesIndex = INVALID_ID;
-
-        bool operator==(const Vertex& other) const {
-            return VertexIndex == other.VertexIndex && TextureCoordinateIndex == other.TextureCoordinateIndex && NormalIndex == other.NormalIndex;
-        }
-    };
-
     class FileParser
     {
     public:

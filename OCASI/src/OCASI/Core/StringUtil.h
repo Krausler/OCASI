@@ -103,4 +103,6 @@ namespace OCASI::Util {
 
     std::vector<std::string> Split(const std::string& target, char token);
     std::vector<std::string> Split(const std::string& target, char token, uint32_t& outTokenCount);
+
+    uint8_t* DecodeBase64(const std::string& dataString, size_t& outSize);
 }

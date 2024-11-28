@@ -2,8 +2,8 @@
 
 namespace OCASI {
 
-    FileReader::FileReader(const Path &path)
-        : m_Path(path), m_FileReader(m_Path)
+    FileReader::FileReader(const Path &path, bool isBinary)
+        : m_Path(path), m_Binary(isBinary), m_FileReader(m_Path, m_Binary ? std::ios::binary : std::ios::in)
     {
     }
 
@@ -34,6 +34,35 @@ namespace OCASI {
     {
         m_FileReader.clear();
         m_FileReader.seekg(0);
+    }
+
+    uint8_t* FileReader::GetFileDataInBytes(size_t& outSize)
+    {
+        m_FileReader.unsetf(std::ios::skipws);
+
+        m_FileReader.seekg(0, std::ios::end);
+        std::streampos fileSize = outSize = m_FileReader.tellg();
+        m_FileReader.seekg(0, std::ios::beg);
+
+        uint8_t* out = new uint8_t[fileSize];
+        m_FileReader.read((char*) out, fileSize);
+
+        return out;
+    }
+
+    std::string FileReader::GetFileString()
+    {
+        m_FileReader.unsetf(std::ios::skipws);
+
+        m_FileReader.seekg(0, std::ios::end);
+        std::streampos fileSize = m_FileReader.tellg();
+        m_FileReader.seekg(0, std::ios::beg);
+
+        std::string out;
+        out.resize(fileSize);
+        m_FileReader.read(out.data(), fileSize);
+
+        return out;
     }
 
     namespace Util {

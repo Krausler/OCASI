@@ -25,20 +25,18 @@ add_library(OCASI STATIC
         src/OCASI/Importers/GLTF2/GLTFImporter.cpp
         src/OCASI/Importers/GLTF2/GLTFImporter.h
         src/OCASI/Importers/GLTF2/Asset.h
+        src/OCASI/Importers/GLTF2/Asset.cpp
+        src/OCASI/Importers/GLTF2/TextFileParser.cpp
+        src/OCASI/Importers/GLTF2/TextFileParser.h
+        src/OCASI/Importers/GLTF2/Json.h
 )
 
 target_include_directories(OCASI PUBLIC
         src
-        vendor
         vendor/spdlog/include
+        vendor/stbimage
         vendor/glm
         vendor/glaze/include
-)
-
-add_subdirectory(vendor/glaze)
-
-target_link_libraries(OCASI PUBLIC
-        glaze::glaze
 )
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")

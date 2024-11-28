@@ -13,7 +13,7 @@ namespace OCASI {
         Logger::Init();
     }
 
-    std::shared_ptr<Asset> Importer::Load3DFile(const Path &path)
+    std::shared_ptr<Scene> Importer::Load3DFile(const Path &path)
     {
         FileReader reader(path);
         if(!reader)
@@ -24,7 +24,7 @@ namespace OCASI {
         }
 
         std::string fExtension = reader.GetPath().extension().string();
-        std::shared_ptr<Asset> result = nullptr;
+        std::shared_ptr<Scene> result = nullptr;
         if(fExtension == ".obj")
         {
             Logger::SetFileFormatPattern("OBJ");

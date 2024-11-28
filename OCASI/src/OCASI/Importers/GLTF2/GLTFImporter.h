@@ -12,7 +12,7 @@ namespace OCASI {
         ~GLTFImporter() = default;
 
         virtual bool CanLoad() override;
-        virtual std::shared_ptr<Asset> Load3DFile() override;
+        virtual std::shared_ptr<Scene> Load3DFile() override;
     private:
         FileReader& m_FileReader;
     };

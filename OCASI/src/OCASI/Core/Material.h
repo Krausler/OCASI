@@ -16,19 +16,19 @@ namespace OCASI {
         glm::vec3 AlbedoColour;
         std::unique_ptr<Image> AlbedoTexture = nullptr;
 
-        // Diffuse: The colour, that is displayed, when light bounces in all directions
+        // Diffuse: The colour that is displayed when light bounces in all directions
         glm::vec3 DiffuseColour;
         std::unique_ptr<Image> DiffuseTexture = nullptr;
 
-        // Specular: The colour, that is displayed, when specular highlights are seen
+        // Specular: The colour that is displayed when specular highlights are computed
         glm::vec3 SpecularColour;
         std::unique_ptr<Image> SpecularTexture = nullptr;
 
-        // Emissive: The colour of an object, if it emits light, acting as a light source
+        // Emissive: The colour of an object when it emits light acting as a light source
         glm::vec3 EmissiveColour;
         std::unique_ptr<Image> EmissiveTexture = nullptr;
 
-        // Shininess: The value, defining how intense specular highlights are rendered
+        // Shininess: The value defining how intense specular highlights are rendered
         float Shininess = 0.0f;
         std::unique_ptr<Image> ShininessTexture = nullptr;
 
@@ -59,6 +59,7 @@ namespace OCASI {
         float ClearcoatRoughness = 0.0f;
         std::unique_ptr<Image> ClearcoatRoughnessTexture = nullptr;
 
+        float IOR = 1.5f;
         float Anisotropy = 0.0f;
         float AnisotropyRotation = 0.0f;
 

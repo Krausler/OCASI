@@ -11,8 +11,8 @@ namespace OCASI {
         return false;
     }
 
-    std::shared_ptr<Asset> GLTFImporter::Load3DFile()
+    std::shared_ptr<Scene> GLTFImporter::Load3DFile()
     {
-        return std::shared_ptr<Asset>();
+        return std::shared_ptr<Scene>();
     }
 }

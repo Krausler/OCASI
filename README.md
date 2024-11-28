@@ -1,4 +1,4 @@
-OCASI (Octopus Asset Importer)
+OCASI (Octopus Scene Importer)
 ================================
 
 OCASI is (going to be) an easy simple asset importer specifically designed for the octopus engine. Planned support for formats are Wavefront OBJ, GLTF 2.0 and FBX

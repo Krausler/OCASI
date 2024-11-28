@@ -28,7 +28,7 @@ namespace OCASI {
         size_t MaterialIndex = INVALID_ID;
     };
 
-    struct Asset
+    struct Scene
     {
         std::vector<Mesh> Meshes;
         std::vector<Material> Materials;

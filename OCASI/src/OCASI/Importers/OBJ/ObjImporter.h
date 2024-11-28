@@ -12,10 +12,10 @@ namespace OCASI {
         ObjImporter(FileReader& reader);
         ~ObjImporter() = default;
 
-        virtual std::shared_ptr<Asset> Load3DFile() override;
+        virtual std::shared_ptr<Scene> Load3DFile() override;
         virtual bool CanLoad() override;
     private:
-        std::shared_ptr<Asset> ConvertToOCASIScene(const Path& folder);
+        std::shared_ptr<Scene> ConvertToOCASIScene(const Path& folder);
         std::shared_ptr<Node> CreateNodesFromObject(const OBJ::Object& o) const;
         std::shared_ptr<Node> CreateNodeFromMesh(uint32_t mesh);
 
@@ -25,7 +25,7 @@ namespace OCASI {
         FileReader& m_FileReader;
 
         std::shared_ptr<OBJ::Model> m_OBJModel = nullptr;
-        std::shared_ptr<Asset> m_OutputScene = nullptr;
+        std::shared_ptr<Scene> m_OutputScene = nullptr;
     };
 
 }

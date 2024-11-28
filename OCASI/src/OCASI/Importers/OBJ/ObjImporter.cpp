@@ -41,7 +41,7 @@ namespace OCASI {
     {
     }
 
-    std::shared_ptr<Asset> ObjImporter::Load3DFile()
+    std::shared_ptr<Scene> ObjImporter::Load3DFile()
     {
         OBJ::FileParser objParser(m_FileReader);
         m_OBJModel = objParser.ParseOBJFile();
@@ -49,8 +49,7 @@ namespace OCASI {
         if (!m_OBJModel)
             return nullptr;
 
-        std::string objPath = m_FileReader.GetPath().string();
-        Path folder = objPath.substr(0, objPath.find_last_of('/'));
+        Path folder = m_FileReader.GetParentPath();
 
         if(!m_OBJModel->MTLFilePath.empty())
         {
@@ -69,9 +68,9 @@ namespace OCASI {
         return Util::FindTokensInFirst100Lines(m_FileReader, { "v", "vn", "vt", "mtlib", "f", "usemtl" });
     }
 
-    std::shared_ptr<Asset> ObjImporter::ConvertToOCASIScene(const Path& folder)
+    std::shared_ptr<Scene> ObjImporter::ConvertToOCASIScene(const Path& folder)
     {
-        m_OutputScene = std::make_shared<Asset>();
+        m_OutputScene = std::make_shared<Scene>();
 
         // Converting from a RHCS to a LHCS
         for (glm::vec3& v : m_OBJModel->Vertices)
@@ -130,6 +129,7 @@ namespace OCASI {
             newMat.Transparency = mat.Opacity;
             newMat.Roughness = mat.Roughness;
             newMat.Metallic = mat.Metallic;
+            newMat.IOR = mat.IOR;
             newMat.Sheen = mat.Sheen;
             newMat.Anisotropy = mat.Anisotropy;
             newMat.AnisotropyRotation = mat.AnisotropyRotation;

@@ -6,8 +6,7 @@ namespace OCASI::OBJ {
 
     FileParser::FileParser(FileReader &reader)
         : m_FileReader(reader), m_OBJModel(std::make_shared<Model>())
-    {
-    }
+    {}
 
     std::shared_ptr<Model> FileParser::ParseOBJFile()
     {
