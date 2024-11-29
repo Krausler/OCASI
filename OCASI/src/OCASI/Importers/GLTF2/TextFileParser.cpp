@@ -77,8 +77,7 @@ namespace OCASI::GLTF {
         if(!ParseMeshes())
             return nullptr;
 
-        if(!ParseNodes())
-            return nullptr;
+        ParseNodes();
 
         if(!ParseScenes())
             return nullptr;
@@ -536,13 +535,250 @@ namespace OCASI::GLTF {
                 material.IsDoubleSided = jMaterial.at("doubleSided").get_boolean();
 
             /// Extensions
+            if (jMaterial.contains("extensions"))
+            {
+                glz::json_t& jExtensions = jMaterial.at("extensions");
 
+                if (jExtensions.contains("KHR_materials_pbrSpecularGlossiness"))
+                {
+                    Json jsonExtension = { jExtensions.at("KHR_materials_pbrSpecularGlossiness") };
+                    ParsePbrSpecularGlossiness(&jsonExtension, material.SpecularGlossiness);
+                }
+
+                if (jExtensions.contains("KHR_materials_specular"))
+                {
+                    Json jsonExtension = { jExtensions.at("KHR_materials_specular") };
+                    ParseSpecular(&jsonExtension, material.Specular);
+                }
+
+                if (jExtensions.contains("KHR_materials_clearcoat"))
+                {
+                    Json jsonExtension = { jExtensions.at("KHR_materials_clearcoat") };
+                    ParseClearcoat(&jsonExtension, material.Clearcoat);
+                }
+
+                if (jExtensions.contains("KHR_materials_sheen"))
+                {
+                    Json jsonExtension = {jExtensions.at("KHR_materials_sheen")};
+                    ParseSheen(&jsonExtension, material.Sheen);
+                }
+
+                if (jExtensions.contains("KHR_materials_transmission"))
+                {
+                    Json jsonExtension = {jExtensions.at("KHR_materials_transmission")};
+                    ParseTransmission(&jsonExtension, material.Transmission);
+                }
+
+                if (jExtensions.contains("KHR_materials_volume"))
+                {
+                    Json jsonExtension = {jExtensions.at("KHR_materials_volume")};
+                    ParseVolume(&jsonExtension, material.Volume);
+                }
+
+                if (jExtensions.contains("KHR_materials_ior"))
+                {
+                    Json jsonExtension = {jExtensions.at("KHR_materials_ior")};
+                    ParseIOR(&jsonExtension, material.IOR);
+                }
+
+                if (jExtensions.contains("KHR_materials_emissive_strength"))
+                {
+                    Json jsonExtension = {jExtensions.at("KHR_materials_emissive_strength")};
+                    ParseEmissiveStrength(&jsonExtension, material.EmissiveStrength);
+                }
+
+                if (jExtensions.contains("KHR_materials_iridescence"))
+                {
+                    Json jsonExtension = {jExtensions.at("KHR_materials_iridescence")};
+                    ParseIridescence(&jsonExtension, material.Iridescence);
+                }
+
+                if (jExtensions.contains("KHR_materials_anisotropy"))
+                {
+                    Json jsonExtension = {jExtensions.at("KHR_materials_pbrSpecularGlossiness")};
+                    ParseAnisotropy(&jsonExtension, material.Anisotropy);
+                }
+            }
         }
 
         return true;
     }
 
-    bool TextFileParser::ParsePbrMetallicRoughness(const Json *jsonPbrMetallicRoughness, std::optional<PBRMetallicRoughness> &outMetallicRoughness)
+
+    bool TextFileParser::ParseMeshes()
+    {
+        glz::json_t& json = m_Json->Json;
+
+        if (!json.contains(MESHES_PROPERTY))
+            return true;
+
+        OCASI_ASSERT(json.at(MESHES_PROPERTY).is_array());
+        auto& meshes = json.at(MESHES_PROPERTY).get_array();
+
+        for (int i = 0; i < meshes.size(); i++)
+        {
+            glz::json_t& jMesh = meshes.at(i);
+
+            if (!jMesh.contains("primitives"))
+            {
+                OCASI_FAIL("Required 'primitives' property in mesh is not present, though mandatory.");
+                return false;
+            }
+
+            Mesh& mesh = m_Asset->Meshes.emplace_back(i);
+            Json jsonPrimitives = { jMesh.at("primitives") };
+            if(!ParsePrimitives(&jsonPrimitives, mesh))
+                return false;
+
+            if (jMesh.contains("weights"))
+            {
+                auto& weights = jMesh.at("weights").get_array();
+                mesh.Weights.resize(weights.size());
+
+                for (int j = 0; j < weights.size(); j++)
+                {
+                    mesh.Weights[j] = (float) weights.at(j).get_number();
+                }
+            }
+        }
+
+        return true;
+    }
+
+    void TextFileParser::ParseNodes()
+    {
+        glz::json_t& json = m_Json->Json;
+
+        if (!json.contains(NODES_PROPERTY))
+            return;
+
+        OCASI_ASSERT(json.at(NODES_PROPERTY).is_array());
+        auto& nodes = json.at(NODES_PROPERTY).get_array();
+
+        for (int i = 0; i < nodes.size(); i++)
+        {
+            glz::json_t& jNode = nodes.at(i);
+            Node& node = m_Asset->Nodes.emplace_back(i);
+
+            // Cameras and animations are not supported
+
+            if (jNode.contains("children"))
+            {
+                auto& children = jNode.at("children").get_array();
+                node.Children.resize(children.size());
+                for (int j = 0; j < children.size(); j++)
+                {
+                    node.Children[j] = (size_t) children.at(i).get_number();
+                }
+            }
+
+            if (jNode.contains("name"))
+                node.Name = jNode.at("name").get_string();
+
+            if (jNode.contains("mesh"))
+                node.Mesh = (size_t) jNode.at("mesh").get_number();
+
+            if (jNode.contains("translation"))
+            {
+                Json json = { jNode.at("translation") };
+                ParseVec3(&json, node.TrsComponent->Translation);
+            }
+
+            if (jNode.contains("rotation"))
+            {
+                Json json = { jNode.at("rotation") };
+                glm::vec4 v;
+                ParseVec4(&json, v);
+                node.TrsComponent->Rotation = glm::quat(v);
+            }
+
+            if (jNode.contains("size"))
+            {
+                Json json = { jNode.at("size") };
+                ParseVec3(&json, node.TrsComponent->Scale);
+            }
+
+            if (jNode.contains("matrix"))
+            {
+                auto& matrixValues = jNode.at("matrix").get_array();
+
+                for (int j = 0; i < matrixValues.size(); j++)
+                {
+                    node.LocalTranslationMatrix.value()[j % 4][j / 4] = (float) matrixValues.at(j).get_number();
+                }
+            }
+
+            if (jNode.contains("weights"))
+            {
+                auto& weights = jNode.at("weights").get_array();
+                node.Weights.resize(weights.size());
+
+                for (int j = 0; i < weights.size(); j++)
+                {
+                    node.Weights[j] = (float) weights.at(j).get_number();
+                }
+            }
+        }
+    }
+
+    bool TextFileParser::ParseScenes()
+    {
+        glz::json_t& json = m_Json->Json;
+
+        if (!json.contains(SCENES_PROPERTY))
+            return true;
+
+        OCASI_ASSERT(json.at(SCENES_PROPERTY).is_array());
+        auto& scenes = json.at(SCENES_PROPERTY).get_array();
+
+        for (int i = 0; i < scenes.size(); i++)
+        {
+            glz::json_t& jScene = scenes.at(i);
+            Scene& scene = m_Asset->Scenes.emplace_back(i);
+
+            if (jScene.contains("name"))
+                scene.Name = jScene.at("name").get_string();
+
+            if (jScene.contains("nodes"))
+            {
+                auto& rootNodes = json.at("nodes").get_array();
+                scene.RootNodes.resize(rootNodes.size());
+                for (int j = 0; j < scenes.size(); j++)
+                {
+                    scene.RootNodes[j] = (size_t) rootNodes.at(j).get_number();
+                }
+            }
+        }
+
+        return true;
+    }
+
+    bool TextFileParser::ParseTextureInfo(const Json* jsonTextureInfo, std::optional<TextureInfo>& outTextureInfo)
+    {
+        const glz::json_t& jPbrMetallicRoughness = jsonTextureInfo->Json;
+
+        if (!jPbrMetallicRoughness.contains("index"))
+        {
+            OCASI_FAIL("Required 'index' property in texture info is not present, though mandatory.");
+            return false;
+        }
+
+        outTextureInfo = {};
+        outTextureInfo->Texture = (size_t) jPbrMetallicRoughness.at("index").get_number();
+
+        if (jPbrMetallicRoughness.contains("texCoord"))
+            outTextureInfo->TexCoords = (size_t) jPbrMetallicRoughness.at("texCoord").get_number();
+
+        if (jPbrMetallicRoughness.contains("scale"))
+            outTextureInfo->Scale = (float) jPbrMetallicRoughness.at("scale").get_number();
+
+        if (jPbrMetallicRoughness.contains("strength"))
+            outTextureInfo->Scale = (float) jPbrMetallicRoughness.at("strength").get_number();
+
+        return true;
+    }
+
+    bool TextFileParser::ParsePbrMetallicRoughness(const Json* jsonPbrMetallicRoughness, std::optional<PBRMetallicRoughness> &outMetallicRoughness)
     {
         const glz::json_t& jPbrMetallicRoughness = jsonPbrMetallicRoughness->Json;
 
@@ -583,34 +819,9 @@ namespace OCASI::GLTF {
         return true;
     }
 
-    bool TextFileParser::ParseTextureInfo(const Json *jsonTextureInfo, std::optional<TextureInfo>& outTextureInfo)
+    bool TextFileParser::ParsePbrSpecularGlossiness(const Json* jsonPbrSpecularGlossiness, std::optional<KHRMaterialPbrSpecularGlossiness> &outMetallicRoughness)
     {
-        const glz::json_t& jPbrMetallicRoughness = jsonTextureInfo->Json;
-
-        if (!jPbrMetallicRoughness.contains("index"))
-        {
-            OCASI_FAIL("Required 'index' property in texture info accessor indices is not present, though mandatory.");
-            return false;
-        }
-
-        outTextureInfo = {};
-        outTextureInfo->Texture = (size_t) jPbrMetallicRoughness.at("index").get_number();
-
-        if (jPbrMetallicRoughness.contains("texCoord"))
-            outTextureInfo->TexCoords = (size_t) jPbrMetallicRoughness.at("texCoord").get_number();
-
-        if (jPbrMetallicRoughness.contains("scale"))
-            outTextureInfo->Scale = (float) jPbrMetallicRoughness.at("scale").get_number();
-
-        if (jPbrMetallicRoughness.contains("strength"))
-            outTextureInfo->Scale = (float) jPbrMetallicRoughness.at("strength").get_number();
-
-        return true;
-    }
-
-    bool TextFileParser::ParsePbrSpecularGlossiness(const Json* jsonExtension, std::optional<KHRMaterialPbrSpecularGlossiness> &outMetallicRoughness)
-    {
-        const glz::json_t& jPbrSpecularGlossiness = jsonExtension->Json.at("KHR_materials_pbrSpecularGlossiness");
+        const glz::json_t& jPbrSpecularGlossiness = jsonPbrSpecularGlossiness->Json;
 
         if (jPbrSpecularGlossiness.contains("diffuseFactor"))
         {
@@ -648,9 +859,43 @@ namespace OCASI::GLTF {
         return true;
     }
 
-    bool TextFileParser::ParseClearcoat(const Json* jsonExtension, std::optional<KHRMaterialClearcoat>& outClearcoat)
+    bool TextFileParser::ParseSpecular(const Json* jsonSpecular, std::optional<KHRMaterialSpecular> &outSpecular)
     {
-        const glz::json_t& jClearcoat = jsonExtension->Json.at("KHR_materials_clearcoat");
+        const glz::json_t& jSpecular = jsonSpecular->Json;
+
+        if (jSpecular.contains("specularFactor"))
+            outSpecular->SpecularFactor = (float) jSpecular["specularFactor"].get_number();
+
+
+        if (jSpecular.contains("specularTexture"))
+        {
+            Json json = { jSpecular.at("specularTexture") };
+            if (!ParseTextureInfo(&json, outSpecular->SpecularTexture))
+                return false;
+        }
+
+        if (jSpecular.contains("specularColorFactor"))
+        {
+            auto& jSpecularColorFactor = jSpecular.at("specularColorFactor").get_array();
+            outSpecular->SpecularColourFactor = glm::vec3(
+                    jSpecularColorFactor.at(0).get_number(),
+                    jSpecularColorFactor.at(1).get_number(),
+                    jSpecularColorFactor.at(2).get_number());
+        }
+
+        if (jSpecular.contains("specularColorTexture"))
+        {
+            Json json = { jSpecular.at("specularColorTexture") };
+            if (!ParseTextureInfo(&json, outSpecular->SpecularColourTexture))
+                return false;
+        }
+
+        return true;
+    }
+
+    bool TextFileParser::ParseClearcoat(const Json* jsonClearcoat, std::optional<KHRMaterialClearcoat>& outClearcoat)
+    {
+        const glz::json_t& jClearcoat = jsonClearcoat->Json;
 
         if (jClearcoat.contains("clearcoatFactor"))
             outClearcoat->ClearcoatFactor = (float) jClearcoat["clearcoatFactor"].get_number();
@@ -682,9 +927,9 @@ namespace OCASI::GLTF {
         return true;
     }
 
-    bool TextFileParser::ParseSheen(const Json *jsonExtension, std::optional<KHRMaterialSheen>& outSheen)
+    bool TextFileParser::ParseSheen(const Json* jsonSheen, std::optional<KHRMaterialSheen>& outSheen)
     {
-        const glz::json_t& jSheen = jsonExtension->Json.at("KHR_materials_sheen");
+        const glz::json_t& jSheen = jsonSheen->Json;
 
         if (jSheen.contains("sheenColourTexture"))
         {
@@ -717,9 +962,9 @@ namespace OCASI::GLTF {
         return true;
     }
 
-    bool TextFileParser::ParseTransmission(const Json *jsonExtension, std::optional<KHRMaterialTransmission>& outTransmission)
+    bool TextFileParser::ParseTransmission(const Json* jsonTransmission, std::optional<KHRMaterialTransmission>& outTransmission)
     {
-        const glz::json_t& jTransmission = jsonExtension->Json.at("KHR_materials_transmission");
+        const glz::json_t& jTransmission = jsonTransmission->Json;
 
         if (jTransmission.contains("transmissionFactor"))
             outTransmission->TransmissionFactor = (float) jTransmission.at("transmissionFactor").get_number();
@@ -734,9 +979,9 @@ namespace OCASI::GLTF {
         return true;
     }
 
-    bool TextFileParser::ParseVolume(const Json *jsonExtension, std::optional<KHRMaterialVolume>& outVolume)
+    bool TextFileParser::ParseVolume(const Json* jsonVolume, std::optional<KHRMaterialVolume>& outVolume)
     {
-        const glz::json_t& jVolume = jsonExtension->Json.at("KHR_materials_volume");
+        const glz::json_t& jVolume = jsonVolume->Json;
 
         if (jVolume.contains("thicknessFactor"))
             outVolume->ThicknessFactor = (float) jVolume.at("thicknessFactor").get_number();
@@ -764,27 +1009,27 @@ namespace OCASI::GLTF {
         return true;
     }
 
-    void TextFileParser::ParseIOR(const Json *jsonExtension, std::optional<KHRMaterialIOR>& outIOR)
+    void TextFileParser::ParseIOR(const Json* jsonIOR, std::optional<KHRMaterialIOR>& outIOR)
     {
-        const glz::json_t& jIOR = jsonExtension->Json.at("KHR_materials_ior");
+        const glz::json_t& jIOR = jsonIOR->Json;
 
         if (jIOR.contains("ior")) {
             outIOR->Ior = (float) jIOR.at("ior").get_number();
         }
     }
 
-    void TextFileParser::ParseEmissiveStrength(const Json *jsonExtension, std::optional<KHRMaterialEmissiveStrength>& outEmissiveStrength)
+    void TextFileParser::ParseEmissiveStrength(const Json* jsonEmissiveStrength, std::optional<KHRMaterialEmissiveStrength>& outEmissiveStrength)
     {
-        const glz::json_t& jEmissiveStrength = jsonExtension->Json.at("KHR_materials_emissive_strength");
+        const glz::json_t& jEmissiveStrength = jsonEmissiveStrength->Json;
 
         if (jEmissiveStrength.contains("emissiveStrength"))
             outEmissiveStrength->EmissiveStrength = (float) jEmissiveStrength.at("emissiveStrength").get_number();
 
     }
 
-    bool TextFileParser::ParseIridescence(const Json *jsonExtension, std::optional<KHRMaterialIridescence>& outIridescence)
+    bool TextFileParser::ParseIridescence(const Json* jsonIridescence, std::optional<KHRMaterialIridescence>& outIridescence)
     {
-        const glz::json_t& jIridescence = jsonExtension->Json.at("KHR_materials_iridescence");
+        const glz::json_t& jIridescence = jsonIridescence->Json;
 
         if (jIridescence.contains("iridescenceFactor"))
             outIridescence->IridescenceFactor = (float)jIridescence["iridescenceFactor"].get_number();
@@ -816,9 +1061,9 @@ namespace OCASI::GLTF {
         return true;
     }
 
-    bool TextFileParser::ParseAnisotropy(const Json *jsonExtension, std::optional<KHRMaterialAnisotropy>& outAnisotropy)
+    bool TextFileParser::ParseAnisotropy(const Json* jsonAnisotropy, std::optional<KHRMaterialAnisotropy>& outAnisotropy)
     {
-        const glz::json_t& jAnisotropy = jsonExtension->Json.at("KHR_materials_anisotropy");
+        const glz::json_t& jAnisotropy = jsonAnisotropy->Json;
 
         if (jAnisotropy.contains("anisotropyFactor"))
             outAnisotropy->AnisotropyFactor = (float)jAnisotropy["anisotropyFactor"].get_number();
@@ -836,10 +1081,82 @@ namespace OCASI::GLTF {
             outAnisotropy->AnisotropyDirection = glm::vec3(
                     jAnisotropyDirection.at(0).get_number(),
                     jAnisotropyDirection.at(1).get_number(),
-                    jAnisotropyDirection.at(2).get_number()
-            );
+                    jAnisotropyDirection.at(2).get_number());
         }
 
         return true;
+    }
+
+    bool TextFileParser::ParsePrimitives(const Json* jsonPrimitive, Mesh& mesh)
+    {
+        auto& primitives = jsonPrimitive->Json.get_array();
+
+        for (int i = 0; i < primitives.size(); i++)
+        {
+            const glz::json_t& jPrimitive = primitives.at(i);
+
+            if (!jPrimitive.contains("attributes"))
+            {
+                OCASI_FAIL("Required 'primitives' property in mesh primitive is not present, though mandatory.");
+                return false;
+            }
+
+            Primitive& primitive = mesh.Primitives.emplace_back(i);
+            Json jsonAttributes = { jPrimitive.at("attributes") };
+            ParseVertexAttributes(&jsonAttributes, primitive.Attributes);
+
+            if (jPrimitive.contains("indices"))
+                primitive.Indices = (size_t) jPrimitive.at("indices").get_number();
+
+            if (jPrimitive.contains("material"))
+                primitive.MaterialIndex = (size_t) jPrimitive.at("material").get_number();
+
+            if (jPrimitive.contains("mode"))
+                primitive.Type = (PrimitiveType) jPrimitive.at("mode").get_number();
+
+            if (jPrimitive.contains("targets"))
+            {
+                auto& targets = jPrimitive.at("targets").get_array();
+
+                for (int j = 0; j < targets.size(); j++)
+                {
+                    Json jsonMorphTarget = { targets.at(j) };
+                    ParseVertexAttributes(&jsonMorphTarget, primitive.MorphTargets.at(j));
+                }
+            }
+        }
+
+        return true;
+    }
+
+    void TextFileParser::ParseVertexAttributes(const Json* jsonVertexAttribute, VertexAttributes &outAttributes)
+    {
+        auto& attributes = jsonVertexAttribute->Json.at("attributes").get_object();
+
+        for (auto& [key, value] : attributes)
+        {
+            outAttributes[key] = (size_t) value.get_number();
+        }
+    }
+
+    void TextFileParser::ParseVec3(const Json* jsonVec, glm::vec3& out)
+    {
+        auto& vec = jsonVec->Json.get_array();
+
+        out = glm::vec3(
+                vec.at(0).get_number(),
+                vec.at(1).get_number(),
+                vec.at(2).get_number());
+    }
+
+    void TextFileParser::ParseVec4(const Json* jsonVec, glm::vec4& out)
+    {
+        auto& vec = jsonVec->Json.get_array();
+
+        out = glm::vec4(
+                vec.at(0).get_number(),
+                vec.at(1).get_number(),
+                vec.at(2).get_number(),
+                vec.at(3).get_number());
     }
 }

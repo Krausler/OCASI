@@ -28,22 +28,30 @@ namespace OCASI::GLTF {
         void ParseTextures();
         bool ParseMaterials();
         bool ParseMeshes();
-        bool ParseNodes();
+        void ParseNodes();
         bool ParseScenes();
 
         bool ParseSparseAccessor(const Json* jsonAccessor, std::optional<Sparse> &outSparse);
         bool ParseTextureInfo(const Json* jsonTextureInfo, std::optional<TextureInfo>& outTextureInfo);
 
-        bool ParsePbrMetallicRoughness(const Json* jsonPbrMetallicRoughness, std::optional<PBRMetallicRoughness>& outMetallicRoughness);
-        bool ParsePbrSpecularGlossiness(const Json* jsonExtension, std::optional<KHRMaterialPbrSpecularGlossiness>& outMetallicRoughness);
-        bool ParseClearcoat(const Json *jsonExtension, std::optional<KHRMaterialClearcoat>& outMaterial);
-        bool ParseSheen(const Json *json, std::optional<KHRMaterialSheen>& outMaterial);
-        bool ParseTransmission(const Json *json, std::optional<KHRMaterialTransmission>& outMaterial);
-        bool ParseVolume(const Json *json, std::optional<KHRMaterialVolume>& outMaterial);
-        void ParseIOR(const Json *json, std::optional<KHRMaterialIOR>& outMaterial);
-        void ParseEmissiveStrength(const Json *json, std::optional<KHRMaterialEmissiveStrength>& outMaterial);
-        bool ParseIridescence(const Json *json, std::optional<KHRMaterialIridescence>& outMaterial);
-        bool ParseAnisotropy(const Json *json, std::optional<KHRMaterialAnisotropy>& outMaterial);
+        // Materials
+        bool ParsePbrMetallicRoughness(const Json* jsonPbrMetallicRoughness, std::optional<PBRMetallicRoughness>& outMaterial);
+        // Material extensions
+        bool ParsePbrSpecularGlossiness(const Json* jsonPbrSpecularGlossiness, std::optional<KHRMaterialPbrSpecularGlossiness>& outMaterial);
+        bool ParseSpecular(const Json* jsonSpecular, std::optional<KHRMaterialSpecular>& outMaterial);
+        bool ParseClearcoat(const Json* jsonClearcoat, std::optional<KHRMaterialClearcoat>& outMaterial);
+        bool ParseSheen(const Json* jsonSheen, std::optional<KHRMaterialSheen>& outMaterial);
+        bool ParseTransmission(const Json* jsonTransmission, std::optional<KHRMaterialTransmission>& outMaterial);
+        bool ParseVolume(const Json* jsonVolume, std::optional<KHRMaterialVolume>& outMaterial);
+        void ParseIOR(const Json* jsonIOR, std::optional<KHRMaterialIOR>& outMaterial);
+        void ParseEmissiveStrength(const Json* jsonEmissiveStrength, std::optional<KHRMaterialEmissiveStrength>& outMaterial);
+        bool ParseIridescence(const Json* jsonIridescence, std::optional<KHRMaterialIridescence>& outMaterial);
+        bool ParseAnisotropy(const Json* jsonAnisotropy, std::optional<KHRMaterialAnisotropy>& outMaterial);
+
+        bool ParsePrimitives(const Json* jsonPrimitive, Mesh& mesh);
+        void ParseVertexAttributes(const Json* jsonVertexAttribute, VertexAttributes& outAttributes);
+        void ParseVec3(const Json* jsonVec, glm::vec3& out);
+        void ParseVec4(const Json* jsonVec, glm::vec4& out);
     private:
         FileReader& m_FileReader;
 

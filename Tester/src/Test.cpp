@@ -20,9 +20,9 @@ int main()
     glz::json_t json;
     auto e = glz::read_json(json, reader.GetFileString());
 
-    json = json["accessors"];
+    glz::json_t& njson = json.at("meshes").get_array().at(0).at("primitives").get_array().at(0);
 
-    OCASI_LOG_INFO("type: {}", json.is_array());
+    OCASI_LOG_INFO("array: {}, object: {}, ", json.is_array(), json.is_object());
 
 
 #if 0

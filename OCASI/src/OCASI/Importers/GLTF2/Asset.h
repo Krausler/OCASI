@@ -329,6 +329,7 @@ namespace OCASI::GLTF {
         /// Extensions
 
         std::optional<KHRMaterialSpecular> Specular;
+        std::optional<KHRMaterialPbrSpecularGlossiness> SpecularGlossiness;
         std::optional<KHRMaterialClearcoat> Clearcoat;
         std::optional<KHRMaterialAnisotropy> Anisotropy;
         std::optional<KHRMaterialIOR> IOR;
@@ -410,6 +411,7 @@ namespace OCASI::GLTF {
 
         std::optional<TRS> TrsComponent;
         std::optional<glm::mat4> LocalTranslationMatrix; // This is only local, when this node is not a root node
+        std::vector<float> Weights;
     };
 
     struct Scene : public Object
