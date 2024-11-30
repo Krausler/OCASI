@@ -1,6 +1,6 @@
 #pragma once
 
-#include "OCASI/Core/Mesh.h"
+#include "OCASI/Core/Model.h"
 #include "OCASI/Core/Material.h"
 
 namespace OCASI {
@@ -18,19 +18,18 @@ namespace OCASI {
             Parent = other.Parent;
             Children = other.Children;
             MeshIndex = other.MeshIndex;
-            MaterialIndex = other.MeshIndex;
         }
 
         std::shared_ptr<Node> Parent;
         std::vector<std::shared_ptr<Node>> Children;
 
         size_t MeshIndex = INVALID_ID;
-        size_t MaterialIndex = INVALID_ID;
+        glm::mat4 LocalTransform = glm::mat4(1.0f);
     };
 
     struct Scene
     {
-        std::vector<Mesh> Meshes;
+        std::vector<Model> Models;
         std::vector<Material> Materials;
         std::vector<std::shared_ptr<Node>> RootNodes;
     };

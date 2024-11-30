@@ -19,7 +19,7 @@ namespace OCASI {
         std::shared_ptr<Node> CreateNodesFromObject(const OBJ::Object& o) const;
         std::shared_ptr<Node> CreateNodeFromMesh(uint32_t mesh);
 
-        void CreateNewVertex(Mesh& mesh, const VertexIndices& indices) const;
+        void CreateNewVertex(Mesh& model, const VertexIndices& indices) const;
         void SortTextures(Material& newMat, const OBJ::Material& mat, const Path& folder, uint32_t i);
     private:
         FileReader& m_FileReader;

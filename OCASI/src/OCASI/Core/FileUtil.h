@@ -18,9 +18,19 @@ namespace OCASI {
         void Reset();
         bool HasReachedEOF() const { return m_FileReader.eof(); }
         bool IsOpen() const { return m_FileReader.is_open(); }
-        bool IsBinary() const { return m_Binary; }
-        uint8_t* GetFileDataInBytes(size_t& outSize);
+        uint8_t* GetFileDataInBytes();
         std::string GetFileString();
+        std::vector<uint8_t> GetBytes(size_t size);
+        void GetBytes(void* outData, size_t size);
+
+        template<typename T>
+        T GetBytes()
+        {
+            auto data = GetBytes(sizeof(T));
+            T out;
+            std::memcpy(&out, data.data(), sizeof(T));
+            return out;
+        }
 
         explicit operator bool() const
         {
@@ -29,10 +39,14 @@ namespace OCASI {
 
         Path GetParentPath() { return m_Path.has_parent_path() ? m_Path.parent_path() : ""; }
         Path& GetPath() { return m_Path; }
+        size_t& GetFileSize() { return m_FileSize; }
+        bool IsBinary() const { return m_Binary; }
+
     private:
         Path m_Path;
         bool m_Binary;
         std::ifstream m_FileReader;
+        size_t m_FileSize;
     };
 
     namespace Util {

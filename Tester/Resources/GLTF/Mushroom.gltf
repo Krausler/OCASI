@@ -36,7 +36,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Mesh",
+			"name":"Model",
 			"primitives":[
 				{
 					"attributes":{

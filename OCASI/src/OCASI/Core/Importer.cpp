@@ -1,6 +1,7 @@
 #include "Importer.h"
 
 #include "OCASI/Importers/OBJ/ObjImporter.h"
+#include "OCASI/Importers/GLTF2//GLTFImporter.h"
 
 #include <unordered_map>
 
@@ -15,24 +16,40 @@ namespace OCASI {
 
     std::shared_ptr<Scene> Importer::Load3DFile(const Path &path)
     {
-        FileReader reader(path);
-        if(!reader)
+        if(!exists(path))
         {
-            OCASI_LOG_ERROR("Requested file does not exist. Verify the 3D model path.");
             OCASI_FAIL("Requested file does not exist. Verify the 3D model path.");
             return nullptr;
         }
 
-        std::string fExtension = reader.GetPath().extension().string();
+        std::string fExtension = path.extension().string();
         std::shared_ptr<Scene> result = nullptr;
         if(fExtension == ".obj")
         {
             Logger::SetFileFormatPattern("OBJ");
+
+            FileReader reader(path, false);
+
             ObjImporter importer(reader);
             CAN_LOAD(importer, path.string());
             result = importer.Load3DFile();
         }
         Logger::ResetPattern();
+
+
+        if (fExtension == ".gltf" || fExtension == ".glb")
+        {
+            Logger::SetFileFormatPattern("GLTF");
+
+            bool binary = fExtension == ".glb";
+            FileReader reader(path, binary);
+
+            GLTFImporter importer(reader);
+            CAN_LOAD(importer, path.string());
+            result = importer.Load3DFile();
+        }
+        Logger::ResetPattern();
+
         OCASI_ASSERT(result);
 
         return nullptr;

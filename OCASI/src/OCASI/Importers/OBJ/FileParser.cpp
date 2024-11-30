@@ -26,7 +26,7 @@ namespace OCASI::OBJ {
                 case 'v':
                 {
                     if (!m_CurrentMesh)
-                        CreateMesh("Mesh");
+                        CreateMesh("Model");
 
                     m_Begin++;
                     switch (*m_Begin)

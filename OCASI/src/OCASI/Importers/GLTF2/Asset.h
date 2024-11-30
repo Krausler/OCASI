@@ -7,6 +7,10 @@
 #include "glm/glm.hpp"
 #include "glm/ext/quaternion_float.hpp"
 
+namespace OCASI {
+    class GLTFImporter;
+}
+
 namespace OCASI::GLTF {
 
     const size_t INVALID_ID = -1;
@@ -344,7 +348,7 @@ namespace OCASI::GLTF {
     {
     public:
 
-        Buffer(size_t id, uint8_t* data, size_t bufferSize);
+        Buffer(size_t id, size_t bufferSize);
         Buffer(size_t id, FileReader& reader, size_t bufferSize);
         Buffer(size_t id, const std::string& URIData, size_t bufferSize);
         ~Buffer();
@@ -384,12 +388,16 @@ namespace OCASI::GLTF {
             return result;
         }
 
+        void SetData(uint8_t* data) { m_Data = data; }
+
         size_t GetByteSize() const { return m_ByteSize; }
     private:
-        uint8_t* m_Data;
+        uint8_t* m_Data = nullptr;
 
         size_t m_ByteSize = 0;
         size_t m_Pointer = 0;
+
+        friend class OCASI::GLTFImporter;
     };
 
     struct TRS

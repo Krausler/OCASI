@@ -4,8 +4,8 @@
 
 namespace OCASI::GLTF {
 
-    Buffer::Buffer(size_t id, uint8_t* data, size_t bufferSize)
-        : Object(id), m_Data(data), m_ByteSize(bufferSize)
+    Buffer::Buffer(size_t id, size_t bufferSize)
+        : Object(id), m_ByteSize(bufferSize)
     {
     }
 
@@ -18,11 +18,11 @@ namespace OCASI::GLTF {
             return;
         }
 
-        size_t readSize = 0;
-        m_Data = reader.GetFileDataInBytes(readSize);
+        size_t fileSize = reader.GetFileSize();
+        m_Data = reader.GetFileDataInBytes();
 
-        OCASI_ASSERT_MSG(readSize == bufferSize, FORMAT("Specified byte size doe not match read byte size of glTF .bin file data. read size: {}, specified size: {}", readSize, bufferSize));
-        m_ByteSize = readSize;
+        OCASI_ASSERT_MSG(fileSize == bufferSize, FORMAT("Specified byte size doe not match read byte size of glTF .bin file data. read size: {}, specified size: {}", fileSize, bufferSize));
+        m_ByteSize = fileSize;
     }
 
     Buffer::Buffer(size_t id, const std::string& URIData, size_t bufferSize)

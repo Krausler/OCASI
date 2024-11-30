@@ -79,14 +79,16 @@ namespace OCASI {
         for (glm::vec3& n : m_OBJModel->Normals)
             n = { n.x, n.y, -n.z };
 
-        /// 3D Mesh conversion
+        /// 3D Model conversion
 
         for (const OBJ::Mesh& m : m_OBJModel->Meshes)
         {
-            Mesh& newMesh = m_OutputScene->Meshes.emplace_back();
-            newMesh.Name = m.Name;
-            newMesh.FaceType = m.FaceType;
-            newMesh.Dimension = m.Dimension;
+            Model& newModel = m_OutputScene->Models.emplace_back();
+            newModel.Name = m.Name;
+            newModel.FaceType = m.FaceType;
+            newModel.Dimension = m.Dimension;
+
+            Mesh& newMesh = newModel.Meshes.emplace_back();
 
             // Indices creation
             std::unordered_map<VertexIndices, size_t> lookUpTable;
@@ -109,11 +111,6 @@ namespace OCASI {
                     }
                 }
             }
-
-            newMesh.HasNormals = !newMesh.Normals.empty();
-            newMesh.HasTexCoords = !newMesh.TexCoords.empty();
-            // OBJ files do not support tangents
-            newMesh.HasTangents = false;
         }
 
         /// Material conversion
@@ -175,7 +172,8 @@ namespace OCASI {
                 Material& mat = m_OutputScene->Materials.at(i);
                 if (mat.Name == m.MaterialName)
                 {
-                    root->MaterialIndex = i;
+                    // Always the firs mesh as obj does not have multiple meshes in one model
+                    m_OutputScene->Models.at(o.Mesh).Meshes.at(0).MaterialIndex = i;
                 }
             }
         }
@@ -187,7 +185,6 @@ namespace OCASI {
             child->MeshIndex = m;
             root->Children.push_back(child);
         }
-        // TODO: MaterialIndex
         return root;
     }
 
@@ -205,23 +202,24 @@ namespace OCASI {
             {
                 if (m_OutputScene->Materials.at(i).Name == m.MaterialName)
                 {
-                    newNode->MaterialIndex = i;
+                    // Always the firs mesh as obj does not have multiple meshes in one model
+                    m_OutputScene->Models.at(mesh).Meshes.at(0).MaterialIndex = i;
                 }
             }
         }
         return newNode;
     }
 
-    void ObjImporter::CreateNewVertex(Mesh &mesh, const VertexIndices& indices) const
+    void ObjImporter::CreateNewVertex(Mesh &model, const VertexIndices& indices) const
     {
-        mesh.Vertices.push_back(m_OBJModel->Vertices.at(indices.VertexIndex));
+        model.Vertices.push_back(m_OBJModel->Vertices.at(indices.VertexIndex));
 
         if (indices.TextureCoordinateIndex != INVALID_ID)
-            mesh.TexCoords[OBJ_TEXTURE_COORDINATE_ARRAY_INDEX].push_back(m_OBJModel->TexCoords.at(indices.TextureCoordinateIndex));
+            model.TexCoords[OBJ_TEXTURE_COORDINATE_ARRAY_INDEX].push_back(m_OBJModel->TexCoords.at(indices.TextureCoordinateIndex));
         if (indices.NormalIndex != INVALID_ID)
-            mesh.Normals.push_back(m_OBJModel->Normals.at(indices.NormalIndex));
+            model.Normals.push_back(m_OBJModel->Normals.at(indices.NormalIndex));
 
-        mesh.Indices.push_back(mesh.Vertices.size() - 1);
+        model.Indices.push_back(model.Vertices.size() - 1);
     }
 
     void ObjImporter::SortTextures(Material &newMat, const OBJ::Material &mat, const Path& folder, uint32_t i)

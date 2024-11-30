@@ -5,7 +5,7 @@
 #include "OCASI/Core/Base.h"
 
 #include "OCASI/Core/Image.h"
-#include "OCASI/Core/Mesh.h"
+#include "OCASI/Core/Model.h"
 
 #include "glm/glm.hpp"
 
@@ -85,7 +85,7 @@ namespace OCASI::OBJ {
 
     struct Mesh
     {
-        Mesh(std::string name = "Mesh")
+        Mesh(std::string name = "Model")
             : Name(std::move(name))
         {}
 

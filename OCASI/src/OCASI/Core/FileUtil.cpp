@@ -5,6 +5,9 @@ namespace OCASI {
     FileReader::FileReader(const Path &path, bool isBinary)
         : m_Path(path), m_Binary(isBinary), m_FileReader(m_Path, m_Binary ? std::ios::binary : std::ios::in)
     {
+        m_FileReader.seekg(0, std::ios::end);
+        m_FileSize = m_FileReader.tellg();
+        m_FileReader.seekg(0, std::ios::beg);
     }
 
     FileReader::~FileReader() {
@@ -36,16 +39,11 @@ namespace OCASI {
         m_FileReader.seekg(0);
     }
 
-    uint8_t* FileReader::GetFileDataInBytes(size_t& outSize)
+    uint8_t* FileReader::GetFileDataInBytes()
     {
         m_FileReader.unsetf(std::ios::skipws);
-
-        m_FileReader.seekg(0, std::ios::end);
-        std::streampos fileSize = outSize = m_FileReader.tellg();
-        m_FileReader.seekg(0, std::ios::beg);
-
-        uint8_t* out = new uint8_t[fileSize];
-        m_FileReader.read((char*) out, fileSize);
+        uint8_t* out = new uint8_t[m_FileSize];
+        m_FileReader.read((char*) out, m_FileSize);
 
         return out;
     }
@@ -53,16 +51,31 @@ namespace OCASI {
     std::string FileReader::GetFileString()
     {
         m_FileReader.unsetf(std::ios::skipws);
-
-        m_FileReader.seekg(0, std::ios::end);
-        std::streampos fileSize = m_FileReader.tellg();
-        m_FileReader.seekg(0, std::ios::beg);
-
         std::string out;
-        out.resize(fileSize);
-        m_FileReader.read(out.data(), fileSize);
+        out.resize(m_FileSize);
+        m_FileReader.read(out.data(), m_FileSize);
 
         return out;
+    }
+
+    std::vector<uint8_t> FileReader::GetBytes(size_t size) {
+        m_FileReader.unsetf(std::ios::skipws);
+        if (size < m_FileSize)
+            return {};
+
+        std::vector<uint8_t > data;
+        data.resize(size);
+        m_FileReader.read(reinterpret_cast<char*>(data.data()), size);
+        return data;
+    }
+
+    void FileReader::GetBytes(void *outData, size_t size)
+    {
+        m_FileReader.unsetf(std::ios::skipws);
+        if (size < m_FileSize)
+            return;
+
+        m_FileReader.read((char*)outData, size);
     }
 
     namespace Util {

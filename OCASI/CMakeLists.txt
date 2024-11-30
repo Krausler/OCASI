@@ -6,7 +6,7 @@ add_library(OCASI STATIC
         "src/OCASI/Core/BaseImporter.h"
         "src/OCASI/Core/Logger.cpp"
         "src/OCASI/Core/Logger.h"
-        "src/OCASI/Core/Mesh.h"
+        "src/OCASI/Core/Model.h"
         "src/OCASI/Core/Material.h"
         "src/OCASI/Core/Scene.h"
         "src/OCASI/Core/Image.h"
@@ -26,9 +26,10 @@ add_library(OCASI STATIC
         src/OCASI/Importers/GLTF2/GLTFImporter.h
         src/OCASI/Importers/GLTF2/Asset.h
         src/OCASI/Importers/GLTF2/Asset.cpp
-        src/OCASI/Importers/GLTF2/TextFileParser.cpp
-        src/OCASI/Importers/GLTF2/TextFileParser.h
-        src/OCASI/Importers/GLTF2/Json.h
+        src/OCASI/Importers/GLTF2/JsonParser.cpp
+        src/OCASI/Importers/GLTF2/JsonParser.h
+        src/OCASI/Core/BinaryReader.h
+        src/OCASI/Core/BinaryReader.cpp
 )
 
 target_include_directories(OCASI PUBLIC
