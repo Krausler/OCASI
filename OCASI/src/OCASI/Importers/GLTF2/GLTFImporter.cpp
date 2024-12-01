@@ -152,22 +152,33 @@ namespace OCASI {
         auto& gltfAsset = *m_Asset;
         auto& ocasiScene = *m_Scene;
 
-        for (auto& scene : gltfAsset.Scenes)
+        for (auto& gltfScene : gltfAsset.Scenes)
         {
-            CreateNodes(scene.GetIndex());
+            CreateNodes(gltfScene.GetIndex());
+        }
+
+        for (auto& gltfMesh : gltfAsset.Meshes)
+        {
+
+        }
+
+        for (auto& gltfMaterial : gltfAsset.Materials)
+        {
+
         }
     }
 
     void GLTFImporter::CreateNodes(size_t sceneIndex)
     {
-        auto& gltfScene = m_Asset->Scenes.at(sceneIndex);
         auto& gltfAsset = *m_Asset;
         auto& ocasiScene = *m_Scene;
+        auto& gltfScene = gltfAsset.Scenes.at(sceneIndex);
 
         std::shared_ptr<Node> ocasiRootNode = nullptr;
         if (m_Asset->Scenes.size() > 1)
         {
             auto& node = m_Scene->RootNodes.emplace_back();
+            node->Name = FORMAT("Additional root node for scene: {}", sceneIndex);
             ocasiRootNode = node;
         }
 
@@ -175,7 +186,11 @@ namespace OCASI {
         {
             GLTF::Node& gltfRootNode = gltfAsset.Nodes.at(gltfRootNodeIndex);
             auto ocasiNode = std::make_shared<Node>();
-            ocasiNode->Parent = ocasiRootNode;
+            if (ocasiRootNode)
+            {
+                ocasiNode->Parent = ocasiRootNode;
+                ocasiRootNode->Children.push_back(ocasiNode);
+            }
 
             if (gltfRootNode.Mesh.has_value())
                 ocasiNode->MeshIndex = gltfRootNode.Mesh.value();
@@ -189,8 +204,6 @@ namespace OCASI {
             }
 
             TraverseNodes(gltfRootNode, ocasiNode);
-
-
         }
     }
 
@@ -199,7 +212,7 @@ namespace OCASI {
         for (size_t child : gltfNode.Children)
         {
             auto& childGltfNode = m_Asset->Nodes.at(child);
-            auto childOcasiNode = std::make_shared<Node>();
+            std::shared_ptr<Node> childOcasiNode = std::make_shared<Node>();
             childOcasiNode->Parent = ocasiNode;
             ocasiNode->Children.push_back(childOcasiNode);
 
@@ -218,5 +231,141 @@ namespace OCASI {
 
             TraverseNodes(childGltfNode, ocasiNode);
         }
+    }
+
+    void GLTFImporter::CreateMesh(size_t meshIndex)
+    {
+        auto& gltfAsset = *m_Asset;
+        auto& ocasiScene = *m_Scene;
+        OCASI_ASSERT(meshIndex < gltfAsset.Meshes.size());
+        auto& gltfMesh = gltfAsset.Meshes.at(meshIndex);
+        OCASI_ASSERT(meshIndex == ocasiScene.Models.size());
+        auto& ocasiModel = ocasiScene.Models.emplace_back();
+
+        for (auto& gltfPrimitive : gltfMesh.Primitives)
+        {
+            auto& ocasiMesh = ocasiModel.Meshes.emplace_back();
+            ocasiMesh.MaterialIndex = gltfPrimitive.MaterialIndex.has_value() ? gltfPrimitive.MaterialIndex.value() : INVALID_ID;
+
+            for (auto& [attributeName, accessor] : gltfPrimitive.Attributes)
+            {
+                if (attributeName == "POSITION")
+                {
+                    std::vector<uint8_t> data = GetAccessorData(accessor);
+                    OCASI_ASSERT(!data.empty());
+
+                    ocasiMesh.Vertices.resize(data.size() / sizeof(glm::vec3));
+                    std::memcpy(ocasiMesh.Vertices.data(), data.data(), data.size());
+
+                }
+                else if (attributeName == "NORMAL")
+                {
+                    std::vector<uint8_t> data = GetAccessorData(accessor);
+                    OCASI_ASSERT(!data.empty());
+
+                    ocasiMesh.Normals.resize(data.size() / sizeof(glm::vec3));
+                    std::memcpy(ocasiMesh.Normals.data(), data.data(), data.size());
+                }
+                else if (attributeName == "TANGENT")
+                {
+                    std::vector<uint8_t> data = GetAccessorData(accessor);
+                    OCASI_ASSERT(!data.empty());
+
+                    ocasiMesh.Tangents.resize(data.size() / sizeof(glm::vec3));
+                    std::memcpy(ocasiMesh.Tangents.data(), data.data(), data.size());
+                }
+                else if (attributeName.starts_with("TEXCOORD_"))
+                {
+                    const size_t TEX_COORD_STRING_INDEX = 9;
+                    size_t texCoordIndex = std::atoi(&attributeName.at(TEX_COORD_STRING_INDEX));
+                    auto& texCoords = ocasiMesh.TexCoords.at(texCoordIndex);
+
+                    std::vector<uint8_t> data = GetAccessorData(accessor);
+                    OCASI_ASSERT(!data.empty());
+
+                    texCoords.resize(data.size() / sizeof(glm::vec2));
+                    std::memcpy(texCoords.data(), data.data(), data.size());
+                }
+            }
+        }
+    }
+
+    std::vector<uint8_t> GLTFImporter::GetAccessorData(size_t accessorIndex)
+    {
+        auto& asset = *m_Asset;
+        OCASI_ASSERT(accessorIndex < asset.Accessors.size());
+        auto& accessor = asset.Accessors.at(accessorIndex);
+        OCASI_ASSERT_MSG(accessor.BufferView.has_value(), "Don't know what to do with an accessor that does not contain a buffer view.");
+
+        // This is the accessor offset not the buffer view offset
+        size_t elementSize = GLTF::ComponentTypeToBytes(accessor.ComponentType) * (size_t) accessor.DataType;
+
+        size_t byteStride = 0;
+        std::vector<uint8_t> data = GetBufferViewData(accessor.BufferView.value(), accessor.ByteOffset, byteStride);
+        OCASI_ASSERT(!data.empty());
+
+        // The byte stride specifies the amount of bytes for each element. It is not the element size, but
+        // the padding between an element, and it's neighbour including the elements size. stride = (element size + padding)
+        if (byteStride != 0 && byteStride != elementSize)
+        {
+            OCASI_ASSERT(byteStride % GLTF::ComponentTypeToBytes(accessor.ComponentType) == 0);
+            for (size_t i = 0; i < accessor.ElementCount; i++)
+            {
+                std::memcpy(&data[i * elementSize], &data[i * byteStride], elementSize);
+            }
+        }
+
+        if (accessor.Sparse.has_value())
+        {
+            auto& sparse = accessor.Sparse.value();
+            OCASI_ASSERT(sparse.Indices.BufferView < asset.BufferViews.size());
+
+            size_t sparseIndicesByteStride; // ignored
+            std::vector<uint8_t> sparseIndicesData = GetBufferViewData(sparse.Indices.BufferView, sparse.Indices.ByteOffset, sparseIndicesByteStride);
+            OCASI_ASSERT(!sparseIndicesData.empty());
+
+            size_t sparseValuesByteStride; // ignored
+            std::vector<uint8_t> sparseValuesData = GetBufferViewData(sparse.Values.BufferView, sparse.Values.ByteOffset, sparseValuesByteStride);
+            OCASI_ASSERT(!sparseValuesData.empty());
+
+            // HACK: For indexing a conversion from bytes to a number is needed
+            for (size_t i = 0; i < sparse.ElementCount; i++)
+            {
+                uint32_t index = 0;
+                switch(sparse.Indices.ComponentType)
+                {
+                    case GLTF::ComponentType::Short:
+                    case GLTF::ComponentType::UnsignedShort:
+                    {
+                        std::memcpy(&index, &sparseIndicesData[i], sizeof(uint16_t));
+                        break;
+                    }
+                    case GLTF::ComponentType::UnsignedInt:
+                    {
+                        std::memcpy(&index, &sparseIndicesData[i], sizeof(uint32_t));
+                        break;
+                    }
+                    default:
+                        OCASI_FAIL(FORMAT("Invalid component type for sparse indices: {}", (size_t) sparse.Indices.ComponentType));
+                }
+
+                std::memcpy(&data[index * elementSize], &sparseValuesData[i * elementSize], elementSize);
+            }
+        }
+
+        return data;
+    }
+
+    std::vector<uint8_t> GLTFImporter::GetBufferViewData(size_t bufferViewIndex, size_t accessorOffset, size_t& outByteStride)
+    {
+        auto& asset = *m_Asset;
+        OCASI_ASSERT(bufferViewIndex < asset.BufferViews.size());
+        auto& bufferView = asset.BufferViews.at(bufferViewIndex);
+        outByteStride = bufferView.ByteStride;
+
+        OCASI_ASSERT(bufferView.Buffer < asset.Buffers.size());
+        auto& buffer = asset.Buffers.at(bufferView.Buffer);
+
+        return buffer.Get(bufferView.ByteLength, bufferView.ByteOffset + accessorOffset);
     }
 }

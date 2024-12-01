@@ -286,7 +286,31 @@ namespace OCASI::GLTF {
             Accessor& accessor = m_Asset->Accessors.emplace_back(i);
             accessor.ComponentType = (ComponentType) jAccessor.at("componentType").get_number();
             accessor.ElementCount = (size_t) jAccessor.at("count").get_number();
-            accessor.ComponentType = (ComponentType) jAccessor.at("type").get_number();
+
+            // Reading the data type
+            {
+                std::string& dataType = jAccessor.at("type").get_string();
+
+                if (dataType == "SCALAR")
+                    accessor.DataType = DataType::Scalar;
+                else if (dataType == "VEC2")
+                    accessor.DataType = DataType::Vec2;
+                else if (dataType == "VEC3")
+                    accessor.DataType = DataType::Vec3;
+                else if (dataType == "VEC4")
+                    accessor.DataType = DataType::Vec4;
+                else if (dataType == "MAT2")
+                    accessor.DataType = DataType::Mat2;
+                else if (dataType == "MAT3")
+                    accessor.DataType = DataType::Mat3;
+                else if (dataType == "MAT4")
+                    accessor.DataType = DataType::Mat4;
+                else
+                {
+                    OCASI_FAIL(FORMAT("The accessor data type string didn't match any case: {}", dataType));
+                    return false;
+                }
+            }
 
             if (jAccessor.contains("bufferView"))
                 accessor.BufferView = (size_t) jAccessor.at("bufferView").get_number();
@@ -423,7 +447,7 @@ namespace OCASI::GLTF {
 
             SparseIndices& indices = outSparse->Indices;
             indices.BufferView = (size_t) jSparseIndices.at("bufferView").get_number();
-            indices.componentType = (ComponentType) jSparseIndices.at("componentType").get_number();
+            indices.ComponentType = (ComponentType) jSparseIndices.at("componentType").get_number();
 
             if (jSparseIndices.contains("byteOffset"))
                 indices.BufferView = (size_t) jSparseIndices.at("byteOffset").get_number();

@@ -23,6 +23,7 @@ namespace OCASI {
         std::shared_ptr<Node> Parent;
         std::vector<std::shared_ptr<Node>> Children;
 
+        std::string Name;
         size_t MeshIndex = INVALID_ID;
         glm::mat4 LocalTransform = glm::mat4(1.0f);
     };

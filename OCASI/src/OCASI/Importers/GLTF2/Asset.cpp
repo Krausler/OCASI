@@ -4,6 +4,22 @@
 
 namespace OCASI::GLTF {
 
+    size_t ComponentTypeToBytes(ComponentType type) {
+        switch (type) {
+            case ComponentType::None:
+                return INVALID_ID;
+            case ComponentType::Byte:
+            case ComponentType::UnsignedByte:
+                return 1;
+            case ComponentType::Short:
+            case ComponentType::UnsignedShort:
+                return 2;
+            case ComponentType::UnsignedInt:
+            case ComponentType::Float:
+                return 4;
+        }
+    }
+
     Buffer::Buffer(size_t id, size_t bufferSize)
         : Object(id), m_ByteSize(bufferSize)
     {
@@ -40,38 +56,17 @@ namespace OCASI::GLTF {
         delete m_Data;
     }
 
-    bool Buffer::SetPointer(size_t position)
+    std::vector<uint8_t> Buffer::Get(size_t byteLength, size_t offset)
     {
-        if (m_ByteSize <= position)
-        {
-            OCASI_FAIL("Tried to set glTF Buffer data pointer out of range");
-            return false;
-        }
-
-        m_Pointer = position;
-        return true;
-    }
-
-    bool Buffer::AddToPointer(size_t position)
-    {
-        if (m_ByteSize <= m_Pointer + position)
-        {
-            OCASI_FAIL("Tried to move glTF Buffer data pointer out of range");
-            return false;
-        }
-
-        m_Pointer += position;
-        return true;
-    }
-
-    void* Buffer::Get(size_t byteLength)
-    {
-        if (m_Pointer + byteLength >= m_ByteSize)
+        if (offset + byteLength >= m_ByteSize)
         {
             OCASI_FAIL("Tried to read glTF buffer data that was out of range");
-            return nullptr;
+            return {};
         }
+        std::vector<uint8_t> result;
+        result.resize(byteLength);
+        std::memcpy(result.data(), m_Data + offset, byteLength);
 
-        return (void*) (m_Data + m_Pointer);
+        return result;
     }
 }

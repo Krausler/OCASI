@@ -41,6 +41,9 @@ namespace OCASI {
         bool CheckBinaryHeader();
         void CreateNodes(size_t sceneIndex);
         void TraverseNodes(GLTF::Node& gltfNode, std::shared_ptr<Node> ocasiNode);
+        void CreateMesh(size_t meshIndex);
+        std::vector<uint8_t> GetAccessorData(size_t accessorIndex);
+        std::vector<uint8_t> GetBufferViewData(size_t bufferViewIndex, size_t accessorOffset, size_t& outByteStride);
     private:
         FileReader& m_FileReader;
         glz::json_t* m_Json = nullptr;

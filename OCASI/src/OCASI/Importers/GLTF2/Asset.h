@@ -44,6 +44,8 @@ namespace OCASI::GLTF {
         Float = 5126
     };
 
+    size_t ComponentTypeToBytes(ComponentType type);
+
     constexpr size_t ByteSize(ComponentType type);
 
     // The values specify the number of components
@@ -117,7 +119,7 @@ namespace OCASI::GLTF {
         size_t Buffer = INVALID_ID;
         size_t ByteLength = INVALID_ID;
         size_t ByteOffset = 0;
-        size_t ByteStride = 0; // Although byteStride does not have a default value, it is easier than making it an optional. It's just adding 0 in a equation which doesn't matter at all.
+        size_t ByteStride = 0; // Although byteStride does not have a default value, it is easier than making it an optional. It's adding a 0 in an equation.
         // The bufferView.target property is not implemented as it's useless
     };
 
@@ -125,7 +127,7 @@ namespace OCASI::GLTF {
     {
         size_t BufferView = INVALID_ID;
         size_t ByteOffset = 0;
-        ComponentType componentType = ComponentType::None;
+        ComponentType ComponentType = ComponentType::None;
     };
 
     struct SparseValues
@@ -353,49 +355,14 @@ namespace OCASI::GLTF {
         Buffer(size_t id, const std::string& URIData, size_t bufferSize);
         ~Buffer();
 
-        bool SetPointer(size_t position);
-        bool AddToPointer(size_t position);
-
-        void* Get(size_t byteLength);
-
-        template<typename T>
-        std::vector<T> Get(size_t byteLength)
-        {
-            void* data = Get(byteLength);
-            if (data == nullptr)
-                return {};
-
-            std::vector<T> result(byteLength / sizeof(T));
-            std::memcpy(result.data(), data, byteLength);
-            return result;
-        }
-
-        template<typename T>
-        std::vector<T> Get(size_t byteLength, size_t byteStride)
-        {
-            void* data = Get(byteLength);
-            if (data == nullptr)
-                return {};
-
-            std::vector<T> result;
-
-            for (size_t i = 0; i < byteLength; i += sizeof(T) + byteStride)
-            {
-                T type;
-                std::memcpy(&type, data, sizeof(T));
-                result.push_back(type);
-            }
-            return result;
-        }
+        std::vector<uint8_t> Get(size_t byteLength, size_t offset);
 
         void SetData(uint8_t* data) { m_Data = data; }
 
         size_t GetByteSize() const { return m_ByteSize; }
     private:
         uint8_t* m_Data = nullptr;
-
         size_t m_ByteSize = 0;
-        size_t m_Pointer = 0;
 
         friend class OCASI::GLTFImporter;
     };
