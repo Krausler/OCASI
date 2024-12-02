@@ -11,18 +11,9 @@ int main()
     OCASI::Importer::Init();
 
     OCASI_LOG_ERROR("hi");
-    std::filesystem::current_path("C:/Lauri/Dev/C++/Projekte/OCASI/Tester");
-//    auto scene = OCASI::Importer::Load3DFile("Resources/Mushroom_smartUVs_01.obj");
-//
-//    std::cout << std::filesystem::current_path().string() << std::endl;
-
-    OCASI::FileReader reader("Resources/GLTF/Mushroom.gltf");
-    glz::json_t json;
-    auto e = glz::read_json(json, reader.GetFileString());
-
-    glz::json_t& njson = json.at("meshes").get_array().at(0).at("primitives").get_array().at(0);
-
-    OCASI_LOG_INFO("array: {}, object: {}, ", json.is_array(), json.is_object());
+    std::filesystem::current_path("C:/Lauri/Dev/C++/Projekte/Octopus/Projekte/OCASI/Tester");
+    auto scene = OCASI::Importer::Load3DFile("Resources/GLTF/Mushroom.glb");
+    std::cout << std::filesystem::current_path().string() << std::endl;
 
 
 #if 0

@@ -22,6 +22,7 @@ namespace OCASI {
         std::string GetFileString();
         std::vector<uint8_t> GetBytes(size_t size);
         void GetBytes(void* outData, size_t size);
+        void Set0();
 
         template<typename T>
         T GetBytes()

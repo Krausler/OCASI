@@ -11,12 +11,15 @@ namespace OCASI {
     BinaryReader::BinaryReader(uint8_t* data, size_t dataSize)
         : m_DataSize(dataSize)
     {
+        OCASI_ASSERT(data);
+        m_Data = new uint8_t[m_DataSize];
         std::memcpy(m_Data, data, m_DataSize);
     }
 
     BinaryReader::BinaryReader(std::vector<uint8_t> &data)
         : m_DataSize(data.size())
     {
+        OCASI_ASSERT(!data.empty());
         m_Data = new uint8_t[m_DataSize];
         std::memcpy(m_Data, data.data(), m_DataSize);
     }
@@ -30,7 +33,7 @@ namespace OCASI {
     {
         OCASI_ASSERT(m_Pointer < m_DataSize);
         uint8_t* data = new uint8_t[size];
-        std::memcpy(&data, m_Data + m_Pointer, size);
+        std::memcpy(data, m_Data + m_Pointer, size);
         m_Pointer += size;
         return data;
     }

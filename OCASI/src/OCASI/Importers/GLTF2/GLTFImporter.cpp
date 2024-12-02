@@ -73,7 +73,7 @@ namespace OCASI {
 
         glz::json_t* json = new glz::json_t;
         std::string jsonString((char*)jsonChunk.Data, jsonChunk.ChunkLength);
-        if (auto error = glz::read_json(json, jsonString))
+        if (auto error = glz::read_json(json, jsonString); error)
         {
             OCASI_FAIL(FORMAT("Failed to load json: {}", error.custom_error_message));
             return false;
@@ -97,7 +97,7 @@ namespace OCASI {
             bool found = false;
             for (GLTF::Buffer& buffer : m_Asset->Buffers)
             {
-                if (buffer.m_Data == nullptr && !found)
+                if (!buffer.m_Data && !found)
                 {
                     buffer.SetData(bufferChunk.Data);
                     found = true;
@@ -121,13 +121,15 @@ namespace OCASI {
         GLBChunk chunk = {};
         chunk.ChunkLength = bReader.GetUint32();
         chunk.Type = bReader.GetUint32();
-        uint8_t* data = bReader.Get(chunk.ChunkLength);
+        chunk.Data = bReader.Get(chunk.ChunkLength);
 
         // Remove trailing zeros
         for (uint32_t i = chunk.ChunkLength - 1; i > 0; i--)
         {
-            if (data[i] == '\0')
+            if (chunk.Data[i] == '\0')
                 chunk.ChunkLength--;
+            else
+                break;
         }
 
         return chunk;
@@ -135,8 +137,9 @@ namespace OCASI {
 
     bool GLTFImporter::CheckBinaryHeader()
     {
-        uint8_t* data = new uint8_t[BINARY_HEADER_BYTE_SIZE];
+        uint8_t data[BINARY_HEADER_BYTE_SIZE];
         m_FileReader.GetBytes(data, BINARY_HEADER_BYTE_SIZE);
+        m_FileReader.Set0();
         BinaryReader bReader(data, BINARY_HEADER_BYTE_SIZE);
         GLBHeader header = bReader.GetType<GLBHeader>();
 
@@ -150,7 +153,6 @@ namespace OCASI {
         m_Scene = std::make_shared<Scene>();
 
         auto& gltfAsset = *m_Asset;
-        auto& ocasiScene = *m_Scene;
 
         for (auto& gltfScene : gltfAsset.Scenes)
         {
@@ -159,7 +161,7 @@ namespace OCASI {
 
         for (auto& gltfMesh : gltfAsset.Meshes)
         {
-
+            CreateMesh(gltfMesh.GetIndex());
         }
 
         for (auto& gltfMaterial : gltfAsset.Materials)
@@ -174,11 +176,12 @@ namespace OCASI {
         auto& ocasiScene = *m_Scene;
         auto& gltfScene = gltfAsset.Scenes.at(sceneIndex);
 
+        // When there are multiple scenes, each scene has a
         std::shared_ptr<Node> ocasiRootNode = nullptr;
         if (m_Asset->Scenes.size() > 1)
         {
             auto& node = m_Scene->RootNodes.emplace_back();
-            node->Name = FORMAT("Additional root node for scene: {}", sceneIndex);
+            node->Name = FORMAT("Additional root node for scene: {} (index: {})", gltfScene.Name, sceneIndex);
             ocasiRootNode = node;
         }
 
@@ -186,6 +189,8 @@ namespace OCASI {
         {
             GLTF::Node& gltfRootNode = gltfAsset.Nodes.at(gltfRootNodeIndex);
             auto ocasiNode = std::make_shared<Node>();
+            ocasiScene.RootNodes.push_back(ocasiNode);
+
             if (ocasiRootNode)
             {
                 ocasiNode->Parent = ocasiRootNode;
@@ -212,6 +217,7 @@ namespace OCASI {
         for (size_t child : gltfNode.Children)
         {
             auto& childGltfNode = m_Asset->Nodes.at(child);
+
             std::shared_ptr<Node> childOcasiNode = std::make_shared<Node>();
             childOcasiNode->Parent = ocasiNode;
             ocasiNode->Children.push_back(childOcasiNode);
@@ -226,6 +232,7 @@ namespace OCASI {
 
                 childOcasiNode->LocalTransform = translation * rotation * scale;
             }
+
             if (childGltfNode.LocalTranslationMatrix.has_value())
                 childOcasiNode->LocalTransform = childGltfNode.LocalTranslationMatrix.value();
 
@@ -237,6 +244,7 @@ namespace OCASI {
     {
         auto& gltfAsset = *m_Asset;
         auto& ocasiScene = *m_Scene;
+
         OCASI_ASSERT(meshIndex < gltfAsset.Meshes.size());
         auto& gltfMesh = gltfAsset.Meshes.at(meshIndex);
         OCASI_ASSERT(meshIndex == ocasiScene.Models.size());
@@ -249,10 +257,11 @@ namespace OCASI {
 
             for (auto& [attributeName, accessor] : gltfPrimitive.Attributes)
             {
+                // TODO: Currently the data types are fixed, make these dynamic
                 if (attributeName == "POSITION")
                 {
                     std::vector<uint8_t> data = GetAccessorData(accessor);
-                    OCASI_ASSERT(!data.empty());
+                    OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec3) == 0);
 
                     ocasiMesh.Vertices.resize(data.size() / sizeof(glm::vec3));
                     std::memcpy(ocasiMesh.Vertices.data(), data.data(), data.size());
@@ -261,30 +270,42 @@ namespace OCASI {
                 else if (attributeName == "NORMAL")
                 {
                     std::vector<uint8_t> data = GetAccessorData(accessor);
-                    OCASI_ASSERT(!data.empty());
+                    OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec3) == 0);
 
                     ocasiMesh.Normals.resize(data.size() / sizeof(glm::vec3));
                     std::memcpy(ocasiMesh.Normals.data(), data.data(), data.size());
                 }
                 else if (attributeName == "TANGENT")
                 {
-                    std::vector<uint8_t> data = GetAccessorData(accessor);
-                    OCASI_ASSERT(!data.empty());
+                     std::vector<uint8_t> data = GetAccessorData(accessor);
+                     OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec4) == 0);
 
-                    ocasiMesh.Tangents.resize(data.size() / sizeof(glm::vec3));
+                    ocasiMesh.Tangents.resize(data.size() / sizeof(glm::vec4));
                     std::memcpy(ocasiMesh.Tangents.data(), data.data(), data.size());
                 }
                 else if (attributeName.starts_with("TEXCOORD_"))
                 {
                     const size_t TEX_COORD_STRING_INDEX = 9;
                     size_t texCoordIndex = std::atoi(&attributeName.at(TEX_COORD_STRING_INDEX));
+                    OCASI_ASSERT(texCoordIndex < ocasiMesh.TexCoords.size());
                     auto& texCoords = ocasiMesh.TexCoords.at(texCoordIndex);
 
                     std::vector<uint8_t> data = GetAccessorData(accessor);
-                    OCASI_ASSERT(!data.empty());
+                    OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec2) == 0);
 
                     texCoords.resize(data.size() / sizeof(glm::vec2));
                     std::memcpy(texCoords.data(), data.data(), data.size());
+                }
+                else if (attributeName.starts_with("COLOR_"))
+                {
+                    const size_t COLOR_STRING_INDEX = 6;
+                    size_t colorIndex = std::atoi(&attributeName.at(COLOR_STRING_INDEX));
+
+                    std::vector<uint8_t> data = GetAccessorData(accessor);
+                    OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec4) == 0);
+
+                    ocasiMesh.VertexColours.resize(data.size() / sizeof(glm::vec4));
+                    std::memcpy(ocasiMesh.VertexColours.data(), data.data(), data.size());
                 }
             }
         }
@@ -293,6 +314,7 @@ namespace OCASI {
     std::vector<uint8_t> GLTFImporter::GetAccessorData(size_t accessorIndex)
     {
         auto& asset = *m_Asset;
+
         OCASI_ASSERT(accessorIndex < asset.Accessors.size());
         auto& accessor = asset.Accessors.at(accessorIndex);
         OCASI_ASSERT_MSG(accessor.BufferView.has_value(), "Don't know what to do with an accessor that does not contain a buffer view.");

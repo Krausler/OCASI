@@ -39,9 +39,10 @@ namespace OCASI {
         std::string Name;
 
         std::vector<glm::vec3> Vertices;
+        std::vector<glm::vec3> VertexColours;
         std::vector<glm::vec3> Normals;
         std::array<std::vector<glm::vec2>, TEXTURE_COORDINATE_ARRAY_SIZE> TexCoords;
-        std::vector<glm::vec3> Tangents; // Optional
+        std::vector<glm::vec4> Tangents; // Optional
         std::vector<uint32_t> Indices;
 
         size_t MaterialIndex;

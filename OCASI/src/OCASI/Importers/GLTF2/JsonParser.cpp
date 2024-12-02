@@ -37,7 +37,7 @@ namespace OCASI::GLTF {
         if (!m_Json)
         {
             m_Json = new glz::json_t;
-            if (auto error = glz::read_json(m_Json, m_FileReader.GetFileString()))
+            if (auto error = glz::read_json(m_Json, m_FileReader.GetFileString()); error)
             {
                 OCASI_FAIL(FORMAT("Failed to load json: {}", error.custom_error_message));
                 return nullptr;
@@ -112,7 +112,7 @@ namespace OCASI::GLTF {
         m_Asset->AssetVersion = {};
         std::string& versionString = asset.at("version").get_string();
         m_Asset->AssetVersion.Major = std::stoi(versionString.substr(0, versionString.find('.')));
-        m_Asset->AssetVersion.Minor = std::stoi(versionString.substr(versionString.find('.')));
+        m_Asset->AssetVersion.Minor = std::stoi(versionString.substr(versionString.find('.') + 1));
         OCASI_ASSERT(m_Asset->AssetVersion.Major == 2);
 
         if (asset.contains("minVersion"))
@@ -240,10 +240,10 @@ namespace OCASI::GLTF {
 
             BufferView& bufferView = m_Asset->BufferViews.emplace_back(i);
             bufferView.Buffer = (size_t) jBufferView.at("buffer").get_number();
-            bufferView.ByteLength = (size_t) jBufferView.at("bufferView").get_number();
+            bufferView.ByteLength = (size_t) jBufferView.at("byteLength").get_number();
 
             if (jBufferView.contains("byteOffset"))
-                bufferView.ByteOffset = (size_t) jBufferView.at("bufferView").get_number();
+                bufferView.ByteOffset = (size_t) jBufferView.at("byteOffset").get_number();
 
             if (jBufferView.contains("byteStride"))
                 bufferView.ByteStride = (size_t) jBufferView.at("byteStride").get_number();
@@ -341,7 +341,7 @@ namespace OCASI::GLTF {
 
             if (jAccessor.contains("sparse"))
             {
-                if (!ParseSparseAccessor(jAccessor.at("sparse"), accessor.Sparse))
+                if (!ParseSparseAccessor(jAccessor.at("sparse"), accessor.Sparse = Sparse()))
                     return false;
             }
         }
@@ -426,7 +426,6 @@ namespace OCASI::GLTF {
             return false;
         }
 
-        outSparse = {};
         outSparse->ElementCount = (size_t) jSparse.at("count").get_number();
 
         // Indices
@@ -514,25 +513,25 @@ namespace OCASI::GLTF {
 
             if (jMaterial.contains("pbrMetallicRoughness"))
             {
-                if (!ParsePbrMetallicRoughness(jMaterial.at("pbrMetallicRoughness"), material.MetallicRoughness))
+                if (!ParsePbrMetallicRoughness(jMaterial.at("pbrMetallicRoughness"), material.MetallicRoughness = PBRMetallicRoughness()))
                     return false;
             }
 
             if (jMaterial.contains("normalTexture"))
             {
-                if (!ParseTextureInfo(jMaterial.at("normalTexture"), material.NormalTexture))
+                if (!ParseTextureInfo(jMaterial.at("normalTexture"), material.NormalTexture = TextureInfo()))
                     return false;
             }
 
             if (jMaterial.contains("occlusionTexture"))
             {
-                if (!ParseTextureInfo(jMaterial.at("occlusionTexture"), material.OcclusionTexture))
+                if (!ParseTextureInfo(jMaterial.at("occlusionTexture"), material.OcclusionTexture = TextureInfo()))
                     return false;
             }
 
             if (jMaterial.contains("emissiveTexture"))
             {
-                if (!ParseTextureInfo(jMaterial.at("emissiveTexture"), material.EmissiveTexture))
+                if (!ParseTextureInfo(jMaterial.at("emissiveTexture"), material.EmissiveTexture = TextureInfo()))
                     return false;
             }
 
@@ -574,34 +573,34 @@ namespace OCASI::GLTF {
                 glz::json_t& jExtensions = jMaterial.at("extensions");
 
                 if (jExtensions.contains("KHR_materials_pbrSpecularGlossiness"))
-                    ParsePbrSpecularGlossiness(jExtensions.at("KHR_materials_pbrSpecularGlossiness"), material.SpecularGlossiness);
+                    ParsePbrSpecularGlossiness(jExtensions.at("KHR_materials_pbrSpecularGlossiness"), material.SpecularGlossiness = KHRMaterialPbrSpecularGlossiness());
 
                 if (jExtensions.contains("KHR_materials_specular"))
-                    ParseSpecular(jExtensions.at("KHR_materials_specular"), material.Specular);
+                    ParseSpecular(jExtensions.at("KHR_materials_specular"), material.Specular = KHRMaterialSpecular());
 
                 if (jExtensions.contains("KHR_materials_clearcoat"))
-                    ParseClearcoat(jExtensions.at("KHR_materials_clearcoat"), material.Clearcoat);
+                    ParseClearcoat(jExtensions.at("KHR_materials_clearcoat"), material.Clearcoat = KHRMaterialClearcoat());
 
                 if (jExtensions.contains("KHR_materials_sheen"))
-                    ParseSheen(jExtensions.at("KHR_materials_sheen"), material.Sheen);
+                    ParseSheen(jExtensions.at("KHR_materials_sheen"), material.Sheen = KHRMaterialSheen());
 
                 if (jExtensions.contains("KHR_materials_transmission"))
-                    ParseTransmission(jExtensions.at("KHR_materials_transmission"), material.Transmission);
+                    ParseTransmission(jExtensions.at("KHR_materials_transmission"), material.Transmission = KHRMaterialTransmission());
 
                 if (jExtensions.contains("KHR_materials_volume"))
-                    ParseVolume(jExtensions.at("KHR_materials_volume"), material.Volume);
+                    ParseVolume(jExtensions.at("KHR_materials_volume"), material.Volume = KHRMaterialVolume());
 
                 if (jExtensions.contains("KHR_materials_ior"))
-                    ParseIOR(jExtensions.at("KHR_materials_ior"), material.IOR);
+                    ParseIOR(jExtensions.at("KHR_materials_ior"), material.IOR = KHRMaterialIOR());
 
                 if (jExtensions.contains("KHR_materials_emissive_strength"))
-                    ParseEmissiveStrength(jExtensions.at("KHR_materials_emissive_strength"), material.EmissiveStrength);
+                    ParseEmissiveStrength(jExtensions.at("KHR_materials_emissive_strength"), material.EmissiveStrength = KHRMaterialEmissiveStrength());
 
                 if (jExtensions.contains("KHR_materials_iridescence"))
-                    ParseIridescence(jExtensions.at("KHR_materials_iridescence"), material.Iridescence);
+                    ParseIridescence(jExtensions.at("KHR_materials_iridescence"), material.Iridescence = KHRMaterialIridescence());
 
                 if (jExtensions.contains("KHR_materials_anisotropy"))
-                    ParseAnisotropy(jExtensions.at("KHR_materials_pbrSpecularGlossiness"), material.Anisotropy);
+                    ParseAnisotropy(jExtensions.at("KHR_materials_pbrSpecularGlossiness"), material.Anisotropy = KHRMaterialAnisotropy());
             }
         }
 
@@ -739,7 +738,7 @@ namespace OCASI::GLTF {
 
             if (jScene.contains("nodes"))
             {
-                auto& rootNodes = json.at("nodes").get_array();
+                auto& rootNodes = jScene.at("nodes").get_array();
                 scene.RootNodes.resize(rootNodes.size());
                 for (int j = 0; j < scenes.size(); j++)
                 {
@@ -759,7 +758,6 @@ namespace OCASI::GLTF {
             return false;
         }
 
-        outTextureInfo = {};
         outTextureInfo->Texture = (size_t) jTextureInfo.at("index").get_number();
 
         if (jTextureInfo.contains("texCoord"))
@@ -774,7 +772,7 @@ namespace OCASI::GLTF {
         return true;
     }
 
-    bool JsonParser::ParsePbrMetallicRoughness(const glz::json_t& jPbrMetallicRoughness, std::optional<PBRMetallicRoughness> &outMetallicRoughness)
+    bool JsonParser::ParsePbrMetallicRoughness(const glz::json_t& jPbrMetallicRoughness, std::optional<PBRMetallicRoughness>& outMetallicRoughness)
     {
         if (jPbrMetallicRoughness.contains("baseColorFactor"))
         {
@@ -792,7 +790,7 @@ namespace OCASI::GLTF {
 
         if (jPbrMetallicRoughness.contains("baseColorTexture"))
         {
-            if (!ParseTextureInfo(jPbrMetallicRoughness.at("baseColorTexture"), outMetallicRoughness->BaseColourTexture))
+            if (!ParseTextureInfo(jPbrMetallicRoughness.at("baseColorTexture"), outMetallicRoughness->BaseColourTexture = TextureInfo()))
                 return false;
         }
 
@@ -804,7 +802,7 @@ namespace OCASI::GLTF {
 
         if (jPbrMetallicRoughness.contains("metallicRoughnessTexture"))
         {
-            if (!ParseTextureInfo(jPbrMetallicRoughness.at("metallicRoughnessTexture") , outMetallicRoughness->MetallicRoughnessTexture))
+            if (!ParseTextureInfo(jPbrMetallicRoughness.at("metallicRoughnessTexture") , outMetallicRoughness->MetallicRoughnessTexture = TextureInfo()))
                 return false;
         }
 
@@ -823,7 +821,7 @@ namespace OCASI::GLTF {
 
         if (jPbrSpecularGlossiness.contains("diffuseTexture"))
         {
-            if (!ParseTextureInfo(jPbrSpecularGlossiness.at("diffuseTexture"), outMetallicRoughness->DiffuseTexture))
+            if (!ParseTextureInfo(jPbrSpecularGlossiness.at("diffuseTexture"), outMetallicRoughness->DiffuseTexture = TextureInfo()))
                 return false;
         }
 
@@ -837,7 +835,7 @@ namespace OCASI::GLTF {
 
         if (jPbrSpecularGlossiness.contains("specularGlossinessTexture"))
         {
-            if (!ParseTextureInfo(jPbrSpecularGlossiness.at("specularGlossinessTexture"), outMetallicRoughness->SpecularGlossinessTexture))
+            if (!ParseTextureInfo(jPbrSpecularGlossiness.at("specularGlossinessTexture"), outMetallicRoughness->SpecularGlossinessTexture = TextureInfo()))
                 return false;
         }
 
@@ -855,7 +853,7 @@ namespace OCASI::GLTF {
 
         if (jSpecular.contains("specularTexture"))
         {
-            if (!ParseTextureInfo(jSpecular.at("specularTexture"), outSpecular->SpecularTexture))
+            if (!ParseTextureInfo(jSpecular.at("specularTexture"), outSpecular->SpecularTexture = TextureInfo()))
                 return false;
         }
 
@@ -870,7 +868,7 @@ namespace OCASI::GLTF {
 
         if (jSpecular.contains("specularColorTexture"))
         {
-            if (!ParseTextureInfo(jSpecular.at("specularColorTexture"), outSpecular->SpecularColourTexture))
+            if (!ParseTextureInfo(jSpecular.at("specularColorTexture"), outSpecular->SpecularColourTexture = TextureInfo()))
                 return false;
         }
 
@@ -887,19 +885,19 @@ namespace OCASI::GLTF {
 
         if (jClearcoat.contains("clearcoatTexture"))
         {
-            if (!ParseTextureInfo(jClearcoat.at("clearcoatTexture"), outClearcoat->ClearcoatTexture))
+            if (!ParseTextureInfo(jClearcoat.at("clearcoatTexture"), outClearcoat->ClearcoatTexture = TextureInfo()))
                 return false;
         }
 
         if (jClearcoat.contains("clearcoatRoughnessTexture"))
         {
-            if (!ParseTextureInfo(jClearcoat.at("clearcoatRoughnessTexture"), outClearcoat->ClearcoatRoughnessTexture))
+            if (!ParseTextureInfo(jClearcoat.at("clearcoatRoughnessTexture"), outClearcoat->ClearcoatRoughnessTexture = TextureInfo()))
                 return false;
         }
 
         if (jClearcoat.contains("clearcoatNormalTexture"))
         {
-            if (!ParseTextureInfo(jClearcoat.at("clearcoatNormalTexture"), outClearcoat->ClearcoatNormalTexture))
+            if (!ParseTextureInfo(jClearcoat.at("clearcoatNormalTexture"), outClearcoat->ClearcoatNormalTexture = TextureInfo()))
                 return false;
         }
 
@@ -910,13 +908,13 @@ namespace OCASI::GLTF {
     {
         if (jSheen.contains("sheenColourTexture"))
         {
-            if (!ParseTextureInfo(jSheen.at("sheenColourTexture"), outSheen->SheenColourTexture))
+            if (!ParseTextureInfo(jSheen.at("sheenColourTexture"), outSheen->SheenColourTexture = TextureInfo()))
                 return false;
         }
 
         if (jSheen.contains("sheenRoughnessTexture"))
         {
-            if (!ParseTextureInfo(jSheen.at("sheenRoughnessTexture"), outSheen->SheenRoughnessTexture))
+            if (!ParseTextureInfo(jSheen.at("sheenRoughnessTexture"), outSheen->SheenRoughnessTexture = TextureInfo()))
                 return false;
 
         }
@@ -944,7 +942,7 @@ namespace OCASI::GLTF {
 
         if (jTransmission.contains("transmissionTexture"))
         {
-            if (!ParseTextureInfo(jTransmission.at("transmissionTexture"), outTransmission->TransmissionTexture))
+            if (!ParseTextureInfo(jTransmission.at("transmissionTexture"), outTransmission->TransmissionTexture = TextureInfo()))
                 return false;
         }
 
@@ -958,7 +956,7 @@ namespace OCASI::GLTF {
 
         if (jVolume.contains("thicknessTexture"))
         {
-            if (!ParseTextureInfo(jVolume.at("thicknessTexture"), outVolume->ThicknessTexture))
+            if (!ParseTextureInfo(jVolume.at("thicknessTexture"), outVolume->ThicknessTexture = TextureInfo()))
                 return false;
         }
 
@@ -998,7 +996,7 @@ namespace OCASI::GLTF {
 
         if (jIridescence.contains("iridescenceTexture"))
         {
-            if (!ParseTextureInfo(jIridescence.at("iridescenceTexture"), outIridescence->IridescenceTexture))
+            if (!ParseTextureInfo(jIridescence.at("iridescenceTexture"), outIridescence->IridescenceTexture = TextureInfo()))
                 return false;
         }
 
@@ -1014,7 +1012,7 @@ namespace OCASI::GLTF {
 
         if (jIridescence.contains("iridescenceThicknessTexture"))
         {
-            if (!ParseTextureInfo(jIridescence.at("iridescenceThicknessTexture"), outIridescence->IridescenceThicknessTexture))
+            if (!ParseTextureInfo(jIridescence.at("iridescenceThicknessTexture"), outIridescence->IridescenceThicknessTexture = TextureInfo()))
                 return false;
         }
 
@@ -1028,7 +1026,7 @@ namespace OCASI::GLTF {
 
         if (jAnisotropy.contains("anisotropyTexture"))
         {
-            if (!ParseTextureInfo(jAnisotropy.at("anisotropyTexture"), outAnisotropy->AnisotropyTexture))
+            if (!ParseTextureInfo(jAnisotropy.at("anisotropyTexture"), outAnisotropy->AnisotropyTexture = TextureInfo()))
                 return false;
         }
 

@@ -69,13 +69,18 @@ namespace OCASI {
         return data;
     }
 
-    void FileReader::GetBytes(void *outData, size_t size)
+    void FileReader::GetBytes(void* outData, size_t size)
     {
         m_FileReader.unsetf(std::ios::skipws);
-        if (size < m_FileSize)
+        if (size > m_FileSize)
             return;
 
-        m_FileReader.read((char*)outData, size);
+        m_FileReader.read((char*)outData, (std::streamsize) size);
+    }
+
+    void FileReader::Set0()
+    {
+        m_FileReader.seekg(0, std::ios::beg);
     }
 
     namespace Util {
