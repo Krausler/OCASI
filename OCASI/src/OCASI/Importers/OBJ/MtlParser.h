@@ -25,6 +25,7 @@ namespace OCASI::OBJ {
         glm::vec4 ParseVec4();
 
         bool CheckMaterial();
+        void CreatePBRMaterialExtension();
     private:
         using FileDataIterator = std::vector<char>::iterator;
 

@@ -24,6 +24,8 @@ namespace OCASI {
 
         std::string fExtension = path.extension().string();
         std::shared_ptr<Scene> result = nullptr;
+
+        // TODO: Change this and make it make sense that all importers share a base class
         if(fExtension == ".obj")
         {
             Logger::SetFileFormatPattern("OBJ");

@@ -11,7 +11,9 @@
 
 namespace OCASI::OBJ {
 
-    constexpr uint8_t MAX_TEXTURE_COUNT = 21;
+    const uint8_t MAX_NON_PBR_TEXTURE_COUNT = 15;
+    const uint8_t MAX_PBR_TEXTURE_COUNT = 8;
+    const uint8_t PBR_TEXTURE_TYPE_ARRAY_NORMALIZER = MAX_NON_PBR_TEXTURE_COUNT;
 
     enum TextureType
     {
@@ -23,25 +25,52 @@ namespace OCASI::OBJ {
         Transparency = 4,
         Bump = 5,
         Shininess = 6,
+        Normal = 7,
+
+        ReflectionTop = 8,
+        ReflectionBottom = 9,
+        ReflectionFront = 10,
+        ReflectionBack = 11,
+        ReflectionLeft = 12,
+        ReflectionRight = 13,
+        ReflectionSphere = 14,
 
         // PBR
-        Roughness = 7,
-        Metallic = 8,
-        Sheen = 9,
-        Clearcoat = 10,
-        ClearcoatRoughness = 11,
-        Occlusion = 12,
-        Normal = 13,
+        Albedo = 15,
+        Roughness = 16,
+        Metallic = 17,
+        Sheen = 18,
+        Clearcoat = 19,
+        ClearcoatRoughness = 20,
+        Occlusion = 21,
+        NormalPBR = 22,
 
-        ReflectionTop = 14,
-        ReflectionBottom = 15,
-        ReflectionFront = 16,
-        ReflectionBack = 17,
-        ReflectionLeft = 18,
-        ReflectionRight = 19,
-        ReflectionSphere = 20,
+        // Only for specifying, that a reflection map is being parsed. No need to have a texture slot in the array for this texture value.
+        Reflection
+    };
 
-        Reflection // Only for specifying, that a reflection map is being parsed. No need to have a texture slot in the array.
+    bool HasPBRTextureType(TextureType type) { return type >= MAX_NON_PBR_TEXTURE_COUNT && type < MAX_NON_PBR_TEXTURE_COUNT + MAX_PBR_TEXTURE_COUNT; }
+
+    struct PBRMaterialExtension
+    {
+        glm::vec3 AlbedoColour = glm::vec3(1);
+
+        float Roughness = 0.0f;                     // Roughness (Pr)
+        float Metallic = 0.0f;                      // Metallic (Pm)
+
+        float Sheen = 0.0f;                         // Sheen intensity (Ps)
+
+        float Clearcoat = 0.0f;                     // Clearcoat intensity (Pc)
+        float ClearcoatRoughness = 0.0f;            // Clearcoat roughness (Pcr)
+
+        float Anisotropy = 0.0f;                    // Anisotropy (an / aniso)
+        float AnisotropyRotation = 0.0f;            // Anisotropy rotation angle (anR / anisoR)
+
+        // Index of refraction (optical density)
+        float IOR = 1.0f;
+
+        std::array<std::string, MAX_PBR_TEXTURE_COUNT> Textures = {}; // Textures (map_{Values}) using TextureType as an index
+        std::array<bool, MAX_PBR_TEXTURE_COUNT> TextureClamps = {}; // Specifies whether a texture is clamped
     };
 
     struct Material {
@@ -55,23 +84,13 @@ namespace OCASI::OBJ {
 
         // Reflectivity and transparency
         float Shininess = 0.0f;                     // Shininess (Ns)
-        float Opacity = 1.0f;                       // Transparency (d or Tr)
+        float Opacity = 1.0f;                       // Transparency (d or Tr)                        // Index of refraction (Ni)
 
-        // Index of refraction (optical density)
-        float IOR = 1.0f;                           // Index of refraction (Ni)
-
-        // Unofficial PBR Extensions
-        float Roughness = 0.0f;                     // Roughness (Pr)
-        float Metallic = 0.0f;                      // Metallic (Pm)
-        float Sheen = 0.0f;                         // Sheen intensity (Ps)
-        float Clearcoat = 0.0f;                     // Clearcoat intensity (Pc)
-        float ClearcoatRoughness = 0.0f;            // Clearcoat roughness (Pcr)
-        float Anisotropy = 0.0f;                    // Anisotropy (an)
-        float AnisotropyRotation = 0.0f;            // Anisotropy rotation angle (anR)
-
-        std::array<std::string, MAX_TEXTURE_COUNT> Textures = {}; // Textures (map_{Values}) using TextureType as an index
-        std::array<bool, MAX_TEXTURE_COUNT> TextureClamps = {}; // Specifies whether a texture is clamped
+        std::array<std::string, MAX_NON_PBR_TEXTURE_COUNT> Textures = {}; // Textures (map_{Values}) using TextureType as an index
+        std::array<bool, MAX_NON_PBR_TEXTURE_COUNT> TextureClamps = {}; // Specifies whether a texture is clamped
         float BumpMapMultiplier = 1.0f;
+
+        std::optional<PBRMaterialExtension> PBRExtension;
     };
 
     struct Face

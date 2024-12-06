@@ -111,7 +111,7 @@ namespace OCASI::OBJ {
 
                     if (m_CurrentMesh->MaterialName.empty() && m_CurrentMesh->Faces.empty())
                     {
-                        
+                        // TODO: set the current objects material
                     }
 
                     break;

@@ -3432,12 +3432,12 @@ namespace glz::jkj
                                                           decimal_significand, decimal_exponent_type_(minus_k)));
                   }
 
-                  // Normal interval case.
+                  // NormalPBR interval case.
                   two_fc |= (carrier_uint(1) << (format::significand_bits + 1));
                }
                // Is the input a subnormal number?
                else {
-                  // Normal interval case.
+                  // NormalPBR interval case.
                   binary_exponent = format::min_exponent - format::significand_bits;
                }
 

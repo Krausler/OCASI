@@ -4,7 +4,7 @@
 
 namespace OCASI::OBJ {
 
-    MtlParser::MtlParser(const std::shared_ptr<Model> &model, const Path& relativePath)
+    MtlParser::MtlParser(const std::shared_ptr<Model>& model, const Path& relativePath)
         : m_Reader(relativePath), m_Model(model)
     {
     }
@@ -39,117 +39,99 @@ namespace OCASI::OBJ {
             m_Begin += 4;
         }
 
-        switch (*m_Begin)
-        {
+        switch (*m_Begin) {
             // New material
-            case 'n':
-            {
+            case 'b':
+            case 'n': {
                 std::string statement = Util::GetToNextToken(m_Begin, m_End, ' ');
                 if (statement == "newmtl")
                     CreateNewMaterial(Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End));
-                else if (statement == "norm")
+                else if (statement == "norm" || statement == "bump")
                     ParseTexture(TextureType::Normal);
                 break;
             }
-            case 'K':
-            {
+            case 'K': {
                 if (!CheckMaterial())
                     return false;
 
                 m_Begin += 3;
-                switch (*(m_Begin - 2))
-                {
+                switch (*(m_Begin - 2)) {
                     // Diffuse colour
-                    case 'd':
-                    {
+                    case 'd': {
                         // Skipping the parameter identifier and the space separating the value
-                        if(isMap)
+                        if (isMap)
                             ParseTexture(TextureType::Diffuse);
                         else
                             m_CurrentMaterial->DiffuseColour = ParseVec3();
 
                         break;
                     }
-                    // Specular colour
-                    case 's':
-                    {
-                        if(isMap)
+                        // Specular colour
+                    case 's': {
+                        if (isMap)
                             ParseTexture(TextureType::Specular);
                         else
-                            m_CurrentMaterial->SpecularColour =  ParseVec3();
+                            m_CurrentMaterial->SpecularColour = ParseVec3();
 
                         break;
                     }
-                    // Emissive colour
-                    case 'e':
-                    {
-                        if(isMap)
+                        // Emissive colour
+                    case 'e': {
+                        if (isMap)
                             ParseTexture(TextureType::Emissive);
                         else
                             m_CurrentMaterial->EmissiveColour = ParseVec3();
 
                         break;
                     }
-                    // Ambient colour
-                    case 'a':
-                    {
-                        if(isMap)
+                        // Ambient colour
+                    case 'a': {
+                        if (isMap)
                             ParseTexture(TextureType::Ambient);
                         else
                             m_CurrentMaterial->AmbientColour = ParseVec3();
 
                         break;
+                        default:
+                            OCASI_LOG_WARN("Unknown parameter: K{}", *(m_Begin - 2));
+                        break;
                     }
-                    // Normal map
-                    case 'n':
-                    {
-                        if (isMap)
-                            ParseTexture(TextureType::Normal);
-                    }
-                    default:
-                        OCASI_LOG_WARN("Unknown parameter: K{}", *(m_Begin - 2));
                         break;
                 }
-                break;
             }
-            case 'N':
-            {
+            case 'N': {
                 if (!CheckMaterial())
                     return false;
 
                 m_Begin += 2;
                 if (*(m_Begin - 1) == 'i')
                 {
-                    m_CurrentMaterial->IOR = ParseFloat();
+                    CreatePBRMaterialExtension();
+                    m_CurrentMaterial->PBRExtension->IOR = ParseFloat();
                 }
-                else if(*(m_Begin - 1) == 's')
+                else if (*(m_Begin - 1) == 's')
                 {
-                    if(isMap)
+                    if (isMap)
                         ParseTexture(TextureType::Shininess);
                     else
                         m_CurrentMaterial->Shininess = ParseFloat();
-                }
-                else
-                {
+                } else {
                     OCASI_LOG_WARN("Unknown parameter: N{}", *(m_Begin - 2));
                 }
-
                 break;
             }
             case 'T':
-            case 'd':
-            {
+            case 'd': {
                 if (!CheckMaterial())
                     return false;
 
-                if  (isMap)
+                if (isMap)
                     m_CurrentMaterial->Opacity = ParseFloat();
                 else
                     ParseTexture(TextureType::Transparency);
                 break;
             }
-            case 'i':
-            {
+            case 'i': {
                 if (!CheckMaterial())
                     return false;
 
@@ -158,60 +140,51 @@ namespace OCASI::OBJ {
                 break;
             }
             // PBR optional extension
-            case 'P':
-            {
+            case 'P': {
                 if (!CheckMaterial())
                     return false;
 
+                CreatePBRMaterialExtension();
+
                 m_Begin += 3;
-                switch (*(m_Begin - 2))
-                {
+                switch (*(m_Begin - 2)) {
                     // Roughness
-                    case 'r':
-                    {
+                    case 'r': {
                         if (isMap)
                             ParseTexture(TextureType::Roughness);
                         else
-                            m_CurrentMaterial->Roughness = ParseFloat();
+                            m_CurrentMaterial->PBRExtension->Roughness = ParseFloat();
                         break;
                     }
-                    // Metallic
-                    case 'm':
-                    {
+                        // Metallic
+                    case 'm': {
                         if (isMap)
                             ParseTexture(TextureType::Metallic);
                         else
-                            m_CurrentMaterial->Metallic = ParseFloat();
+                            m_CurrentMaterial->PBRExtension->Metallic = ParseFloat();
                         break;
                     }
-                    // Sheen
-                    case 's':
-                    {
+                        // Sheen
+                    case 's': {
                         if (isMap)
                             ParseTexture(TextureType::Sheen);
                         else
-                            m_CurrentMaterial->Sheen = ParseFloat();
+                            m_CurrentMaterial->PBRExtension->Sheen = ParseFloat();
                         break;
                     }
-                    // Clearcoat and CleacoatRougness
-                    case 'c':
-                    {
-                        if (*(m_Begin - 1) == 'r')
-                        {
+                        // Clearcoat and CleacoatRougness
+                    case 'c': {
+                        if (*(m_Begin - 1) == 'r') {
                             if (isMap)
                                 ParseTexture(TextureType::ClearcoatRoughness);
                             else
-                                m_CurrentMaterial->ClearcoatRoughness = ParseFloat();
-                        }
-                        else if(*(m_Begin - 1) == ' ')
-                        {
+                                m_CurrentMaterial->PBRExtension->ClearcoatRoughness = ParseFloat();
+                        } else if (*(m_Begin - 1) == ' ') {
                             if (isMap)
                                 ParseTexture(TextureType::Clearcoat);
                             else
-                                m_CurrentMaterial->Clearcoat = ParseFloat();
-                        }
-                        else
-                        {
+                                m_CurrentMaterial->PBRExtension->Clearcoat = ParseFloat();
+                        } else {
                             OCASI_LOG_WARN("Unknown parameter: Pc{}", *(m_Begin - 1));
                         }
                         break;
@@ -223,34 +196,31 @@ namespace OCASI::OBJ {
                 break;
             }
             // Anisotropy
-            case 'a':
-            {
+            case 'a': {
                 if (!CheckMaterial())
                     return false;
 
+                CreatePBRMaterialExtension();
                 size_t charactersToNextSpace = Util::GetToNextToken(m_Begin, m_End, ' ').size();
 
-                // Either aniso or an
-                if (charactersToNextSpace == 5 || charactersToNextSpace == 2)
-                {
+                // This parameter has different names in different OBJ implementations: aniso (5 Characters) or an (2 characters)
+                if (charactersToNextSpace == 5 || charactersToNextSpace == 2) {
                     m_Begin += charactersToNextSpace;
-                    m_CurrentMaterial->Anisotropy = ParseFloat();
+                    m_CurrentMaterial->PBRExtension->Anisotropy = ParseFloat();
                 }
-                // Either anisor or anR
-                else if (charactersToNextSpace == 6 || charactersToNextSpace == 3)
-                {
+                // This parameter has different names in different OBJ implementations: anisor (6 characters) or anr (3 characters)
+                else if (charactersToNextSpace == 6 || charactersToNextSpace == 3) {
                     m_Begin += charactersToNextSpace;
-                    m_CurrentMaterial->AnisotropyRotation = ParseFloat();
-                }
-                else
-                {
-                    OCASI_LOG_WARN("Unknown parameter: Parameter starts with 'a' but does not fulfill the length requirements. Length is {}.", charactersToNextSpace);
+                    m_CurrentMaterial->PBRExtension->AnisotropyRotation = ParseFloat();
+                } else {
+                    OCASI_LOG_WARN(
+                            "Unknown parameter: Parameter starts with 'a' but does not fulfill the length requirements. Length is {}.",
+                            charactersToNextSpace);
                 }
                 break;
             }
-            // Occlusion map
-            case 'o':
-            {
+                // Occlusion map
+            case 'o': {
                 if (!CheckMaterial())
                     return false;
 
@@ -259,17 +229,9 @@ namespace OCASI::OBJ {
                 else
                 {
                     m_Begin++;
-                    OCASI_LOG_WARN("Unkown parameter: o{} is not a map", Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End));
+                    OCASI_LOG_WARN("Unkown parameter: o{} is not a map",
+                    Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End));
                 }
-                break;
-            }
-            // Bump map
-            case 'b':
-            {
-                if (!CheckMaterial())
-                    return false;
-
-                ParseTexture(TextureType::Bump);
                 break;
             }
 
@@ -280,8 +242,16 @@ namespace OCASI::OBJ {
         return true;
     }
 
-    void MtlParser::CreateNewMaterial(const std::string &name)
+    void MtlParser::CreateNewMaterial(const std::string& name)
     {
+        // Some none pbr parameters are also used in the pbr model
+        if (m_CurrentMaterial && m_CurrentMaterial->PBRExtension.has_value())
+        {
+            m_CurrentMaterial->PBRExtension->Textures[TextureType::NormalPBR - PBR_TEXTURE_TYPE_ARRAY_NORMALIZER] = m_CurrentMaterial->Textures.at(TextureType::NormalPBR);
+            m_CurrentMaterial->PBRExtension->AlbedoColour = m_CurrentMaterial->DiffuseColour;
+            m_CurrentMaterial->PBRExtension->Textures[TextureType::Albedo - PBR_TEXTURE_TYPE_ARRAY_NORMALIZER] = m_CurrentMaterial->Textures.at(TextureType::Diffuse);
+        }
+
         m_Model->Materials[name] = {};
         m_CurrentMaterial = &m_Model->Materials.at(name);
         m_CurrentMaterial->Name = name;
@@ -342,6 +312,12 @@ namespace OCASI::OBJ {
             return;
         }
 
+        // Ensuring that the parameter and name parsing starts at the right index
+        // This kind of hacky and not safe at all. But as long as it works it's fine to me
+        if (*m_Begin != ' ' || *(m_Begin - 1) == ' ')
+            Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+
+
         while (true)
         {
             if (m_Begin == m_End || Util::IsLineEnd(*m_Begin))
@@ -398,14 +374,23 @@ namespace OCASI::OBJ {
                 {
                     std::string option = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
                     if (option == "on")
-                        m_CurrentMaterial->TextureClamps.at(type) = true;
+                    {
+                        if (HasPBRTextureType(type))
+                        {
+                            CreatePBRMaterialExtension();
+                            m_CurrentMaterial->PBRExtension->TextureClamps.at(type) = true;
+                        }
+                        else
+                        {
+                            m_CurrentMaterial->TextureClamps.at(type) = true;
+                        }
+                    }
                 }
-                // Only have one parameter. This is skipped
+                /// All options below are skipped as they are mostly not necessary
                 else if (tokenSequence == "blendu" || tokenSequence == "blendv" || tokenSequence == "blend" || tokenSequence == "boost" || tokenSequence == "imfchan")
                 {
                     Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
                 }
-                // Have two parameters. This is skipped
                 else if (tokenSequence == "mm")
                 {
                     Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
@@ -420,8 +405,26 @@ namespace OCASI::OBJ {
             }
             else
             {
-                m_CurrentMaterial->Textures[type] = Util::GetToNextToken(begin, m_End, '\n');
+                if (type < MAX_NON_PBR_TEXTURE_COUNT)
+                    m_CurrentMaterial->Textures[type] = Util::GetToNextToken(begin, m_End, '\n');
+                else if (HasPBRTextureType(type))
+                {
+                    CreatePBRMaterialExtension();
+
+                    m_CurrentMaterial->PBRExtension->Textures[type - PBR_TEXTURE_TYPE_ARRAY_NORMALIZER] = Util::GetToNextToken(begin, m_End, '\n');
+                }
+                else
+                {
+                    OCASI_FAIL("Tried to parse texture, while end of line was already reached.");
+                    return;
+                }
             }
         }
+    }
+
+    void MtlParser::CreatePBRMaterialExtension()
+    {
+        if (!m_CurrentMaterial->PBRExtension.has_value())
+            m_CurrentMaterial->PBRExtension = PBRMaterialExtension();
     }
 }
