@@ -7,7 +7,7 @@
 
 namespace OCASI {
 
-    // TODO: Rework textures. Create a texture system with an array of texture objects, with an enum for the index
+    // TODO: Rework textures. Create a texture system with an array of texture objects, using an enum for indexing.
 
     struct PBRMaterial
     {
