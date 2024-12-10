@@ -12,7 +12,7 @@
 namespace OCASI::OBJ {
 
     const uint8_t MAX_NON_PBR_TEXTURE_COUNT = 15;
-    const uint8_t MAX_PBR_TEXTURE_COUNT = 8;
+    const uint8_t MAX_PBR_TEXTURE_COUNT = 9;
     const uint8_t PBR_TEXTURE_TYPE_ARRAY_NORMALIZER = MAX_NON_PBR_TEXTURE_COUNT;
 
     enum TextureType
@@ -37,13 +37,14 @@ namespace OCASI::OBJ {
 
         // PBR
         Albedo = 15,
-        Roughness = 16,
-        Metallic = 17,
-        Sheen = 18,
-        Clearcoat = 19,
-        ClearcoatRoughness = 20,
-        Occlusion = 21,
-        NormalPBR = 22,
+        EmissivePBR = 16,
+        Roughness = 17,
+        Metallic = 18,
+        Sheen = 19,
+        Clearcoat = 20,
+        ClearcoatRoughness = 21,
+        Occlusion = 22,
+        NormalPBR = 23,
 
         // Only for specifying, that a reflection map is being parsed. No need to have a texture slot in the array for this texture value.
         Reflection
@@ -54,17 +55,18 @@ namespace OCASI::OBJ {
     struct PBRMaterialExtension
     {
         glm::vec3 AlbedoColour = glm::vec3(1);
+        glm::vec3 EmissiveColour = glm::vec3(0);
 
         float Roughness = 0.0f;                     // Roughness (Pr)
         float Metallic = 0.0f;                      // Metallic (Pm)
 
-        float Sheen = 0.0f;                         // Sheen intensity (Ps)
+        float Sheen = 0.0f;                         // ExtSheen intensity (Ps)
 
-        float Clearcoat = 0.0f;                     // Clearcoat intensity (Pc)
-        float ClearcoatRoughness = 0.0f;            // Clearcoat roughness (Pcr)
+        float Clearcoat = 0.0f;                     // ExtClearcoat intensity (Pc)
+        float ClearcoatRoughness = 0.0f;            // ExtClearcoat roughness (Pcr)
 
-        float Anisotropy = 0.0f;                    // Anisotropy (an / aniso)
-        float AnisotropyRotation = 0.0f;            // Anisotropy rotation angle (anR / anisoR)
+        float Anisotropy = 0.0f;                    // ExtAnisotropy (an / aniso)
+        float AnisotropyRotation = 0.0f;            // ExtAnisotropy rotation angle (anR / anisoR)
 
         // Index of refraction (optical density)
         float IOR = 1.0f;
@@ -79,7 +81,7 @@ namespace OCASI::OBJ {
         // Basic material colors
         glm::vec3 AmbientColour = glm::vec3(1);   // Ambient color (Ka)
         glm::vec3 DiffuseColour = glm::vec3(1);   // Diffuse color (Kd)
-        glm::vec3 SpecularColour = glm::vec3(0);  // Specular color (Ks)
+        glm::vec3 SpecularColour = glm::vec3(0);  // ExtSpecular color (Ks)
         glm::vec3 EmissiveColour = glm::vec3(0);  // Emissive color (Ke)
 
         // Reflectivity and transparency

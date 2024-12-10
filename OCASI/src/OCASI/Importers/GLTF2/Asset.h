@@ -83,7 +83,7 @@ namespace OCASI::GLTF {
     {
         Nearest = 9728,
         Linear = 9729,
-        NearestMipMapLNearest = 9984,
+        NearestMipMapNearest = 9984,
         NearestMipMapLinear = 9986,
         LinearMipMapNearest = 9985,
         LinearMipMapLinear = 9987
@@ -91,9 +91,9 @@ namespace OCASI::GLTF {
 
     enum class UVWrap
     {
-        ClampToEdge = 33071,
+        Repeat = 10497,
         MirroredRepeat = 33648,
-        Repeat = 10497
+        ClampToEdge = 33071
     };
 
     class Object
@@ -270,7 +270,7 @@ namespace OCASI::GLTF {
 
     struct KHRMaterialIOR
     {
-        float Ior = INVALID_ID_FLOAT;
+        float IOR = INVALID_ID_FLOAT;
     };
 
     struct KHRMaterialSpecular
@@ -326,24 +326,24 @@ namespace OCASI::GLTF {
         bool IsDoubleSided = false;
         std::optional<TextureInfo> NormalTexture;
         std::optional<TextureInfo> OcclusionTexture;
-        std::optional<TextureInfo> EmissiveTexture;
         glm::vec3 EmissiveColour = glm::vec3(0);
+        std::optional<TextureInfo> EmissiveTexture;
 
         AlphaMode AlphaMode = AlphaMode::Opaque;
         float AlphaCutoff = 0.5f;
 
         /// Extensions
 
-        std::optional<KHRMaterialSpecular> Specular;
-        std::optional<KHRMaterialPbrSpecularGlossiness> SpecularGlossiness;
-        std::optional<KHRMaterialClearcoat> Clearcoat;
-        std::optional<KHRMaterialAnisotropy> Anisotropy;
-        std::optional<KHRMaterialIOR> IOR;
-        std::optional<KHRMaterialEmissiveStrength> EmissiveStrength;
-        std::optional<KHRMaterialIridescence> Iridescence;
-        std::optional<KHRMaterialSheen> Sheen;
-        std::optional<KHRMaterialTransmission> Transmission;
-        std::optional<KHRMaterialVolume> Volume;
+        std::optional<KHRMaterialSpecular> ExtSpecular;
+        std::optional<KHRMaterialPbrSpecularGlossiness> ExtSpecularGlossiness;
+        std::optional<KHRMaterialClearcoat> ExtClearcoat;
+        std::optional<KHRMaterialAnisotropy> ExtAnisotropy;
+        std::optional<KHRMaterialIOR> ExtIOR;
+        std::optional<KHRMaterialEmissiveStrength> ExtEmissiveStrength;
+        std::optional<KHRMaterialIridescence> ExtIridescence;
+        std::optional<KHRMaterialSheen> ExtSheen;
+        std::optional<KHRMaterialTransmission> ExtTransmission;
+        std::optional<KHRMaterialVolume> ExtVolume;
     };
 
     class Buffer : public Object

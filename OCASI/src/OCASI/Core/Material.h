@@ -14,9 +14,13 @@ namespace OCASI {
         glm::vec3 AlbedoColour = glm::vec3(1); // The objects base color;
         std::unique_ptr<Image> AlbedoTexture = nullptr;
 
+        glm::vec3 EmissiveColour = glm::vec3(0, 0, 0);
+        std::unique_ptr<Image> EmissiveTexture = nullptr;
+
         std::unique_ptr<Image> NormalMap = nullptr;
 
-        float Metallic = 0; // Value determining the mix value between the IOR and the objects albedo colour (default: defines that the object does not have a metallic appearance)
+        bool HasCombinedMetallicRoughnessTexture = false;
+        float Metallic = 0; // Value determining the mix value between the ExtIOR and the objects albedo colour (default: defines that the object does not have a metallic appearance)
         std::unique_ptr<Image> MetallicTexture = nullptr;
 
         float Roughness = 0.5f; // Value determining the roughness of a surface (default: half of the maximum value)
@@ -25,7 +29,7 @@ namespace OCASI {
         float IOR = 0.04f; // Index of refraction or the base reflectivity of the object (default: base reflectivity of plastic)
         std::unique_ptr<Image> AmbientOcclusionTexture = nullptr;
 
-        // Anisotropy can often be found brushed metal like aluminum
+        // ExtAnisotropy can often be found brushed metal like aluminum
         float Anisotropy = 0.0f; // The amount of additional reflection added to the objects surface
         float AnisotropyRotation = 0.0f; // The rotation of the reflection
 
@@ -46,7 +50,7 @@ namespace OCASI {
         glm::vec3 AmbientColour;
         std::unique_ptr<Image> AmbientTexture = nullptr;
 
-        // Specular: The colour that is displayed when specular highlights are computed
+        // ExtSpecular: The colour that is displayed when specular highlights are computed
         glm::vec3 SpecularColour;
         std::unique_ptr<Image> SpecularTexture = nullptr;
 

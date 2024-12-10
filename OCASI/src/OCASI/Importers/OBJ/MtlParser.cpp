@@ -66,7 +66,7 @@ namespace OCASI::OBJ {
 
                         break;
                     }
-                        // Specular colour
+                        // ExtSpecular colour
                     case 's': {
                         if (isMap)
                             ParseTexture(TextureType::Specular);
@@ -164,7 +164,7 @@ namespace OCASI::OBJ {
                             m_CurrentMaterial->PBRExtension->Metallic = ParseFloat();
                         break;
                     }
-                        // Sheen
+                        // ExtSheen
                     case 's': {
                         if (isMap)
                             ParseTexture(TextureType::Sheen);
@@ -172,7 +172,7 @@ namespace OCASI::OBJ {
                             m_CurrentMaterial->PBRExtension->Sheen = ParseFloat();
                         break;
                     }
-                        // Clearcoat and CleacoatRougness
+                        // ExtClearcoat and CleacoatRougness
                     case 'c': {
                         if (*(m_Begin - 1) == 'r') {
                             if (isMap)
@@ -195,7 +195,7 @@ namespace OCASI::OBJ {
                 }
                 break;
             }
-            // Anisotropy
+            // ExtAnisotropy
             case 'a': {
                 if (!CheckMaterial())
                     return false;
@@ -247,9 +247,10 @@ namespace OCASI::OBJ {
         // Some none pbr parameters are also used in the pbr model
         if (m_CurrentMaterial && m_CurrentMaterial->PBRExtension.has_value())
         {
-            m_CurrentMaterial->PBRExtension->Textures[TextureType::NormalPBR - PBR_TEXTURE_TYPE_ARRAY_NORMALIZER] = m_CurrentMaterial->Textures.at(TextureType::NormalPBR);
+            m_CurrentMaterial->PBRExtension->Textures[TextureType::NormalPBR - PBR_TEXTURE_TYPE_ARRAY_NORMALIZER] = m_CurrentMaterial->Textures.at(TextureType::Normal);
             m_CurrentMaterial->PBRExtension->AlbedoColour = m_CurrentMaterial->DiffuseColour;
             m_CurrentMaterial->PBRExtension->Textures[TextureType::Albedo - PBR_TEXTURE_TYPE_ARRAY_NORMALIZER] = m_CurrentMaterial->Textures.at(TextureType::Diffuse);
+            m_CurrentMaterial->PBRExtension->Textures[TextureType::EmissivePBR - PBR_TEXTURE_TYPE_ARRAY_NORMALIZER] = m_CurrentMaterial->Textures.at(TextureType::Emissive);
         }
 
         m_Model->Materials[name] = {};

@@ -16,7 +16,7 @@ namespace OCASI {
         : m_ImagePath(path), m_Settings(settings)
     {}
 
-    Image::Image(const std::vector<char>& imageData, uint8_t channels, uint32_t width, uint32_t height, const ImageSettings& settings)
+    Image::Image(const std::vector<uint8_t>& imageData, uint8_t channels, uint32_t width, uint32_t height, const ImageSettings& settings)
         : m_MemoryImage(true), m_Settings(settings)
     {
         m_ImageData = {};
@@ -26,21 +26,27 @@ namespace OCASI {
         m_ImageData.Height = height;
     }
 
-    Image::Image(const ImageData& data, const ImageSettings& settings)
-        : m_ImageData(data), m_Settings(settings)
-    {}
+    Image::Image(const std::vector<uint8_t>& data, bool load, const ImageSettings& settings)
+        : m_Settings(settings)
+    {
+        m_ImageData = {};
+        m_ImageData.Data = data;
 
-    ImageData Image::LoadImageFromDisk()
+        if (load)
+            ImportImageFromData();
+    }
+
+    const ImageData* Image::LoadImageFromDisk()
     {
         if (m_MemoryImage)
         {
             OCASI_LOG_INFO("Tried to load an image from disk that is memory only.");
-            return {};
+            return nullptr;
         }
 
         stbi_set_flip_vertically_on_load(true);
 
-        ImageData outData = {};
+        ImageData& outData = m_ImageData = {};
         int width, height, channels;
         stbi_uc* data = stbi_load(m_ImagePath.string().c_str(), &width, &height, &channels, 4);
         outData.Width = width;
@@ -51,17 +57,47 @@ namespace OCASI {
         {
             uint32_t size = outData.Width * outData.Height * outData.Channels;
             outData.Data.resize(size);
-            for(uint32_t i = 0; i < outData.Width * outData.Height * outData.Channels; i++)
-            {
-                outData.Data[i] = data[i];
-            }
+
+            std::memcpy(outData.Data.data(), data, size);
+
             stbi_image_free(data);
         }
         else
         {
-            OCASI_LOG_ERROR("Failed to load image with path {0}: {1}", m_ImagePath.string(), stbi_failure_reason());
+            OCASI_FAIL(FORMAT("Failed to load image with path {0}: {1}", m_ImagePath.string(), stbi_failure_reason()));
         }
 
-        return outData;
+        return &outData;
+    }
+
+    const ImageData* Image::ImportImageFromData()
+    {
+        if (!m_MemoryImage)
+        {
+            OCASI_LOG_INFO("Tried to load an image from memory that is not a memory only image.");
+            return nullptr;
+        }
+
+        stbi_set_flip_vertically_on_load(true);
+
+        OCASI_ASSERT(!m_ImageData.Data.empty());
+        ImageData& outData = m_ImageData = {};
+        stbi_uc* data = stbi_load_from_memory((stbi_uc*)m_ImageData.Data.data(), m_ImageData.Data.size(), (int*) &outData.Width, (int*) &outData.Height, (int*) &outData.Channels, 4);
+
+        if(data)
+        {
+            uint32_t size = outData.Width * outData.Height * outData.Channels;
+            outData.Data.resize(size);
+
+            std::memcpy(outData.Data.data(), data, size);
+
+            stbi_image_free(data);
+        }
+        else
+        {
+            OCASI_FAIL(FORMAT("Failed to load image with path {0}: {1}", m_ImagePath.string(), stbi_failure_reason()));
+        }
+
+        return nullptr;
     }
 }

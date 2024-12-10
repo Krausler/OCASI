@@ -1,6 +1,7 @@
 #include "GLTFImporter.h"
 
 #include "OCASI/Core/BinaryReader.h"
+#include "OCASI/Core/StringUtil.h"
 
 #include "glm/gtc/quaternion.hpp"
 #include "glaze/glaze.hpp"
@@ -166,7 +167,7 @@ namespace OCASI {
 
         for (auto& gltfMaterial : gltfAsset.Materials)
         {
-
+            CreateMaterial(gltfMaterial.GetIndex());
         }
     }
 
@@ -287,6 +288,7 @@ namespace OCASI {
                 {
                     const size_t TEX_COORD_STRING_INDEX = 9;
                     size_t texCoordIndex = std::atoi(&attributeName.at(TEX_COORD_STRING_INDEX));
+
                     OCASI_ASSERT(texCoordIndex < ocasiMesh.TexCoords.size());
                     auto& texCoords = ocasiMesh.TexCoords.at(texCoordIndex);
 
@@ -309,6 +311,141 @@ namespace OCASI {
                 }
             }
         }
+    }
+
+    void GLTFImporter::CreateMaterial(size_t materialIndex)
+    {
+        auto& gltfAsset = *m_Asset;
+        auto& ocasiScene = *m_Scene;
+
+        OCASI_ASSERT(materialIndex < gltfAsset.Materials.size());
+        auto& gltfMaterial = gltfAsset.Materials.at(materialIndex);
+        OCASI_ASSERT(materialIndex == ocasiScene.Materials.size());
+        auto& ocasiMaterial = ocasiScene.Materials.emplace_back();
+
+        ocasiMaterial.PbrMaterial = std::make_unique<PBRMaterial>();
+        PBRMaterial& pbrMaterial = *ocasiMaterial.PbrMaterial;
+        ocasiMaterial.Name = gltfMaterial.Name;
+
+
+        // Non extension material parameters
+        {
+            if (gltfMaterial.MetallicRoughness.has_value())
+            {
+                pbrMaterial.AlbedoColour = gltfMaterial.MetallicRoughness->BaseColour;
+                pbrMaterial.AlbedoTexture = CreateTexture(gltfMaterial.MetallicRoughness->BaseColourTexture);
+
+                pbrMaterial.HasCombinedMetallicRoughnessTexture = true;
+                pbrMaterial.Metallic = gltfMaterial.MetallicRoughness->Metallic;
+                pbrMaterial.MetallicTexture = CreateTexture(gltfMaterial.MetallicRoughness->MetallicRoughnessTexture);
+
+                pbrMaterial.Roughness = gltfMaterial.MetallicRoughness->Roughness;
+                pbrMaterial.RoughnessTexture = CreateTexture(gltfMaterial.MetallicRoughness->MetallicRoughnessTexture);
+            }
+
+            pbrMaterial.NormalMap = CreateTexture(gltfMaterial.NormalTexture);
+            pbrMaterial.AmbientOcclusionTexture = CreateTexture(gltfMaterial.OcclusionTexture);
+
+            pbrMaterial.EmissiveColour = gltfMaterial.EmissiveColour;
+            pbrMaterial.EmissiveTexture = CreateTexture(gltfMaterial.EmissiveTexture);
+
+            // TODO: AlphaCutoff, AlphaMode, DoubleSided
+        }
+
+        // Extension material parameters
+        {
+
+
+        }
+    }
+
+    std::unique_ptr<Image> GLTFImporter::CreateTexture(std::optional<GLTF::TextureInfo>& texInfo)
+    {
+        if (!texInfo.has_value())
+            return nullptr;
+
+        auto& gltfAsset = *m_Asset;
+        auto& ocasiScene = *m_Scene;
+
+        const GLTF::TextureInfo& gltfInfo = texInfo.value();
+
+        OCASI_ASSERT(gltfInfo.Texture < gltfAsset.Textures.size());
+        GLTF::Texture& gltfTexture = gltfAsset.Textures.at(gltfInfo.Texture);
+
+        OCASI_ASSERT_MSG(gltfTexture.Source.has_value(), FORMAT("Do not know what to do with a texture that does not contain an image source. Texture json index: {}", texInfo->Texture));
+        OCASI_ASSERT(gltfTexture.Source < gltfAsset.Images.size());
+        GLTF::Image& gltfImage = gltfAsset.Images.at(gltfTexture.Source.value());
+
+        ImageSettings settings = {};
+        if (gltfTexture.Sampler.has_value())
+        {
+            OCASI_ASSERT(gltfTexture.Sampler < gltfAsset.Samplers.size());
+            GLTF::Sampler& gltfSampler = gltfAsset.Samplers.at(gltfTexture.Source.value());
+
+            // For implementation purposes and ease oof use the UVWrapT option
+            // will be using the UVWrapT value.
+            settings.Clamp = gltfSampler.WrapT == GLTF::UVWrap::Repeat ? ClampOption::ClampRepeat : (gltfSampler.WrapT == GLTF::UVWrap::ClampToEdge ? ClampOption::ClampToEdge : ClampOption::ClampMirroredRepeat);
+
+            if (gltfSampler.MagFilter.has_value())
+                settings.MagFilter = ConvertToOCASIFilterOption(gltfSampler.MagFilter.value());
+            if (gltfSampler.MinFilter.has_value())
+                settings.MinFilter = ConvertToOCASIFilterOption(gltfSampler.MinFilter.value());
+        }
+
+        if (gltfImage.BufferView.has_value())
+        {
+            size_t unused;
+            std::vector<uint8_t> data = GetBufferViewData(gltfImage.BufferView.value(), 0, unused);
+
+            // When buffer view is defined mimeType must also be defined
+            OCASI_ASSERT(gltfImage.MimeType.has_value());
+            ImageType type = ConvertMimeTypeToImagType(gltfImage.MimeType.value());
+
+            return std::make_unique<Image>(data, true, settings);
+        }
+        else if (gltfImage.URI.has_value())
+        {
+            std::string uri = gltfImage.URI.value();
+            if (uri.starts_with("data:"))
+            {
+                std::string data = gltfImage.URI.value().substr(uri.find(':'));
+                size_t readSize = 0;
+                uint8_t* binaryData = Util::DecodeBase64(data, readSize);
+                std::vector<uint8_t> binaryDataVector(readSize);
+
+                std::memcpy(binaryDataVector.data(), binaryData, readSize);
+
+                return std::make_unique<Image>(binaryDataVector, data.size(), settings);
+            }
+            else if (Path path = m_FileReader.GetParentPath() / uri; std::filesystem::exists(path))
+            {
+                return std::make_unique<Image>(path, settings);
+            }
+            else
+            {
+                OCASI_FAIL("Invalid URI. URI is neither a Base64 encoded data string, nor a valid path to an image coexisting in the same directory as the GLTF file.");
+                return nullptr;
+            }
+        }
+        else
+        {
+            OCASI_FAIL("Not a valid way to define an image. Neither a bufferView, nor a data uri was supplied.");
+            return nullptr;
+        }
+        return nullptr;
+    }
+
+    std::vector<uint8_t> GLTFImporter::GetBufferViewData(size_t bufferViewIndex, size_t accessorOffset, size_t& outByteStride)
+    {
+        auto& asset = *m_Asset;
+        OCASI_ASSERT(bufferViewIndex < asset.BufferViews.size());
+        auto& bufferView = asset.BufferViews.at(bufferViewIndex);
+        outByteStride = bufferView.ByteStride;
+
+        OCASI_ASSERT(bufferView.Buffer < asset.Buffers.size());
+        auto& buffer = asset.Buffers.at(bufferView.Buffer);
+
+        return buffer.Get(bufferView.ByteLength, bufferView.ByteOffset + accessorOffset);
     }
 
     std::vector<uint8_t> GLTFImporter::GetAccessorData(size_t accessorIndex)
@@ -378,16 +515,33 @@ namespace OCASI {
         return data;
     }
 
-    std::vector<uint8_t> GLTFImporter::GetBufferViewData(size_t bufferViewIndex, size_t accessorOffset, size_t& outByteStride)
+    // TODO: Use the already existing FilterOption struct for the GLTF implementation. This is completely unnecessary!
+    FilterOption GLTFImporter::ConvertToOCASIFilterOption(GLTF::MinMagFilter filter)
     {
-        auto& asset = *m_Asset;
-        OCASI_ASSERT(bufferViewIndex < asset.BufferViews.size());
-        auto& bufferView = asset.BufferViews.at(bufferViewIndex);
-        outByteStride = bufferView.ByteStride;
+        switch (filter)
+        {
+            case GLTF::MinMagFilter::Nearest:
+                return FilterOption::Nearest;
+            case GLTF::MinMagFilter::Linear:
+                return FilterOption::Linear;
+            case GLTF::MinMagFilter::NearestMipMapNearest:
+                return FilterOption::NearestMipMapNearest;
+            case GLTF::MinMagFilter::NearestMipMapLinear:
+                return FilterOption::NearestMipMapLinear;
+            case GLTF::MinMagFilter::LinearMipMapNearest:
+                return FilterOption::LinearMipMapNearest;
+            case GLTF::MinMagFilter::LinearMipMapLinear:
+                return FilterOption::LinearMipMapLinear;
+        }
+    }
 
-        OCASI_ASSERT(bufferView.Buffer < asset.Buffers.size());
-        auto& buffer = asset.Buffers.at(bufferView.Buffer);
-
-        return buffer.Get(bufferView.ByteLength, bufferView.ByteOffset + accessorOffset);
+    ImageType GLTFImporter::ConvertMimeTypeToImagType(const std::string& mimeType)
+    {
+        if (mimeType == "image/png")
+            return ImageType::PNG;
+        else if (mimeType == "image/jpeg")
+            return ImageType::JPEG;
+        else
+            return ImageType::None;
     }
 }

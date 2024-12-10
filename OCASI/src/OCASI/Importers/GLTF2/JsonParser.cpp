@@ -573,34 +573,34 @@ namespace OCASI::GLTF {
                 glz::json_t& jExtensions = jMaterial.at("extensions");
 
                 if (jExtensions.contains("KHR_materials_pbrSpecularGlossiness"))
-                    ParsePbrSpecularGlossiness(jExtensions.at("KHR_materials_pbrSpecularGlossiness"), material.SpecularGlossiness = KHRMaterialPbrSpecularGlossiness());
+                    ParsePbrSpecularGlossiness(jExtensions.at("KHR_materials_pbrSpecularGlossiness"), material.ExtSpecularGlossiness = KHRMaterialPbrSpecularGlossiness());
 
                 if (jExtensions.contains("KHR_materials_specular"))
-                    ParseSpecular(jExtensions.at("KHR_materials_specular"), material.Specular = KHRMaterialSpecular());
+                    ParseSpecular(jExtensions.at("KHR_materials_specular"), material.ExtSpecular = KHRMaterialSpecular());
 
                 if (jExtensions.contains("KHR_materials_clearcoat"))
-                    ParseClearcoat(jExtensions.at("KHR_materials_clearcoat"), material.Clearcoat = KHRMaterialClearcoat());
+                    ParseClearcoat(jExtensions.at("KHR_materials_clearcoat"), material.ExtClearcoat = KHRMaterialClearcoat());
 
                 if (jExtensions.contains("KHR_materials_sheen"))
-                    ParseSheen(jExtensions.at("KHR_materials_sheen"), material.Sheen = KHRMaterialSheen());
+                    ParseSheen(jExtensions.at("KHR_materials_sheen"), material.ExtSheen = KHRMaterialSheen());
 
                 if (jExtensions.contains("KHR_materials_transmission"))
-                    ParseTransmission(jExtensions.at("KHR_materials_transmission"), material.Transmission = KHRMaterialTransmission());
+                    ParseTransmission(jExtensions.at("KHR_materials_transmission"), material.ExtTransmission = KHRMaterialTransmission());
 
                 if (jExtensions.contains("KHR_materials_volume"))
-                    ParseVolume(jExtensions.at("KHR_materials_volume"), material.Volume = KHRMaterialVolume());
+                    ParseVolume(jExtensions.at("KHR_materials_volume"), material.ExtVolume = KHRMaterialVolume());
 
                 if (jExtensions.contains("KHR_materials_ior"))
-                    ParseIOR(jExtensions.at("KHR_materials_ior"), material.IOR = KHRMaterialIOR());
+                    ParseIOR(jExtensions.at("KHR_materials_ior"), material.ExtIOR = KHRMaterialIOR());
 
                 if (jExtensions.contains("KHR_materials_emissive_strength"))
-                    ParseEmissiveStrength(jExtensions.at("KHR_materials_emissive_strength"), material.EmissiveStrength = KHRMaterialEmissiveStrength());
+                    ParseEmissiveStrength(jExtensions.at("KHR_materials_emissive_strength"), material.ExtEmissiveStrength = KHRMaterialEmissiveStrength());
 
                 if (jExtensions.contains("KHR_materials_iridescence"))
-                    ParseIridescence(jExtensions.at("KHR_materials_iridescence"), material.Iridescence = KHRMaterialIridescence());
+                    ParseIridescence(jExtensions.at("KHR_materials_iridescence"), material.ExtIridescence = KHRMaterialIridescence());
 
                 if (jExtensions.contains("KHR_materials_anisotropy"))
-                    ParseAnisotropy(jExtensions.at("KHR_materials_pbrSpecularGlossiness"), material.Anisotropy = KHRMaterialAnisotropy());
+                    ParseAnisotropy(jExtensions.at("KHR_materials_pbrSpecularGlossiness"), material.ExtAnisotropy = KHRMaterialAnisotropy());
             }
         }
 
@@ -978,7 +978,7 @@ namespace OCASI::GLTF {
     void JsonParser::ParseIOR(const glz::json_t& jIOR, std::optional<KHRMaterialIOR>& outIOR)
     {
         if (jIOR.contains("ior")) {
-            outIOR->Ior = (float) jIOR.at("ior").get_number();
+            outIOR->IOR = (float) jIOR.at("ior").get_number();
         }
     }
 

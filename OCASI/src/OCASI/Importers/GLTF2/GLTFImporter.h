@@ -42,8 +42,13 @@ namespace OCASI {
         void CreateNodes(size_t sceneIndex);
         void TraverseNodes(GLTF::Node& gltfNode, std::shared_ptr<Node> ocasiNode);
         void CreateMesh(size_t meshIndex);
+        void CreateMaterial(size_t materialIndex);
+        std::unique_ptr<Image> CreateTexture(std::optional<GLTF::TextureInfo>& texInfo);
         std::vector<uint8_t> GetAccessorData(size_t accessorIndex);
         std::vector<uint8_t> GetBufferViewData(size_t bufferViewIndex, size_t accessorOffset, size_t& outByteStride);
+
+        FilterOption ConvertToOCASIFilterOption(GLTF::MinMagFilter filter);
+        ImageType ConvertMimeTypeToImagType(const std::string& mimeType);
     private:
         FileReader& m_FileReader;
         glz::json_t* m_Json = nullptr;

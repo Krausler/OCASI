@@ -126,6 +126,7 @@ namespace OCASI {
                 newMat.PbrMaterial = std::make_unique<PBRMaterial>();
 
                 newMat.PbrMaterial->AlbedoColour = pbrExtension.AlbedoColour;
+                newMat.PbrMaterial->EmissiveColour = pbrExtension.EmissiveColour;
                 newMat.PbrMaterial->Roughness = pbrExtension.Roughness;
                 newMat.PbrMaterial->Metallic = pbrExtension.Metallic;
                 newMat.PbrMaterial->IOR = pbrExtension.IOR;
@@ -183,7 +184,8 @@ namespace OCASI {
                 Material& mat = m_OutputScene->Materials.at(i);
                 if (mat.Name == m.MaterialName)
                 {
-                    // Always the firs mesh as obj does not have multiple meshes in one model
+                    // Every model has only one submesh in the OBJ file format. There is support for nesting node structures,
+                    // but not for multiple submeshes in one mesh
                     m_OutputScene->Models.at(o.Mesh).Meshes.at(0).MaterialIndex = i;
                 }
             }
@@ -259,7 +261,7 @@ namespace OCASI {
             return;
 
         ImageSettings settings = {};
-        settings.Clamp = clampValue ? ClampOption::ClampToBorder : ClampOption::ClampRepeat;
+        settings.Clamp = clampValue ? ClampOption::ClampToEdge : ClampOption::ClampRepeat;
 
         if (mat.PBRExtension.has_value())
         {
