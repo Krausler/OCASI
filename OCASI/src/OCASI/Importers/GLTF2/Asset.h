@@ -224,7 +224,7 @@ namespace OCASI::GLTF {
     struct TextureInfo
     {
         size_t Texture = INVALID_ID;
-        size_t TexCoords = 0; // Set of texture coordinates
+        size_t TexCoords = 0; // SetValue of texture coordinates
         float Scale = 1.0f;
     };
 

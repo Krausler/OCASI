@@ -55,7 +55,7 @@ namespace OCASI {
         FilterOption MinFilter = FilterOption::Linear;
         FilterOption MagFilter = FilterOption::Linear;
 
-        ClampOption Clamp = ClampOption::ClampRepeat; // Set to repeat by default as it's the most common option
+        ClampOption Clamp = ClampOption::ClampRepeat; // SetValue to repeat by default as it's the most common option
         TextureOrientation Orientation = TextureOrientation::None; // Will be TextureOrientation::None when it is not relevant
     };
 

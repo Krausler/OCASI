@@ -115,7 +115,7 @@ SPDLOG_INLINE std::shared_ptr<thread_pool> registry::get_tp() {
     return tp_;
 }
 
-// Set global formatter. Each sink in each logger will get a clone of this object
+// SetValue global formatter. Each sink in each logger will get a clone of this object
 SPDLOG_INLINE void registry::set_formatter(std::unique_ptr<formatter> formatter) {
     std::lock_guard<std::mutex> lock(logger_map_mutex_);
     formatter_ = std::move(formatter);

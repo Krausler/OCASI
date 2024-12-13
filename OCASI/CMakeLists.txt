@@ -30,6 +30,7 @@ add_library(OCASI STATIC
         src/OCASI/Importers/GLTF2/JsonParser.h
         src/OCASI/Core/BinaryReader.h
         src/OCASI/Core/BinaryReader.cpp
+        src/OCASI/Core/Material.cpp
 )
 
 target_include_directories(OCASI PUBLIC

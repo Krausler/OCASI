@@ -118,35 +118,28 @@ namespace OCASI {
         for (const auto& [name, mat] : m_OBJModel->Materials)
         {
             Material& newMat = m_OutputScene->Materials.emplace_back();
-            newMat.Name = mat.Name;
+            newMat.SetName(mat.Name);
 
             if (mat.PBRExtension.has_value())
             {
                 const OBJ::PBRMaterialExtension& pbrExtension = mat.PBRExtension.value();
-                newMat.PbrMaterial = std::make_unique<PBRMaterial>();
 
-                newMat.PbrMaterial->AlbedoColour = pbrExtension.AlbedoColour;
-                newMat.PbrMaterial->EmissiveColour = pbrExtension.EmissiveColour;
-                newMat.PbrMaterial->Roughness = pbrExtension.Roughness;
-                newMat.PbrMaterial->Metallic = pbrExtension.Metallic;
-                newMat.PbrMaterial->IOR = pbrExtension.IOR;
-                newMat.PbrMaterial->Anisotropy = pbrExtension.Anisotropy;
-                newMat.PbrMaterial->AnisotropyRotation = pbrExtension.AnisotropyRotation;
-                newMat.PbrMaterial->Clearcoat = pbrExtension.Clearcoat;
-                newMat.PbrMaterial->ClearcoatRoughness = pbrExtension.ClearcoatRoughness;
-            }
-            else
-            {
-                newMat.BlinnPhongMaterial = std::make_unique<BlinnPhongMaterial>();
-
-                newMat.BlinnPhongMaterial->DiffuseColour = mat.DiffuseColour;
-                newMat.BlinnPhongMaterial->SpecularColour = mat.SpecularColour;
-                newMat.BlinnPhongMaterial->Shininess = mat.Shininess;
-                newMat.BlinnPhongMaterial->Transparency = mat.Opacity;
-                newMat.BlinnPhongMaterial->EmissiveColour = mat.EmissiveColour;
+                newMat.SetValue(MATERIAL_ROUGHNESS_INDEX, pbrExtension.Roughness);
+                newMat.SetValue(MATERIAL_METALLIC_INDEX, pbrExtension.Metallic);
+                newMat.SetValue(MATERIAL_IOR_INDEX, pbrExtension.IOR);
+                newMat.SetValue(MATERIAL_ANISOTROPY_INDEX, pbrExtension.Anisotropy);
+                newMat.SetValue(MATERIAL_ANISOTROPY_ROTATION_INDEX, pbrExtension.AnisotropyRotation);
+                newMat.SetValue(MATERIAL_CLEARCOAT_INDEX, pbrExtension.Clearcoat);
+                newMat.SetValue(MATERIAL_CLEARCOAT_ROUGHNESS_INDEX, pbrExtension.ClearcoatRoughness);
             }
 
-            for (uint32_t i = 0; i < OBJ::MAX_NON_PBR_TEXTURE_COUNT + OBJ::MAX_PBR_TEXTURE_COUNT; i++)
+            newMat.SetValue(MATERIAL_ALBEDO_COLOUR_INDEX, mat.DiffuseColour);
+            newMat.SetValue(MATERIAL_SPECULAR_COLOUR_INDEX, mat.SpecularColour);
+            newMat.SetValue(MATERIAL_SPECULAR_STRENGTH_INDEX, mat.Shininess);
+            newMat.SetValue(MATERIAL_EMISSIVE_COLOUR_INDEX, mat.EmissiveColour);
+            newMat.SetValue(MATERIAL_TRANSPARENCY_INDEX, mat.Opacity);
+
+            for (uint32_t i = 0; i < mat.Textures.size(); i++)
             {
                 SortTextures(newMat, mat, folder, i);
             }
@@ -182,7 +175,7 @@ namespace OCASI {
             for (int i = 0; i < m_OutputScene->Materials.size(); i++)
             {
                 Material& mat = m_OutputScene->Materials.at(i);
-                if (mat.Name == m.MaterialName)
+                if (mat.GetName() == m.MaterialName)
                 {
                     // Every model has only one submesh in the OBJ file format. There is support for nesting node structures,
                     // but not for multiple submeshes in one mesh
@@ -213,7 +206,7 @@ namespace OCASI {
         {
             for (int i = 0; i < m_OutputScene->Materials.size(); i++)
             {
-                if (m_OutputScene->Materials.at(i).Name == m.MaterialName)
+                if (m_OutputScene->Materials.at(i).GetName() == m.MaterialName)
                 {
                     // Always the firs mesh as obj does not have multiple meshes in one model
                     m_OutputScene->Models.at(mesh).Meshes.at(0).MaterialIndex = i;
@@ -239,87 +232,112 @@ namespace OCASI {
     {
         // This value is needed to convert the OBJ::TextureType to a OCASI::TextureOrientation
         // for reflection textures. In OBJ each side of the cube map is provided using a single
-        // image. The value 6 is just the mapping value that needs to be subtracted from the TextureType
+        // image. The value 8 is just the mapping value that needs to be subtracted from the TextureType
         // to be able to cast the integer value of the enum to the integer value of the TextureOrientation.
-        const uint8_t REFLECTION_TEXTURE_INDEX_NORMALIZER = 6;
+        const uint8_t REFLECTION_TEXTURE_INDEX_NORMALIZER = 8;
 
         OBJ::TextureType type = (OBJ::TextureType) i;
-        std::string texturePath;
-        bool clampValue = false;
-        if (!OBJ::HasPBRTextureType(type))
-        {
-            texturePath = mat.Textures.at(type);
-            clampValue = mat.TextureClamps.at(i);
-        }
-        else if (OBJ::HasPBRTextureType(type) && mat.PBRExtension.has_value())
-        {
-            texturePath = mat.PBRExtension->Textures.at(type);
-            clampValue = mat.PBRExtension->TextureClamps.at(i);
-        }
+        std::string texturePath = mat.Textures.at(type);
 
         if (texturePath.empty())
             return;
 
         ImageSettings settings = {};
-        settings.Clamp = clampValue ? ClampOption::ClampToEdge : ClampOption::ClampRepeat;
+        settings.Clamp = mat.TextureClamps.at(i) ? ClampOption::ClampToEdge : ClampOption::ClampRepeat;
 
-        if (mat.PBRExtension.has_value())
+        switch (type)
         {
-            PBRMaterial& pbrMaterial = *newMat.PbrMaterial;
-            switch (type)
+            case OBJ::TextureType::Roughness:
             {
-                case OBJ::TextureType::Albedo:
-                    pbrMaterial.AlbedoTexture = std::make_unique<Image>(folder / texturePath, settings);
-                case OBJ::TextureType::Roughness:
-                    pbrMaterial.RoughnessTexture = std::make_unique<Image>(folder / texturePath, settings);
-                case OBJ::TextureType::Metallic:
-                    pbrMaterial.MetallicTexture = std::make_unique<Image>(folder / texturePath, settings);
-                case OBJ::TextureType::Sheen:
-                    // TODO: Not Implemented
-                case OBJ::TextureType::Clearcoat:
-                    pbrMaterial.ClearcoatTexture = std::make_unique<Image>(folder / texturePath, settings);
-                case OBJ::TextureType::ClearcoatRoughness:
-                    pbrMaterial.ClearcoatRoughnessTexture = std::make_unique<Image>(folder / texturePath, settings);
-                case OBJ::TextureType::Occlusion:
-                    pbrMaterial.AmbientOcclusionTexture = std::make_unique<Image>(folder / texturePath, settings);
-                case OBJ::TextureType::NormalPBR:
-                    pbrMaterial.NormalMap = std::make_unique<Image>(folder / texturePath, settings);
-                default:
-                    OCASI_FAIL("Something went very wrong");
+                auto image = std::make_shared<Image>(folder / texturePath, settings);
+                newMat.SetTexture(MATERIAL_TEXTURE_ROUGHNESS_INDEX, image);
+                break;
             }
-        }
-        else
-        {
-            BlinnPhongMaterial& blinnPhongMaterial = *newMat.BlinnPhongMaterial;
-
-            switch (type)
+            case OBJ::TextureType::Metallic:
             {
-                case OBJ::TextureType::Diffuse:
-                    blinnPhongMaterial.DiffuseTexture = std::make_unique<Image>(folder / texturePath, settings);
-                case OBJ::TextureType::Ambient:
-                    blinnPhongMaterial.AmbientTexture = std::make_unique<Image>(folder / texturePath, settings);
-                case OBJ::TextureType::Specular:
-                    blinnPhongMaterial.SpecularTexture = std::make_unique<Image>(folder / texturePath, settings);
-                case OBJ::TextureType::Emissive:
-                    blinnPhongMaterial.EmissiveTexture = std::make_unique<Image>(folder / texturePath, settings);
-                case OBJ::TextureType::Transparency:
-                    blinnPhongMaterial.TransparencyTexture = std::make_unique<Image>(folder / texturePath, settings);
-                case OBJ::TextureType::Shininess:
-                    blinnPhongMaterial.ShininessTexture = std::make_unique<Image>(folder / texturePath, settings);
-                case OBJ::TextureType::Normal:
-                    blinnPhongMaterial.NormalMap = std::make_unique<Image>(folder / texturePath, settings);
-
-                case OBJ::TextureType::ReflectionTop:
-                case OBJ::TextureType::ReflectionBottom:
-                case OBJ::TextureType::ReflectionBack:
-                case OBJ::TextureType::ReflectionFront:
-                case OBJ::TextureType::ReflectionLeft:
-                case OBJ::TextureType::ReflectionRight:
-                case OBJ::TextureType::ReflectionSphere:
-                    settings.Orientation = (TextureOrientation) (type - REFLECTION_TEXTURE_INDEX_NORMALIZER);
-                    newMat.BlinnPhongMaterial->ReflectionMaps.push_back(std::make_unique<Image>(folder / texturePath, settings));
-                    break;
+                auto image = std::make_shared<Image>(folder / texturePath, settings);
+                newMat.SetTexture(MATERIAL_TEXTURE_METALLIC_INDEX, image);
+                break;
             }
+            case OBJ::TextureType::Sheen:
+                // TODO: Not Implemented
+                break;
+            case OBJ::TextureType::Clearcoat:
+            {
+                auto image = std::make_shared<Image>(folder / texturePath, settings);
+                newMat.SetTexture(MATERIAL_TEXTURE_CLEARCOAT_INDEX, image);
+                break;
+            }
+            case OBJ::TextureType::ClearcoatRoughness:
+            {
+                auto image = std::make_shared<Image>(folder / texturePath, settings);
+                newMat.SetTexture(MATERIAL_TEXTURE_CLEARCOAT_ROUGHNESS_INDEX, image);
+                break;
+            }
+            case OBJ::TextureType::Occlusion:
+            {
+                auto image = std::make_shared<Image>(folder / texturePath, settings);
+                newMat.SetTexture(MATERIAL_TEXTURE_OCCLUSION_INDEX, image);
+                break;
+            }
+            case OBJ::TextureType::Diffuse:
+            {
+                // Diffuse textures are classified as the objects base color
+                auto image = std::make_shared<Image>(folder / texturePath, settings);
+                newMat.SetTexture(MATERIAL_TEXTURE_ALBEDO_INDEX, image);
+                break;
+            }
+            case OBJ::TextureType::Ambient:
+            {
+                auto image = std::make_shared<Image>(folder / texturePath, settings);
+                newMat.SetTexture(MATERIAL_TEXTURE_AMBIENT_INDEX, image);
+                break;
+            }
+            case OBJ::TextureType::Specular:
+            {
+                auto image = std::make_shared<Image>(folder / texturePath, settings);
+                newMat.SetTexture(MATERIAL_TEXTURE_SPECULAR_INDEX, image);
+                break;
+            }
+            case OBJ::TextureType::Emissive:
+            {
+                auto image = std::make_shared<Image>(folder / texturePath, settings);
+                newMat.SetTexture(MATERIAL_TEXTURE_EMISSIVE_INDEX, image);
+                break;
+            }
+            case OBJ::TextureType::Transparency:
+            {
+                auto image = std::make_shared<Image>(folder / texturePath, settings);
+                newMat.SetTexture(MATERIAL_TEXTURE_TRANSPARENCY_INDEX, image);
+                break;
+            }
+            case OBJ::TextureType::Shininess:
+            {
+                auto image = std::make_shared<Image>(folder / texturePath, settings);
+                newMat.SetTexture(MATERIAL_TEXTURE_SPECULAR_STRENGTH_INDEX, image);
+                break;
+            }
+            case OBJ::TextureType::Normal:
+            {
+                auto image = std::make_shared<Image>(folder / texturePath, settings);
+                newMat.SetTexture(MATERIAL_TEXTURE_NORMAL_INDEX, image);
+                break;
+            }
+            case OBJ::TextureType::ReflectionTop:
+            case OBJ::TextureType::ReflectionBottom:
+            case OBJ::TextureType::ReflectionBack:
+            case OBJ::TextureType::ReflectionFront:
+            case OBJ::TextureType::ReflectionLeft:
+            case OBJ::TextureType::ReflectionRight:
+            case OBJ::TextureType::ReflectionSphere:
+            {
+                auto image = std::make_shared<Image>(folder / texturePath, settings);
+                newMat.SetTexture(MATERIAL_TEXTURE_REFLECTION_MAP_TOP + type - REFLECTION_TEXTURE_INDEX_NORMALIZER, image);
+                break;
+            }
+            default:
+            OCASI_FAIL("Something went very wrong");
+                break;
         }
     }
 }

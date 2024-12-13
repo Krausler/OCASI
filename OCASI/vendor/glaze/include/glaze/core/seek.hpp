@@ -192,7 +192,7 @@ namespace glz
       return detail::seek_impl(std::forward<F>(func), std::forward<T>(value), json_ptr);
    }
 
-   // Get a refrence to a value at the location of a json_ptr. Will error if
+   // GetValue a refrence to a value at the location of a json_ptr. Will error if
    // value doesnt exist or is wrong type
    template <class V, class T>
    expected<std::reference_wrapper<V>, error_ctx> get(T&& root_value, sv json_ptr)
@@ -221,7 +221,7 @@ namespace glz
       return std::ref(*result);
    }
 
-   // Get a pointer to a value at the location of a json_ptr. Will return
+   // GetValue a pointer to a value at the location of a json_ptr. Will return
    // nullptr if value doesnt exist or is wrong type
    template <class V, class T>
    V* get_if(T&& root_value, sv json_ptr) noexcept
@@ -237,7 +237,7 @@ namespace glz
       return result;
    }
 
-   // Get a value at the location of a json_ptr. Will error if
+   // GetValue a value at the location of a json_ptr. Will error if
    // value doesnt exist or is not asignable or is a narrowing conversion.
    template <class V, class T>
    expected<V, error_code> get_value(T&& root_value, sv json_ptr) noexcept
@@ -428,7 +428,7 @@ namespace glz
          return {s.substr(0, i + 1), next.substr(i, next.size() - i)};
       };
 
-      // Get each full JSON pointer path at increasing depth
+      // GetValue each full JSON pointer path at increasing depth
       inline auto json_ptr_children(sv s)
       {
          std::vector<sv> v{};

@@ -1044,7 +1044,7 @@ template <> struct cache_accessor<double> {
     int kb = cache_index * compression_ratio + float_info<double>::min_k;
     int offset = k - kb;
 
-    // Get base cache.
+    // GetValue base cache.
     uint128_fallback base_cache = pow10_significands[cache_index];
     if (offset == 0) return base_cache;
 

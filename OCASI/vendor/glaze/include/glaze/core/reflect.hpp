@@ -71,7 +71,7 @@ namespace glz::detail
 
 namespace glz
 {
-   // Get indices of elements satisfying a predicate
+   // GetValue indices of elements satisfying a predicate
    template <class Tuple, template <class> class Predicate>
    consteval auto filter_indices()
    {

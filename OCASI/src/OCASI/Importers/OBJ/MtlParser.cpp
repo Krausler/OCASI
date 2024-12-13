@@ -244,15 +244,6 @@ namespace OCASI::OBJ {
 
     void MtlParser::CreateNewMaterial(const std::string& name)
     {
-        // Some none pbr parameters are also used in the pbr model
-        if (m_CurrentMaterial && m_CurrentMaterial->PBRExtension.has_value())
-        {
-            m_CurrentMaterial->PBRExtension->Textures[TextureType::NormalPBR - PBR_TEXTURE_TYPE_ARRAY_NORMALIZER] = m_CurrentMaterial->Textures.at(TextureType::Normal);
-            m_CurrentMaterial->PBRExtension->AlbedoColour = m_CurrentMaterial->DiffuseColour;
-            m_CurrentMaterial->PBRExtension->Textures[TextureType::Albedo - PBR_TEXTURE_TYPE_ARRAY_NORMALIZER] = m_CurrentMaterial->Textures.at(TextureType::Diffuse);
-            m_CurrentMaterial->PBRExtension->Textures[TextureType::EmissivePBR - PBR_TEXTURE_TYPE_ARRAY_NORMALIZER] = m_CurrentMaterial->Textures.at(TextureType::Emissive);
-        }
-
         m_Model->Materials[name] = {};
         m_CurrentMaterial = &m_Model->Materials.at(name);
         m_CurrentMaterial->Name = name;
@@ -376,15 +367,7 @@ namespace OCASI::OBJ {
                     std::string option = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
                     if (option == "on")
                     {
-                        if (HasPBRTextureType(type))
-                        {
-                            CreatePBRMaterialExtension();
-                            m_CurrentMaterial->PBRExtension->TextureClamps.at(type) = true;
-                        }
-                        else
-                        {
-                            m_CurrentMaterial->TextureClamps.at(type) = true;
-                        }
+                        m_CurrentMaterial->TextureClamps.at(type) = true;
                     }
                 }
                 /// All options below are skipped as they are mostly not necessary
@@ -406,25 +389,15 @@ namespace OCASI::OBJ {
             }
             else
             {
-                if (type < MAX_NON_PBR_TEXTURE_COUNT)
-                    m_CurrentMaterial->Textures[type] = Util::GetToNextToken(begin, m_End, '\n');
-                else if (HasPBRTextureType(type))
-                {
-                    CreatePBRMaterialExtension();
-
-                    m_CurrentMaterial->PBRExtension->Textures[type - PBR_TEXTURE_TYPE_ARRAY_NORMALIZER] = Util::GetToNextToken(begin, m_End, '\n');
-                }
-                else
-                {
-                    OCASI_FAIL("Tried to parse texture, while end of line was already reached.");
-                    return;
-                }
+                m_CurrentMaterial->Textures[type] = Util::GetToNextToken(begin, m_End, '\n');
             }
         }
     }
 
     void MtlParser::CreatePBRMaterialExtension()
     {
+        OCASI_ASSERT(m_CurrentMaterial);
+
         if (!m_CurrentMaterial->PBRExtension.has_value())
             m_CurrentMaterial->PBRExtension = PBRMaterialExtension();
     }

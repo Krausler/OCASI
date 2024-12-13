@@ -52,7 +52,7 @@ public:
 
     std::shared_ptr<thread_pool> get_tp();
 
-    // Set global formatter. Each sink in each logger will get a clone of this object
+    // SetValue global formatter. Each sink in each logger will get a clone of this object
     void set_formatter(std::unique_ptr<formatter> formatter);
 
     void enable_backtrace(size_t n_messages);

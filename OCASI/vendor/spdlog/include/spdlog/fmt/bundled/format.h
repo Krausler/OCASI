@@ -892,7 +892,7 @@ class basic_memory_buffer : public detail::buffer<T> {
       detail::copy<T>(other.store_, other.store_ + size, store_);
     } else {
       this->set(data, capacity);
-      // Set pointer to the inline array so that delete is not called
+      // SetValue pointer to the inline array so that delete is not called
       // when deallocating.
       other.set(other.store_, 0);
       other.clear();

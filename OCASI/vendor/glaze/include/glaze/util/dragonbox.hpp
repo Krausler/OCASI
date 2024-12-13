@@ -758,7 +758,7 @@ namespace glz::jkj
                return x * stdr::uint_least64_t(y);
             }
 
-            // Get 128-bit result of multiplication of two 64-bit unsigned integers.
+            // GetValue 128-bit result of multiplication of two 64-bit unsigned integers.
             GLZ_JKJ_SAFEBUFFERS inline GLZ_JKJ_CONSTEXPR20 uint128 umul128(stdr::uint_least64_t x,
                                                                            stdr::uint_least64_t y) noexcept
             {
@@ -804,7 +804,7 @@ namespace glz::jkj
 #endif
             }
 
-            // Get high half of the 128-bit result of multiplication of two 64-bit unsigned
+            // GetValue high half of the 128-bit result of multiplication of two 64-bit unsigned
             // integers.
             GLZ_JKJ_SAFEBUFFERS inline GLZ_JKJ_CONSTEXPR20 stdr::uint_least64_t umul128_upper64(
                stdr::uint_least64_t x, stdr::uint_least64_t y) noexcept
@@ -850,7 +850,7 @@ namespace glz::jkj
 #endif
             }
 
-            // Get upper 128-bits of multiplication of a 64-bit unsigned integer and a 128-bit
+            // GetValue upper 128-bits of multiplication of a 64-bit unsigned integer and a 128-bit
             // unsigned integer.
             GLZ_JKJ_SAFEBUFFERS inline GLZ_JKJ_CONSTEXPR20 uint128 umul192_upper128(stdr::uint_least64_t x,
                                                                                     uint128 y) noexcept
@@ -860,7 +860,7 @@ namespace glz::jkj
                return r;
             }
 
-            // Get upper 64-bits of multiplication of a 32-bit unsigned integer and a 64-bit
+            // GetValue upper 64-bits of multiplication of a 32-bit unsigned integer and a 64-bit
             // unsigned integer.
             inline GLZ_JKJ_CONSTEXPR20 stdr::uint_least64_t umul96_upper64(stdr::uint_least32_t x,
                                                                            stdr::uint_least64_t y) noexcept
@@ -878,7 +878,7 @@ namespace glz::jkj
 #endif
             }
 
-            // Get lower 128-bits of multiplication of a 64-bit unsigned integer and a 128-bit
+            // GetValue lower 128-bits of multiplication of a 64-bit unsigned integer and a 128-bit
             // unsigned integer.
             GLZ_JKJ_SAFEBUFFERS inline GLZ_JKJ_CONSTEXPR20 uint128 umul192_lower128(stdr::uint_least64_t x,
                                                                                     uint128 y) noexcept
@@ -888,7 +888,7 @@ namespace glz::jkj
                return {(high + high_low.high()) & UINT64_C(0xffffffffffffffff), high_low.low()};
             }
 
-            // Get lower 64-bits of multiplication of a 32-bit unsigned integer and a 64-bit
+            // GetValue lower 64-bits of multiplication of a 32-bit unsigned integer and a 64-bit
             // unsigned integer.
             constexpr stdr::uint_least64_t umul96_lower64(stdr::uint_least32_t x, stdr::uint_least64_t y) noexcept
             {
@@ -2154,7 +2154,7 @@ namespace glz::jkj
             const auto kb = DecimalExponentType(cache_index * compression_ratio + min_k);
             const auto offset = DecimalExponentType(k - kb);
 
-            // Get the base cache.
+            // GetValue the base cache.
             const auto base_cache = cache[cache_index];
 
             if (offset == 0) {
@@ -2252,7 +2252,7 @@ namespace glz::jkj
             const auto kb = DecimalExponentType(cache_index * compression_ratio + min_k);
             const auto offset = DecimalExponentType(k - kb);
 
-            // Get the base cache.
+            // GetValue the base cache.
             const auto base_cache = cache[cache_index];
 
             if (offset == 0) {

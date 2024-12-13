@@ -7,77 +7,98 @@
 
 namespace OCASI {
 
-    // TODO: Rework textures. Create a texture system with an array of texture objects, with an enum for the index
+    // The index into the MATERIAL_VALUE_OBJECT_SIZES where the object's size is specified
+    const size_t MATERIAL_ALBEDO_COLOUR_INDEX = 0; // Object size: glm::vec3; this may also be the diffuse colour
+    const size_t MATERIAL_AMBIENT_COLOUR_INDEX = 1; // Object size: glm::vec3
+    const size_t MATERIAL_SPECULAR_COLOUR_INDEX = 2; // Object size: glm::vec3
+    const size_t MATERIAL_EMISSIVE_COLOUR_INDEX = 3; // Object size: glm::vec3
+    const size_t MATERIAL_ROUGHNESS_INDEX = 4; // Object size: float
+    const size_t MATERIAL_METALLIC_INDEX = 5; // Object size: float
+    const size_t MATERIAL_ANISOTROPY_INDEX = 6; // Object size: float
+    const size_t MATERIAL_ANISOTROPY_ROTATION_INDEX = 7; // Object size: float
+    const size_t MATERIAL_CLEARCOAT_INDEX = 8; // Object size: float
+    const size_t MATERIAL_CLEARCOAT_ROUGHNESS_INDEX = 9; // Object size: float
+    const size_t MATERIAL_SPECULAR_STRENGTH_INDEX = 10; // Object size: float; this is also called shininess
+    const size_t MATERIAL_EMISSIVE_STRENGTH_INDEX = 11; // Object size: float
+    const size_t MATERIAL_TRANSPARENCY_INDEX = 12; // Object size: float
+    const size_t MATERIAL_IOR_INDEX = 13; // Object size: float
 
-    struct PBRMaterial
+    const size_t MATERIAL_BUFFER_BYTE_SIZE = 14;
+
+    const size_t MATERIAL_VALUE_OBJECT_SIZES[] =
     {
-        glm::vec3 AlbedoColour = glm::vec3(1); // The objects base color;
-        std::unique_ptr<Image> AlbedoTexture = nullptr;
-
-        glm::vec3 EmissiveColour = glm::vec3(0, 0, 0);
-        std::unique_ptr<Image> EmissiveTexture = nullptr;
-
-        std::unique_ptr<Image> NormalMap = nullptr;
-
-        bool HasCombinedMetallicRoughnessTexture = false;
-        float Metallic = 0; // Value determining the mix value between the ExtIOR and the objects albedo colour (default: defines that the object does not have a metallic appearance)
-        std::unique_ptr<Image> MetallicTexture = nullptr;
-
-        float Roughness = 0.5f; // Value determining the roughness of a surface (default: half of the maximum value)
-        std::unique_ptr<Image> RoughnessTexture = nullptr;
-
-        float IOR = 0.04f; // Index of refraction or the base reflectivity of the object (default: base reflectivity of plastic)
-        std::unique_ptr<Image> AmbientOcclusionTexture = nullptr;
-
-        // ExtAnisotropy can often be found brushed metal like aluminum
-        float Anisotropy = 0.0f; // The amount of additional reflection added to the objects surface
-        float AnisotropyRotation = 0.0f; // The rotation of the reflection
-
-        float Clearcoat = 0.0f;
-        std::unique_ptr<Image> ClearcoatTexture;
-        float ClearcoatRoughness = 0.0f;
-        std::unique_ptr<Image> ClearcoatRoughnessTexture;
+            sizeof(glm::vec3), // albedo
+            sizeof(glm::vec3), // ambient
+            sizeof(glm::vec3), // specular
+            sizeof(glm::vec3), // emissive
+            sizeof(float), // roughness
+            sizeof(float), // metallic
+            sizeof(float), // anisotropy
+            sizeof(float), // anisotropy rotation
+            sizeof(float), // clearcoat
+            sizeof(float), // clearcoat roughness
+            sizeof(float), // specular strength
+            sizeof(float), // emissive strength
+            sizeof(float), // transparency
+            sizeof(float), // ior (index of refraction)
     };
 
-    // Some values are duplicates as they are used in both models e.g. the normal map
-    struct BlinnPhongMaterial
+    // The index at which the texture lies in the m_Texture array from the Material class
+    const size_t MATERIAL_TEXTURE_ALBEDO_INDEX = 0;
+    const size_t MATERIAL_TEXTURE_AMBIENT_INDEX = 1;
+    const size_t MATERIAL_TEXTURE_SPECULAR_INDEX = 2;
+    const size_t MATERIAL_TEXTURE_EMISSIVE_INDEX = 3;
+    const size_t MATERIAL_TEXTURE_ROUGHNESS_INDEX = 4;
+    const size_t MATERIAL_TEXTURE_METALLIC_INDEX = 5;
+    const size_t MATERIAL_TEXTURE_CLEARCOAT_INDEX = 6;
+    const size_t MATERIAL_TEXTURE_CLEARCOAT_ROUGHNESS_INDEX = 7;
+    const size_t MATERIAL_TEXTURE_NORMAL_INDEX = 8;
+    const size_t MATERIAL_TEXTURE_EMISSIVE_STRENGTH_INDEX = 9;
+    const size_t MATERIAL_TEXTURE_SPECULAR_STRENGTH_INDEX = 10;
+    const size_t MATERIAL_TEXTURE_ANISOTROPY_INDEX = 11; // This texture holds both the anisotropy and the rotation
+    const size_t MATERIAL_TEXTURE_TRANSPARENCY_INDEX = 12;
+    const size_t MATERIAL_TEXTURE_OCCLUSION_INDEX = 13;
+
+    // Reflection maps
+    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_TOP = 14;
+    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_BOTTOM = 15;
+    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_FRONT = 16;
+    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_BACK = 17;
+    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_RIGHT = 18;
+    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_LEFT = 19;
+    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_SPHERE = 20;
+
+    const size_t MATERIAL_TEXTURE_ARRAY_SIZE = 21;
+
+    class Material
     {
-        // Diffuse: The colour that is displayed when light bounces in all directions
-        glm::vec3 DiffuseColour;
-        std::unique_ptr<Image> DiffuseTexture = nullptr;
+    public:
+        Material() = default;
 
-        // Diffuse: The colour that is displayed when light bounces in all directions
-        glm::vec3 AmbientColour;
-        std::unique_ptr<Image> AmbientTexture = nullptr;
+        template<typename Type>
+        void SetValue(size_t index, const Type& value);
 
-        // ExtSpecular: The colour that is displayed when specular highlights are computed
-        glm::vec3 SpecularColour;
-        std::unique_ptr<Image> SpecularTexture = nullptr;
+        template<typename Type>
+        Type GetValue(size_t index);
 
-        // Emissive: The colour of an object when it emits light acting as a light source
-        glm::vec3 EmissiveColour;
-        std::unique_ptr<Image> EmissiveTexture = nullptr;
+        void SetTexture(size_t index, std::shared_ptr<Image> image);
+        std::shared_ptr<Image> GetTexture(size_t index);
 
-        // Shininess: The value defining how intense specular highlights are rendered
-        float Shininess = 0.0f;
-        std::unique_ptr<Image> ShininessTexture = nullptr;
+        void SetName(const std::string& name);
+        void SetCombinedMetallicRoughnessTexture(bool value) { m_UseCombinedMetallicRoughnessTexture = value; }
 
-        float Transparency = 1.0f;
-        std::unique_ptr<Image> TransparencyTexture = nullptr;
-        std::vector<std::unique_ptr<Image>> ReflectionMaps;
+        bool UsesCombinedMetallicRoughnessTexture() { return m_UseCombinedMetallicRoughnessTexture; }
+        const std::string& GetName() { return m_Name; }
+    private:
+        static consteval size_t GetMaterialValueObjectsSizesArraySize() { return sizeof(MATERIAL_VALUE_OBJECT_SIZES) / sizeof(MATERIAL_VALUE_OBJECT_SIZES[0]); }
+        static consteval size_t CalculateMaterialBufferByteSize();
 
-        std::unique_ptr<Image> NormalMap = nullptr;
-    };
-
-    struct Material
-    {
-        std::string Name;
-
-        std::unique_ptr<PBRMaterial> PbrMaterial = nullptr;
-        std::unique_ptr<BlinnPhongMaterial> BlinnPhongMaterial = nullptr;
-
-        bool IsPbrMaterial() const { return PbrMaterial != nullptr; }
-        bool IsBlinnPhongMaterial() const { return BlinnPhongMaterial != nullptr; }
+        static constexpr size_t CalculateOffset(size_t index);
+    private:
+        std::string m_Name;
+        bool m_UseCombinedMetallicRoughnessTexture = false;
+        std::array<uint8_t, MATERIAL_BUFFER_BYTE_SIZE> m_MaterialValues;
+        std::array<std::shared_ptr<Image>, MATERIAL_TEXTURE_ARRAY_SIZE> m_MaterialTextures;
     };
 
 }

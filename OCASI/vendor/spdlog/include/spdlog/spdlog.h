@@ -51,10 +51,10 @@ SPDLOG_API void initialize_logger(std::shared_ptr<logger> logger);
 // example: spdlog::get("my_logger")->info("hello {}", "world");
 SPDLOG_API std::shared_ptr<logger> get(const std::string &name);
 
-// Set global formatter. Each sink in each logger will get a clone of this object
+// SetValue global formatter. Each sink in each logger will get a clone of this object
 SPDLOG_API void set_formatter(std::unique_ptr<spdlog::formatter> formatter);
 
-// Set global format string.
+// SetValue global format string.
 // example: spdlog::set_pattern("%Y-%m-%d %H:%M:%S.%e %l : %v");
 SPDLOG_API void set_pattern(std::string pattern,
                             pattern_time_type time_type = pattern_time_type::local);
@@ -68,16 +68,16 @@ SPDLOG_API void disable_backtrace();
 // call dump backtrace on default logger
 SPDLOG_API void dump_backtrace();
 
-// Get global logging level
+// GetValue global logging level
 SPDLOG_API level::level_enum get_level();
 
-// Set global logging level
+// SetValue global logging level
 SPDLOG_API void set_level(level::level_enum log_level);
 
 // Determine whether the default logger should log messages with a certain level
 SPDLOG_API bool should_log(level::level_enum lvl);
 
-// Set global flush level
+// SetValue global flush level
 SPDLOG_API void flush_on(level::level_enum log_level);
 
 // Start/Restart a periodic flusher thread
@@ -87,7 +87,7 @@ inline void flush_every(std::chrono::duration<Rep, Period> interval) {
     details::registry::instance().flush_every(interval);
 }
 
-// Set global error handler
+// SetValue global error handler
 SPDLOG_API void set_error_handler(void (*handler)(const std::string &msg));
 
 // Register the given logger with the given name

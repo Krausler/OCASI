@@ -1377,7 +1377,7 @@ template <typename Context> class value {
 #endif
     if (!is_constant_evaluated())
       custom.value = const_cast<char*>(&reinterpret_cast<const char&>(val));
-    // Get the formatter type through the context to allow different contexts
+    // GetValue the formatter type through the context to allow different contexts
     // have different extension points, e.g. `formatter<T>` for `format` and
     // `printf_formatter<T>` for `printf`.
     custom.format = format_custom_arg<

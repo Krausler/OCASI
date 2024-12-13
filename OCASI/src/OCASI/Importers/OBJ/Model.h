@@ -11,9 +11,7 @@
 
 namespace OCASI::OBJ {
 
-    const uint8_t MAX_NON_PBR_TEXTURE_COUNT = 15;
-    const uint8_t MAX_PBR_TEXTURE_COUNT = 9;
-    const uint8_t PBR_TEXTURE_TYPE_ARRAY_NORMALIZER = MAX_NON_PBR_TEXTURE_COUNT;
+    const size_t OBJ_MATERIAL_TEXTURE_COUNT = 22;
 
     enum TextureType
     {
@@ -37,26 +35,19 @@ namespace OCASI::OBJ {
 
         // PBR
         Albedo = 15,
-        EmissivePBR = 16,
-        Roughness = 17,
-        Metallic = 18,
-        Sheen = 19,
-        Clearcoat = 20,
-        ClearcoatRoughness = 21,
-        Occlusion = 22,
-        NormalPBR = 23,
+        Roughness = 16,
+        Metallic = 17,
+        Sheen = 18,
+        Clearcoat = 19,
+        ClearcoatRoughness = 20,
+        Occlusion = 21,
 
         // Only for specifying, that a reflection map is being parsed. No need to have a texture slot in the array for this texture value.
         Reflection
     };
 
-    bool HasPBRTextureType(TextureType type) { return type >= MAX_NON_PBR_TEXTURE_COUNT && type < MAX_NON_PBR_TEXTURE_COUNT + MAX_PBR_TEXTURE_COUNT; }
-
     struct PBRMaterialExtension
     {
-        glm::vec3 AlbedoColour = glm::vec3(1);
-        glm::vec3 EmissiveColour = glm::vec3(0);
-
         float Roughness = 0.0f;                     // Roughness (Pr)
         float Metallic = 0.0f;                      // Metallic (Pm)
 
@@ -70,9 +61,6 @@ namespace OCASI::OBJ {
 
         // Index of refraction (optical density)
         float IOR = 1.0f;
-
-        std::array<std::string, MAX_PBR_TEXTURE_COUNT> Textures = {}; // Textures (map_{Values}) using TextureType as an index
-        std::array<bool, MAX_PBR_TEXTURE_COUNT> TextureClamps = {}; // Specifies whether a texture is clamped
     };
 
     struct Material {
@@ -88,8 +76,8 @@ namespace OCASI::OBJ {
         float Shininess = 0.0f;                     // Shininess (Ns)
         float Opacity = 1.0f;                       // Transparency (d or Tr)                        // Index of refraction (Ni)
 
-        std::array<std::string, MAX_NON_PBR_TEXTURE_COUNT> Textures = {}; // Textures (map_{Values}) using TextureType as an index
-        std::array<bool, MAX_NON_PBR_TEXTURE_COUNT> TextureClamps = {}; // Specifies whether a texture is clamped
+        std::array<std::string, OBJ_MATERIAL_TEXTURE_COUNT> Textures = {}; // Textures (map_{Values}) using TextureType as an index
+        std::array<bool, OBJ_MATERIAL_TEXTURE_COUNT> TextureClamps = {}; // Specifies whether a texture is clamped
         float BumpMapMultiplier = 1.0f;
 
         std::optional<PBRMaterialExtension> PBRExtension;
