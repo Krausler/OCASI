@@ -1,7 +1,8 @@
 OCASI (Octopus Asset Importer)
 ================================
 
-OCASI is (going to be) an easy, simple asset importer, specifically designed for the octopus engine. Planned support for formats are Wavefront OBJ, GLTF 2.0 and FBX
+OCASI is a 3D asset importer designed around simplicity for the end user and the octopus engine. 
+Planned support for formats are Wavefront OBJ, GLTF 2.0 and FBX
 
 ## Getting Started
 To build the library start by cloning the repository using `git clone htpps://github.com/Krausler/OCASI`. OCASI uses CMake as a build system:
