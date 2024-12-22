@@ -14,51 +14,44 @@ namespace OCASI {
 
     Image::Image(const Path& path, const ImageSettings& settings)
         : m_ImagePath(path), m_Settings(settings)
-    {}
+    {
+    }
 
-    Image::Image(const std::vector<uint8_t>& imageData, uint8_t channels, uint32_t width, uint32_t height, const ImageSettings& settings)
+    Image::Image(std::vector<uint8_t>&& imageData, uint8_t channels, uint32_t width, uint32_t height, const ImageSettings& settings)
         : m_MemoryImage(true), m_Settings(settings)
     {
         m_ImageData = {};
-        m_ImageData.Data = imageData;
+        m_ImageData.Data = std::move(imageData);
         m_ImageData.Channels = channels;
         m_ImageData.Width = width;
         m_ImageData.Height = height;
     }
 
-    Image::Image(const std::vector<uint8_t>& data, bool load, const ImageSettings& settings)
-        : m_Settings(settings)
+    Image::Image(std::vector<uint8_t>&& data, const ImageSettings& settings)
+        : m_Settings(settings), m_MemoryImage(true)
     {
         m_ImageData = {};
-        m_ImageData.Data = data;
-
-        if (load)
-            ImportImageFromData();
+        m_ImageData.Data = std::move(data);
     }
 
-    const ImageData* Image::LoadImageFromDisk()
+    void Image::LoadImageFromDisk()
     {
         if (m_MemoryImage)
         {
             OCASI_LOG_INFO("Tried to load an image from disk that is memory only.");
-            return nullptr;
+            return;
         }
 
         stbi_set_flip_vertically_on_load(true);
 
-        ImageData& outData = m_ImageData = {};
-        int width, height, channels;
-        stbi_uc* data = stbi_load(m_ImagePath.string().c_str(), &width, &height, &channels, 4);
-        outData.Width = width;
-        outData.Height = height;
-        outData.Channels = channels;
+        stbi_uc* data = stbi_load(m_ImagePath.string().c_str(), (int*) &m_ImageData.Width, (int*) &m_ImageData.Height, (int*) &m_ImageData.Channels, 0);
 
         if(data)
         {
-            uint32_t size = outData.Width * outData.Height * outData.Channels;
-            outData.Data.resize(size);
+            uint32_t size = m_ImageData.Width * m_ImageData.Height * m_ImageData.Channels;
+            m_ImageData.Data.resize(size);
 
-            std::memcpy(outData.Data.data(), data, size);
+            std::memcpy(m_ImageData.Data.data(), data, size);
 
             stbi_image_free(data);
         }
@@ -66,30 +59,28 @@ namespace OCASI {
         {
             OCASI_FAIL(FORMAT("Failed to load image with path {0}: {1}", m_ImagePath.string(), stbi_failure_reason()));
         }
-
-        return &outData;
     }
 
-    const ImageData* Image::ImportImageFromData()
+    void Image::ImportImageFromData()
     {
         if (!m_MemoryImage)
         {
             OCASI_LOG_INFO("Tried to load an image from memory that is not a memory only image.");
-            return nullptr;
+            return;
         }
 
         stbi_set_flip_vertically_on_load(true);
 
         OCASI_ASSERT(!m_ImageData.Data.empty());
-        ImageData& outData = m_ImageData = {};
-        stbi_uc* data = stbi_load_from_memory((stbi_uc*)m_ImageData.Data.data(), m_ImageData.Data.size(), (int*) &outData.Width, (int*) &outData.Height, (int*) &outData.Channels, 4);
+        stbi_uc* data = stbi_load_from_memory((stbi_uc*)m_ImageData.Data.data(), (int) m_ImageData.Data.size(), (int*) &m_ImageData.Width, (int*) &m_ImageData.Height, (int*) &m_ImageData.Channels, 0);
 
         if(data)
         {
-            uint32_t size = outData.Width * outData.Height * outData.Channels;
-            outData.Data.resize(size);
+            uint32_t size = m_ImageData.Width * m_ImageData.Height * m_ImageData.Channels;
+            m_ImageData.Data.clear();
+            m_ImageData.Data.resize(size);
 
-            std::memcpy(outData.Data.data(), data, size);
+            std::memcpy(m_ImageData.Data.data(), data, size);
 
             stbi_image_free(data);
         }
@@ -97,7 +88,5 @@ namespace OCASI {
         {
             OCASI_FAIL(FORMAT("Failed to load image with path {0}: {1}", m_ImagePath.string(), stbi_failure_reason()));
         }
-
-        return nullptr;
     }
 }

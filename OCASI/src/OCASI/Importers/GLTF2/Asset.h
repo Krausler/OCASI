@@ -195,7 +195,7 @@ namespace OCASI::GLTF {
 
         std::optional<std::string> URI;
 
-        std::optional<size_t> BufferView = INVALID_ID;
+        std::optional<size_t> BufferView;
         std::optional<std::string> MimeType;
     };
 

@@ -39,16 +39,12 @@ namespace OCASI::Util {
         return {};
     }
 
-    // Skips the first character, if it equals the searched token
     template<class Iterator>
     std::string GetToNextTokenOrEndOfIterator(Iterator& iter, const Iterator& end, char token)
     {
-        if (iter == end)
-        {
-            OCASI_FAIL("iter == end. invalid");
-            return {};
-        }
+        OCASI_ASSERT(iter != end);
 
+        // Skipping the first token if it matches the searched for token.
         if(*iter == token)
             iter++;
 
@@ -105,4 +101,5 @@ namespace OCASI::Util {
     std::vector<std::string> Split(const std::string& target, char token, uint32_t& outTokenCount);
 
     uint8_t* DecodeBase64(const std::string& dataString, size_t& outSize);
+    std::string URIUnescapedString(const std::string& input);
 }

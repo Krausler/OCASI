@@ -17,14 +17,14 @@ namespace OCASI {
         {
             Parent = other.Parent;
             Children = other.Children;
-            MeshIndex = other.MeshIndex;
+            ModelIndex = other.ModelIndex;
+            LocalTransform = other.LocalTransform;
         }
 
         std::shared_ptr<Node> Parent;
         std::vector<std::shared_ptr<Node>> Children;
 
-        std::string Name;
-        size_t MeshIndex = INVALID_ID;
+        size_t ModelIndex = INVALID_ID;
         glm::mat4 LocalTransform = glm::mat4(1.0f);
     };
 

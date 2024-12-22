@@ -18,6 +18,7 @@ namespace OCASI::GLTF {
             case ComponentType::Float:
                 return 4;
         }
+        return INVALID_ID;
     }
 
     Buffer::Buffer(size_t id, size_t bufferSize)
@@ -58,7 +59,7 @@ namespace OCASI::GLTF {
 
     std::vector<uint8_t> Buffer::Get(size_t byteLength, size_t offset)
     {
-        if (offset + byteLength >= m_ByteSize)
+        if (offset + byteLength > m_ByteSize)
         {
             OCASI_FAIL("Tried to read glTF buffer data that was out of range");
             return {};

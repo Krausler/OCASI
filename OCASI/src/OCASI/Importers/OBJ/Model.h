@@ -111,8 +111,8 @@ namespace OCASI::OBJ {
     {
         std::string Name;
 
-        uint32_t Mesh;
-        std::vector<uint32_t> Children;
+        std::vector<size_t> Meshes; // This vector is the equivalent of OCASI::Model
+        std::vector<size_t> Groups; // A group is a single mesh.
     };
 
     struct Model
@@ -122,7 +122,7 @@ namespace OCASI::OBJ {
 
         std::unordered_map<std::string, Material> Materials;
         std::vector<Mesh> Meshes;
-        std::vector<Object> Objects;
+        std::vector<Object> RootObjects;
 
         std::vector<glm::vec3> Vertices;
         std::vector<glm::vec3> VertexColours;

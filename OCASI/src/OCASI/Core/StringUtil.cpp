@@ -69,7 +69,7 @@ namespace OCASI::Util {
 
         if (dataString.size() % BASE64_GROUP_COUNT_PER_CHUNK > 0)
         {
-            OCASI_FAIL("Failed to decode base64 data. Data is not aligned with 3 bytes.")
+            OCASI_FAIL("Failed to decode base64 data. Data is not aligned with 3 bytes.");
             return nullptr;
         }
 
@@ -112,6 +112,29 @@ namespace OCASI::Util {
         outSize = byteCounter;
 
         return out;
+    }
+
+    // Thank you, ChatGPT
+    std::string URIUnescapedString(const std::string &input)
+    {
+        std::ostringstream decoded;
+        size_t i = 0;
+        while (i < input.length()) {
+            if (input.at(i) == '%' && i + 2 < input.length()) {
+                std::istringstream hex(input.substr(i + 1, 2));
+                int value;
+                hex >> std::hex >> value;
+                decoded << static_cast<char>(value);
+                i += 3; // Move past '%xx'
+            } else if (input[i] == '+') {
+                decoded << ' '; // Replace '+' with space
+                ++i;
+            } else {
+                decoded << input[i];
+                ++i;
+            }
+        }
+        return decoded.str();
     }
 
 }

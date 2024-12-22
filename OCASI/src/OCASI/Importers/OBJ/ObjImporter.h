@@ -16,11 +16,11 @@ namespace OCASI {
         virtual bool CanLoad() override;
     private:
         std::shared_ptr<Scene> ConvertToOCASIScene(const Path& folder);
-        std::shared_ptr<Node> CreateNodesFromObject(const OBJ::Object& o) const;
-        std::shared_ptr<Node> CreateNodeFromMesh(uint32_t mesh);
+        std::shared_ptr<Node> CreateNodes(const OBJ::Object& o);
 
-        void CreateNewVertex(Mesh& model, const VertexIndices& indices) const;
-        void SortTextures(Material& newMat, const OBJ::Material& mat, const Path& folder, uint32_t i);
+        Mesh CreateMesh(size_t mesh) const;
+        void CreateNewVertex(Mesh& mesh, const VertexIndices& indices) const;
+        void SortTextures(Material& newMat, const OBJ::Material& mat, const Path& folder, size_t i);
     private:
         FileReader& m_FileReader;
 

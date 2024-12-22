@@ -54,6 +54,6 @@ namespace OCASI {
 
         OCASI_ASSERT(result);
 
-        return nullptr;
+        return result;
     }
 }

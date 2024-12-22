@@ -557,7 +557,7 @@ namespace OCASI::GLTF {
                     material.AlphaMode = AlphaMode::Blend;
                 else
                 {
-                    OCASI_FAIL(FORMAT("Invalid value for alphaMode in material of index {}. Value: {}", i, jAlphaMode))
+                    OCASI_FAIL(FORMAT("Invalid value for alphaMode in material of index {}. Value: {}", i, jAlphaMode));
                 }
             }
 

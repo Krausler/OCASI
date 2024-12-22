@@ -13,7 +13,7 @@ namespace OCASI::OBJ {
     {
         if (!m_Reader.IsOpen())
         {
-            OCASI_FAIL(FORMAT("Failed to open material file with path: {}", m_Reader.GetPath().string()))
+            OCASI_FAIL(FORMAT("Failed to open material file with path: {}", m_Reader.GetPath().string()));
             return false;
         }
 
@@ -26,7 +26,9 @@ namespace OCASI::OBJ {
             if (m_Begin == m_End)
                 continue;
 
-            ParseParameter(*m_Begin == 'm');
+            if(!ParseParameter(*m_Begin == 'm'))
+                return false;
+
         }
 
         return true;
@@ -55,7 +57,8 @@ namespace OCASI::OBJ {
                     return false;
 
                 m_Begin += 3;
-                switch (*(m_Begin - 2)) {
+                switch (*(m_Begin - 2))
+                {
                     // Diffuse colour
                     case 'd': {
                         // Skipping the parameter identifier and the space separating the value
@@ -67,7 +70,8 @@ namespace OCASI::OBJ {
                         break;
                     }
                         // ExtSpecular colour
-                    case 's': {
+                    case 's':
+                    {
                         if (isMap)
                             ParseTexture(TextureType::Specular);
                         else
@@ -76,7 +80,8 @@ namespace OCASI::OBJ {
                         break;
                     }
                         // Emissive colour
-                    case 'e': {
+                    case 'e':
+                    {
                         if (isMap)
                             ParseTexture(TextureType::Emissive);
                         else
@@ -85,7 +90,8 @@ namespace OCASI::OBJ {
                         break;
                     }
                         // Ambient colour
-                    case 'a': {
+                    case 'a':
+                    {
                         if (isMap)
                             ParseTexture(TextureType::Ambient);
                         else
@@ -96,8 +102,8 @@ namespace OCASI::OBJ {
                             OCASI_LOG_WARN("Unknown parameter: K{}", *(m_Begin - 2));
                         break;
                     }
-                        break;
                 }
+                break;
             }
             case 'N': {
                 if (!CheckMaterial())
@@ -125,10 +131,11 @@ namespace OCASI::OBJ {
                 if (!CheckMaterial())
                     return false;
 
+                m_Begin += 2;
                 if (isMap)
-                    m_CurrentMaterial->Opacity = ParseFloat();
-                else
                     ParseTexture(TextureType::Transparency);
+                else
+                    m_CurrentMaterial->Opacity = ParseFloat();
                 break;
             }
             case 'i': {
@@ -149,7 +156,8 @@ namespace OCASI::OBJ {
                 m_Begin += 3;
                 switch (*(m_Begin - 2)) {
                     // Roughness
-                    case 'r': {
+                    case 'r':
+                    {
                         if (isMap)
                             ParseTexture(TextureType::Roughness);
                         else
@@ -157,7 +165,8 @@ namespace OCASI::OBJ {
                         break;
                     }
                         // Metallic
-                    case 'm': {
+                    case 'm':
+                    {
                         if (isMap)
                             ParseTexture(TextureType::Metallic);
                         else
@@ -165,7 +174,8 @@ namespace OCASI::OBJ {
                         break;
                     }
                         // ExtSheen
-                    case 's': {
+                    case 's':
+                    {
                         if (isMap)
                             ParseTexture(TextureType::Sheen);
                         else
@@ -173,7 +183,8 @@ namespace OCASI::OBJ {
                         break;
                     }
                         // ExtClearcoat and CleacoatRougness
-                    case 'c': {
+                    case 'c':
+                    {
                         if (*(m_Begin - 1) == 'r') {
                             if (isMap)
                                 ParseTexture(TextureType::ClearcoatRoughness);
@@ -251,7 +262,7 @@ namespace OCASI::OBJ {
 
     float MtlParser::ParseFloat()
     {
-        std::string s = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+        std::string s = std::string(m_Begin, m_End);
         return std::stof(s);
     }
 
@@ -303,12 +314,6 @@ namespace OCASI::OBJ {
             OCASI_FAIL("Tried to parse texture, while end of line was already reached.");
             return;
         }
-
-        // Ensuring that the parameter and name parsing starts at the right index
-        // This kind of hacky and not safe at all. But as long as it works it's fine to me
-        if (*m_Begin != ' ' || *(m_Begin - 1) == ' ')
-            Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
-
 
         while (true)
         {
@@ -389,7 +394,7 @@ namespace OCASI::OBJ {
             }
             else
             {
-                m_CurrentMaterial->Textures[type] = Util::GetToNextToken(begin, m_End, '\n');
+                m_CurrentMaterial->Textures[type] = Util::GetToNextTokenOrEndOfIterator(begin, m_End, '\n');
             }
         }
     }

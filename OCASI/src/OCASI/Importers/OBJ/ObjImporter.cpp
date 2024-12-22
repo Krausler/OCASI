@@ -53,7 +53,6 @@ namespace OCASI {
 
         if(!m_OBJModel->MTLFilePath.empty())
         {
-
             OBJ::MtlParser mtlParser(m_OBJModel, folder / m_OBJModel->MTLFilePath);
 
             if (!mtlParser.ParseMTLFile())
@@ -72,46 +71,12 @@ namespace OCASI {
     {
         m_OutputScene = std::make_shared<Scene>();
 
-        // Converting from a RHCS to a LHCS
+        // Converting from a RHCS to LHCS
         for (glm::vec3& v : m_OBJModel->Vertices)
             v = { v.x, v.y, -v.z };
 
         for (glm::vec3& n : m_OBJModel->Normals)
             n = { n.x, n.y, -n.z };
-
-        /// 3D Model conversion
-
-        for (const OBJ::Mesh& m : m_OBJModel->Meshes)
-        {
-            Model& newModel = m_OutputScene->Models.emplace_back();
-            newModel.Name = m.Name;
-            newModel.FaceType = m.FaceType;
-            newModel.Dimension = m.Dimension;
-
-            Mesh& newMesh = newModel.Meshes.emplace_back();
-
-            // Indices creation
-            std::unordered_map<VertexIndices, size_t> lookUpTable;
-            for (OBJ::Face f : m.Faces)
-            {
-                for (size_t i = 0; i < (size_t) f.Type; i++)
-                {
-                    VertexIndices indices = { f.VertexIndices.at(i),
-                                              !f.TextureCoordinateIndices.empty() ? f.TextureCoordinateIndices.at(i) : INVALID_ID,
-                                              !f.NormalIndices.empty() ? f.NormalIndices.at(i) : INVALID_ID };
-
-                    if (lookUpTable.find(indices) == lookUpTable.end())
-                    {
-                        CreateNewVertex(newMesh, indices);
-                        lookUpTable[indices] = newMesh.Indices.at(newMesh.Vertices.size() - 1);
-                    }
-                    else
-                    {
-                        newMesh.Indices.push_back(lookUpTable.at(indices));
-                    }
-                }
-            }
-        }
 
         /// Material conversion
 
@@ -139,96 +104,117 @@ namespace OCASI {
             newMat.SetValue(MATERIAL_EMISSIVE_COLOUR_INDEX, mat.EmissiveColour);
             newMat.SetValue(MATERIAL_TRANSPARENCY_INDEX, mat.Opacity);
 
-            for (uint32_t i = 0; i < mat.Textures.size(); i++)
+            for (size_t i = 0; i < mat.Textures.size(); i++)
             {
                 SortTextures(newMat, mat, folder, i);
             }
         }
 
-        if (!m_OBJModel->Objects.empty())
+        if (!m_OBJModel->RootObjects.empty())
         {
-            for (const OBJ::Object& o : m_OBJModel->Objects)
+            for (const OBJ::Object& o : m_OBJModel->RootObjects)
             {
-                m_OutputScene->RootNodes.push_back(CreateNodesFromObject(o));
-            }
-        }
-        else
-        {
-            for (int i = 0; i < m_OBJModel->Meshes.size(); i++)
-            {
-                m_OutputScene->RootNodes.push_back(CreateNodeFromMesh(i));
+                m_OutputScene->RootNodes.push_back(CreateNodes(o));
             }
         }
 
         return m_OutputScene;
     }
 
-    std::shared_ptr<Node> ObjImporter::CreateNodesFromObject(const OBJ::Object& o) const
+    std::shared_ptr<Node> ObjImporter::CreateNodes(const OBJ::Object& o)
     {
-        OBJ::Mesh& m = m_OBJModel->Meshes.at(o.Mesh);
+        std::shared_ptr<Node> node = std::make_unique<Node>();
+        node->Parent = nullptr;
 
-        std::shared_ptr<Node> root = std::make_shared<Node>();
-        root->Parent = nullptr;
-        root->MeshIndex = o.Mesh;
-        if (!m.MaterialName.empty())
+        if (!o.Meshes.empty())
         {
-            for (int i = 0; i < m_OutputScene->Materials.size(); i++)
+            node->ModelIndex = m_OutputScene->Models.size();
+            Model& model = m_OutputScene->Models.emplace_back();
+            model.Name = o.Name;
+
+            for (size_t i = 0; i < o.Meshes.size(); i++)
             {
-                Material& mat = m_OutputScene->Materials.at(i);
-                if (mat.GetName() == m.MaterialName)
+                model.Meshes.push_back(CreateMesh(o.Meshes.at(i)));
+            }
+        }
+
+        for (size_t meshIndex : o.Groups)
+        {
+            std::shared_ptr<Node> groupNode = std::make_unique<Node>();
+            node->Children.push_back(groupNode);
+            groupNode->Parent = node;
+            groupNode->ModelIndex = m_OutputScene->Models.size();
+
+            Model& groupModel = m_OutputScene->Models.emplace_back();
+            groupModel.Name = m_OBJModel->Meshes.at(meshIndex).Name;
+            groupModel.Meshes.push_back(CreateMesh(meshIndex));
+
+        }
+
+        return node;
+    }
+
+    Mesh ObjImporter::CreateMesh(size_t mesh) const
+    {
+        const OBJ::Mesh& m = m_OBJModel->Meshes.at(mesh);
+
+        Mesh outMesh = {};
+        outMesh.Name = m.Name;
+        // In order to generate indices and remove duplicate vertices, we have to keep track of all unique VertexIndices.
+        // This means that for every face the indices into the global vertex arrays (vertex array, normal array, texture
+        // coordinate array) have to be checked against all already loaded indices. If there is a match, we just use the
+        // index of that matching vertex in the indices array.
+        std::unordered_map<VertexIndices, size_t> lookUpTable;
+        for (OBJ::Face f : m.Faces)
+        {
+            for (size_t i = 0; i < (size_t) f.Type; i++)
+            {
+                VertexIndices indices = { f.VertexIndices.at(i),
+                                          !f.TextureCoordinateIndices.empty() ? f.TextureCoordinateIndices.at(i) : INVALID_ID,
+                                          !f.NormalIndices.empty() ? f.NormalIndices.at(i) : INVALID_ID };
+
+                if (lookUpTable.find(indices) == lookUpTable.end())
                 {
-                    // Every model has only one submesh in the OBJ file format. There is support for nesting node structures,
-                    // but not for multiple submeshes in one mesh
-                    m_OutputScene->Models.at(o.Mesh).Meshes.at(0).MaterialIndex = i;
+                    CreateNewVertex(outMesh, indices);
+                    lookUpTable[indices] = outMesh.Indices.at(outMesh.Vertices.size() - 1);
+                }
+                else
+                {
+                    outMesh.Indices.push_back(lookUpTable.at(indices));
                 }
             }
         }
 
-        for(uint32_t m : o.Children)
-        {
-            std::shared_ptr<Node> child = std::make_unique<Node>();
-            child->Parent = root;
-            child->MeshIndex = m;
-            root->Children.push_back(child);
-        }
-        return root;
-    }
-
-    std::shared_ptr<Node> ObjImporter::CreateNodeFromMesh(uint32_t mesh)
-    {
-        OBJ::Mesh& m = m_OBJModel->Meshes.at(mesh);
-
-        std::shared_ptr<Node> newNode = std::make_unique<Node>();
-        newNode->Parent = nullptr;
-        newNode->Children.clear();
-        newNode->MeshIndex = mesh;
         if (!m.MaterialName.empty())
         {
-            for (int i = 0; i < m_OutputScene->Materials.size(); i++)
+            for (size_t i = 0; i < m_OutputScene->Materials.size(); i++)
             {
-                if (m_OutputScene->Materials.at(i).GetName() == m.MaterialName)
-                {
-                    // Always the firs mesh as obj does not have multiple meshes in one model
-                    m_OutputScene->Models.at(mesh).Meshes.at(0).MaterialIndex = i;
-                }
+                if (m_OutputScene->Materials.at(i).GetName() == outMesh.Name)
+                    outMesh.MaterialIndex = i;
             }
         }
-        return newNode;
+
+        outMesh.Dimension = m.Dimension;
+        outMesh.FaceType = m.FaceType;
+
+        return outMesh;
     }
 
-    void ObjImporter::CreateNewVertex(Mesh &model, const VertexIndices& indices) const
+    void ObjImporter::CreateNewVertex(Mesh& mesh, const VertexIndices& indices) const
     {
-        model.Vertices.push_back(m_OBJModel->Vertices.at(indices.VertexIndex));
+        mesh.Vertices.push_back(m_OBJModel->Vertices.at(indices.VertexIndex));
+        if (!m_OBJModel->VertexColours.empty())
+            mesh.VertexColours.push_back(m_OBJModel->VertexColours.at(indices.VertexIndex));
 
         if (indices.TextureCoordinateIndex != INVALID_ID)
-            model.TexCoords[OBJ_TEXTURE_COORDINATE_ARRAY_INDEX].push_back(m_OBJModel->TexCoords.at(indices.TextureCoordinateIndex));
+            mesh.TexCoords[OBJ_TEXTURE_COORDINATE_ARRAY_INDEX].push_back(m_OBJModel->TexCoords.at(indices.TextureCoordinateIndex));
         if (indices.NormalIndex != INVALID_ID)
-            model.Normals.push_back(m_OBJModel->Normals.at(indices.NormalIndex));
+            mesh.Normals.push_back(m_OBJModel->Normals.at(indices.NormalIndex));
 
-        model.Indices.push_back(model.Vertices.size() - 1);
+        mesh.Indices.push_back(mesh.Vertices.size() - 1);
     }
 
-    void ObjImporter::SortTextures(Material &newMat, const OBJ::Material &mat, const Path& folder, uint32_t i)
+    void ObjImporter::SortTextures(Material &newMat, const OBJ::Material &mat, const Path& folder, size_t i)
     {
         // This value is needed to convert the OBJ::TextureType to a OCASI::TextureOrientation
         // for reflection textures. In OBJ each side of the cube map is provided using a single

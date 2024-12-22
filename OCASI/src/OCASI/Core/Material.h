@@ -22,15 +22,15 @@ namespace OCASI {
     const size_t MATERIAL_EMISSIVE_STRENGTH_INDEX = 11; // Object size: float
     const size_t MATERIAL_TRANSPARENCY_INDEX = 12; // Object size: float
     const size_t MATERIAL_IOR_INDEX = 13; // Object size: float
+    const size_t MATERIAL_USE_COMBINED_METALLIC_ROUGHNESS_TEXTURE_INDEX = 14; // (R, G) = anisotropy rotation in range [-1; 1]; (B) = anisotropy value/strength
+    const size_t MATERIAL_USE_COMBINED_ANISOTROPY_ANISOTROPY_ROTATION_TEXTURE_INDEX = 15; // (G) = roughness; (B) = metallic
 
-    const size_t MATERIAL_BUFFER_BYTE_SIZE = 14;
-
-    const size_t MATERIAL_VALUE_OBJECT_SIZES[] =
+    constexpr size_t MATERIAL_VALUE_OBJECT_SIZES[] =
     {
-            sizeof(glm::vec3), // albedo
-            sizeof(glm::vec3), // ambient
-            sizeof(glm::vec3), // specular
-            sizeof(glm::vec3), // emissive
+            sizeof(glm::vec4), // albedo
+            sizeof(glm::vec4), // ambient
+            sizeof(glm::vec4), // specular
+            sizeof(glm::vec4), // emissive
             sizeof(float), // roughness
             sizeof(float), // metallic
             sizeof(float), // anisotropy
@@ -41,7 +41,24 @@ namespace OCASI {
             sizeof(float), // emissive strength
             sizeof(float), // transparency
             sizeof(float), // ior (index of refraction)
+            sizeof(bool), // combined metallic roughness
+            sizeof(bool) // combined anisotropy
     };
+
+    consteval size_t GetMaterialValueObjectSizesArraySize() { return sizeof(MATERIAL_VALUE_OBJECT_SIZES) / sizeof(MATERIAL_VALUE_OBJECT_SIZES[0]); }
+
+    consteval size_t CalculateMaterialBufferByteSize()
+    {
+        size_t byteSize = 0;
+        for (size_t i = 0; i < GetMaterialValueObjectSizesArraySize(); i++)
+        {
+            byteSize += MATERIAL_VALUE_OBJECT_SIZES[i];
+        }
+
+        return byteSize;
+    }
+
+    const size_t MATERIAL_BUFFER_BYTE_SIZE = CalculateMaterialBufferByteSize();
 
     // The index at which the texture lies in the m_Texture array from the Material class
     const size_t MATERIAL_TEXTURE_ALBEDO_INDEX = 0;
@@ -52,23 +69,25 @@ namespace OCASI {
     const size_t MATERIAL_TEXTURE_METALLIC_INDEX = 5;
     const size_t MATERIAL_TEXTURE_CLEARCOAT_INDEX = 6;
     const size_t MATERIAL_TEXTURE_CLEARCOAT_ROUGHNESS_INDEX = 7;
-    const size_t MATERIAL_TEXTURE_NORMAL_INDEX = 8;
-    const size_t MATERIAL_TEXTURE_EMISSIVE_STRENGTH_INDEX = 9;
-    const size_t MATERIAL_TEXTURE_SPECULAR_STRENGTH_INDEX = 10;
-    const size_t MATERIAL_TEXTURE_ANISOTROPY_INDEX = 11; // This texture holds both the anisotropy and the rotation
-    const size_t MATERIAL_TEXTURE_TRANSPARENCY_INDEX = 12;
-    const size_t MATERIAL_TEXTURE_OCCLUSION_INDEX = 13;
+    const size_t MATERIAL_TEXTURE_CLEARCOAT_NORMAL_INDEX = 8;
+    const size_t MATERIAL_TEXTURE_NORMAL_INDEX = 9;
+    const size_t MATERIAL_TEXTURE_EMISSIVE_STRENGTH_INDEX = 10;
+    const size_t MATERIAL_TEXTURE_SPECULAR_STRENGTH_INDEX = 11;
+    const size_t MATERIAL_TEXTURE_ANISOTROPY_INDEX = 12; // This texture can hold both the anisotropy and the rotation, when MATERIAL_USE_COMBINED_ANISOTROPY_ANISOTROPY_ROTATION_TEXTURE_INDEX is set to true
+    const size_t MATERIAL_TEXTURE_ANISOTROPY_ROTATION_INDEX = 13;
+    const size_t MATERIAL_TEXTURE_TRANSPARENCY_INDEX = 14;
+    const size_t MATERIAL_TEXTURE_OCCLUSION_INDEX = 15;
 
     // Reflection maps
-    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_TOP = 14;
-    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_BOTTOM = 15;
-    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_FRONT = 16;
-    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_BACK = 17;
-    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_RIGHT = 18;
-    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_LEFT = 19;
-    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_SPHERE = 20;
+    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_TOP = 16;
+    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_BOTTOM = 17;
+    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_FRONT = 18;
+    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_BACK = 19;
+    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_RIGHT = 20;
+    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_LEFT = 21;
+    const size_t MATERIAL_TEXTURE_REFLECTION_MAP_SPHERE = 22;
 
-    const size_t MATERIAL_TEXTURE_ARRAY_SIZE = 21;
+    const size_t MATERIAL_TEXTURE_ARRAY_SIZE = 23;
 
     class Material
     {
@@ -81,22 +100,19 @@ namespace OCASI {
         template<typename Type>
         Type GetValue(size_t index);
 
+        void* Get(size_t index);
+        void Set(uint8_t* value, size_t index, size_t size);
+
         void SetTexture(size_t index, std::shared_ptr<Image> image);
         std::shared_ptr<Image> GetTexture(size_t index);
 
         void SetName(const std::string& name);
-        void SetCombinedMetallicRoughnessTexture(bool value) { m_UseCombinedMetallicRoughnessTexture = value; }
-
-        bool UsesCombinedMetallicRoughnessTexture() { return m_UseCombinedMetallicRoughnessTexture; }
-        const std::string& GetName() { return m_Name; }
+        const std::string& GetName() const { return m_Name; }
     private:
-        static consteval size_t GetMaterialValueObjectsSizesArraySize() { return sizeof(MATERIAL_VALUE_OBJECT_SIZES) / sizeof(MATERIAL_VALUE_OBJECT_SIZES[0]); }
-        static consteval size_t CalculateMaterialBufferByteSize();
-
         static constexpr size_t CalculateOffset(size_t index);
     private:
         std::string m_Name;
-        bool m_UseCombinedMetallicRoughnessTexture = false;
+
         std::array<uint8_t, MATERIAL_BUFFER_BYTE_SIZE> m_MaterialValues;
         std::array<std::shared_ptr<Image>, MATERIAL_TEXTURE_ARRAY_SIZE> m_MaterialTextures;
     };

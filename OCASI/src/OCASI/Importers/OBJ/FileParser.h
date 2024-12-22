@@ -24,7 +24,10 @@ namespace OCASI::OBJ {
 
         void ProcessGroup();
         void ProcessObject();
-        void CreateMesh(const std::string& name);
+        void ProcessMaterialAssignment();
+
+        size_t CreateObject(const std::string& name);
+        size_t CreateMesh(const std::string& name);
 //        void CreateNewVertex(Vertex& v);
 
         glm::vec3 ParseVec3();
@@ -39,5 +42,6 @@ namespace OCASI::OBJ {
 
         Mesh* m_CurrentMesh = nullptr;
         Object* m_CurrentObject = nullptr;
+        bool m_GroupActive = false;
     };
 }

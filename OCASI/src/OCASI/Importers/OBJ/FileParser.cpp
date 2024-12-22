@@ -11,7 +11,7 @@ namespace OCASI::OBJ {
     std::shared_ptr<Model> FileParser::ParseOBJFile()
     {
         std::vector<char> line;
-        uint32_t vertexCount = 0;
+        size_t vertexCount = 0;
         while (m_FileReader.NextLineC(line))
         {
             m_Begin = line.begin();
@@ -25,35 +25,29 @@ namespace OCASI::OBJ {
                 // Vertices
                 case 'v':
                 {
-                    if (!m_CurrentMesh)
-                        CreateMesh("Model");
-
                     m_Begin++;
                     switch (*m_Begin)
                     {
                         case ' ':
                         {
                             m_Begin++;
-                            uint32_t spaces = Util::GetAmountOfTokens(m_Begin, m_End, ' ');
+                            size_t spaces = Util::GetAmountOfTokens(m_Begin, m_End, ' ');
 
                             // vertex colours (xyz rgb)
                             if (spaces == 5)
                             {
                                 ParseVertex3D();
                                 ParseVertexColour();
-                                m_CurrentMesh->Dimension = Dimension::_3D;
                             }
                             // Vertex with 3 components (xyz)
                             else if (spaces == 2)
                             {
                                 ParseVertex3D();
-                                m_CurrentMesh->Dimension = Dimension::_3D;
                             }
                             // Vertex with 2 components (xy)
                             else if (spaces == 1)
                             {
                                 ParseVertex2D();
-                                m_CurrentMesh->Dimension = Dimension::_2D;
                             }
                             vertexCount++;
                             break;
@@ -93,6 +87,18 @@ namespace OCASI::OBJ {
                 case 'l':
                 case 'f':
                 {
+                    // If at face assembly stage, there is no object present, create a group and an
+                    // associated mesh.
+                    if (!m_CurrentObject)
+                    {
+                        CreateObject("Object");
+                        m_CurrentObject->Meshes.push_back(CreateMesh("Mesh"));
+                    }
+                    else if (m_CurrentObject->Meshes.empty() && !m_GroupActive)
+                    {
+                        m_CurrentObject->Meshes.push_back(CreateMesh("Mesh"));
+                    }
+
                     ParseFace();
                     break;
                 }
@@ -101,19 +107,13 @@ namespace OCASI::OBJ {
                 {
                     Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
                     m_Begin++;
-                    m_OBJModel->MTLFilePath = { m_Begin, m_End };
+                    m_OBJModel->MTLFilePath = std::string(m_Begin, m_End);
                     break;
                 }
 
                 case 'u':
                 {
-                    std::string materialName = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
-
-                    if (m_CurrentMesh->MaterialName.empty() && m_CurrentMesh->Faces.empty())
-                    {
-                        // TODO: set the current objects material
-                    }
-
+                    ProcessMaterialAssignment();
                     break;
                 }
 
@@ -243,41 +243,64 @@ namespace OCASI::OBJ {
     {
         m_Begin++;
 
-        // Checking whether the current mesh attached to the object has already got faces.
-        // When it doesn't it does not make sense to create a new object and mesh.
-        if (m_CurrentObject)
-        {
-            Mesh &m = m_OBJModel->Meshes.at(m_CurrentObject->Mesh);
-            if (m.Faces.empty())
-                return;
-        }
+        // In the case that an object is already present but the active mesh does not have
+        // any faces or there are no groups, there is no need to create a new object.
+        if (m_CurrentObject && m_CurrentObject->Meshes.empty())
+            return;
 
         std::string name = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
-        Object& o = m_OBJModel->Objects.emplace_back();
-        o.Name = name;
-        o.Mesh = m_OBJModel->Meshes.size();
-        m_CurrentObject = &o;
-        CreateMesh(name);
+        CreateObject(name);
+        m_GroupActive = false;
     }
 
     void FileParser::ProcessGroup()
     {
+        OCASI_ASSERT(m_CurrentObject);
         m_Begin++;
 
-        if (m_CurrentObject)
-        {
-            Mesh& m = m_OBJModel->Meshes.at(m_CurrentObject->Mesh);
-            if (m.Faces.empty())
-                return;
-            m_CurrentObject->Children.push_back(m_OBJModel->Meshes.size());
-        }
-        CreateMesh(Util::GetToNextSpaceOrEndOfLine<FileDataIterator>(m_Begin, m_End));
+        size_t groupIndex = CreateMesh(Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End));
+        m_CurrentObject->Groups.push_back(groupIndex);
+
+        m_GroupActive = true;
     }
 
-    void FileParser::CreateMesh(const std::string& name)
+    void FileParser::ProcessMaterialAssignment()
     {
-        m_CurrentMesh = &m_OBJModel->Meshes.emplace_back(name);
+        Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+        m_Begin++;
+        std::string name = std::string(m_Begin, m_End);
+
+        if (m_GroupActive && m_CurrentMesh->Faces.empty())
+        {
+            m_CurrentMesh->MaterialName = name;
+        }
+        else
+        {
+            if (!m_CurrentObject)
+                CreateObject(FORMAT("Model_{}",  name));
+
+            m_CurrentObject->Meshes.push_back(CreateMesh(FORMAT("Mesh_{}",  name)));
+            m_GroupActive = false;
+        }
+    }
+
+    size_t FileParser::CreateObject(const std::string& name)
+    {
+        size_t index = m_OBJModel->RootObjects.size();
+
+        Object& obj = m_OBJModel->RootObjects.emplace_back();
+        obj.Name = name;
+
+        m_CurrentObject = &m_OBJModel->RootObjects.at(index);
+        return index;
+    }
+
+    size_t FileParser::CreateMesh(const std::string& name)
+    {
+        m_CurrentMesh = &m_OBJModel->Meshes.emplace_back();
         m_CurrentMesh->Name = name;
+
+        return m_OBJModel->Meshes.size() - 1;
     }
 
     glm::vec3 FileParser::ParseVec3() {
@@ -303,20 +326,4 @@ namespace OCASI::OBJ {
 
         return { f1, f2 };
     }
-
-#if 0
-    void ObjFileParser::CreateNewVertex(Vertex &v)
-    {
-        m_CurrentMesh->Vertices.push_back(m_Vertices.at(v.VertexIndex - m_CurrentVertexIndex));
-        if(!m_TexCoords.empty())
-            m_CurrentMesh->TexCoords.push_back(m_TexCoords.at(v.TextureCoordinateIndex - m_CurrentTextureCoordinateIndex));
-        if(!m_Normals.empty())
-            m_CurrentMesh->Normals.push_back(m_Normals.at(v.NormalIndex - m_CurrentNormalIndex));
-
-        size_t index = m_CurrentMesh->Vertices.size() - 1;
-        m_CurrentMesh->Indices.push_back(index);
-        v.IndicesIndex = index;
-        m_VerticesLookupTable[v.VertexIndex].push_back(v);
-    }
-#endif
 }

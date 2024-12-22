@@ -46,6 +46,9 @@ namespace OCASI {
         std::vector<uint32_t> Indices;
 
         size_t MaterialIndex;
+
+        FaceType FaceType;
+        Dimension Dimension;
     };
 
     struct Model
@@ -53,8 +56,6 @@ namespace OCASI {
         std::string Name;
 
         std::vector<Mesh> Meshes;
-        FaceType FaceType;
-        Dimension Dimension;
     };
 
 }

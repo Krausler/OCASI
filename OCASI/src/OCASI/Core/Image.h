@@ -64,15 +64,15 @@ namespace OCASI {
     public:
         Image() = default;
         Image(const Path& path, const ImageSettings& settings = {});
-        Image(const std::vector<uint8_t>& imageData, uint8_t channels, uint32_t width, uint32_t height, const ImageSettings& settings = {});
-        Image(const std::vector<uint8_t>& data, bool load = false, const ImageSettings& settings = {});
+        Image(std::vector<uint8_t>&& imageData, uint8_t channels, uint32_t width, uint32_t height, const ImageSettings& settings = {});
+        Image(std::vector<uint8_t>&& data, const ImageSettings& settings = {});
 
         // If the image is not a memory image, it's data can be loaded with this function;
-        const ImageData* LoadImageFromDisk();
-        const ImageData* ImportImageFromData();
+        void LoadImageFromDisk();
+        void ImportImageFromData();
 
         bool IsMemoryImage() const { return m_MemoryImage; }
-        bool IsLoaded() const { return m_MemoryImage && m_ImageData.Width != 0 && m_ImageData.Height != 0 && m_ImageData.Channels != 0; }
+        bool IsLoaded() const { return m_ImageData.Width != 0 && m_ImageData.Height != 0 && m_ImageData.Channels != 0; }
         const ImageData& GetImageData() const { return m_ImageData; }
         const ImageSettings& GetImageSettings() const { return m_Settings; }
         const Path& GetImagePath() const { return m_ImagePath; }
