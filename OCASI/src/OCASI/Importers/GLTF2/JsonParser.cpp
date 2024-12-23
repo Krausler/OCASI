@@ -44,7 +44,7 @@ namespace OCASI::GLTF {
             }
         }
 
-        m_Asset = std::make_shared<Asset>();
+        m_Asset = MakeShared<Asset>();
         glz::json_t& json = *m_Json;
 
         // The order of how things are parsed doesn't really matter, however it does make sense

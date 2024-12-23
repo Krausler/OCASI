@@ -69,7 +69,8 @@ namespace OCASI {
 
         // If the image is not a memory image, it's data can be loaded with this function;
         void LoadImageFromDisk();
-        void ImportImageFromData();
+        void LoadImageFromMemory();
+        const ImageData& Load();
 
         bool IsMemoryImage() const { return m_MemoryImage; }
         bool IsLoaded() const { return m_ImageData.Width != 0 && m_ImageData.Height != 0 && m_ImageData.Channels != 0; }

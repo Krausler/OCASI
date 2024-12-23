@@ -152,7 +152,7 @@ namespace OCASI {
 
     void GLTFImporter::ConvertToOCASIScene()
     {
-        m_Scene = std::make_shared<Scene>();
+        m_Scene = MakeShared<Scene>();
 
         auto& gltfAsset = *m_Asset;
 
@@ -191,7 +191,7 @@ namespace OCASI {
         for (size_t& gltfRootNodeIndex : gltfScene.RootNodes)
         {
             GLTF::Node& gltfRootNode = gltfAsset.Nodes.at(gltfRootNodeIndex);
-            auto ocasiNode = std::make_shared<Node>();
+            auto ocasiNode = MakeShared<Node>();
             ocasiScene.RootNodes.push_back(ocasiNode);
 
             if (ocasiRootNode)
@@ -221,7 +221,7 @@ namespace OCASI {
         {
             auto& childGltfNode = m_Asset->Nodes.at(child);
 
-            std::shared_ptr<Node> childOcasiNode = std::make_shared<Node>();
+            std::shared_ptr<Node> childOcasiNode = MakeShared<Node>();
             childOcasiNode->Parent = ocasiNode;
             ocasiNode->Children.push_back(childOcasiNode);
 
@@ -303,8 +303,8 @@ namespace OCASI {
                 }
                 else if (attributeName.starts_with("TEXCOORD_"))
                 {
-                    const size_t TEX_COORD_STRING_INDEX = 9;
-                    size_t texCoordIndex = std::atoi(&attributeName.at(TEX_COORD_STRING_INDEX));
+                    const size_t TEX_COORD_STRING = 9;
+                    size_t texCoordIndex = std::atoi(&attributeName.at(TEX_COORD_STRING));
 
                     OCASI_ASSERT(texCoordIndex < ocasiMesh.TexCoords.size());
                     auto& texCoords = ocasiMesh.TexCoords.at(texCoordIndex);
@@ -317,8 +317,8 @@ namespace OCASI {
                 }
                 else if (attributeName.starts_with("COLOR_"))
                 {
-                    const size_t COLOR_STRING_INDEX = 6;
-                    size_t colorIndex = std::atoi(&attributeName.at(COLOR_STRING_INDEX));
+                    const size_t COLOR_STRING = 6;
+                    size_t colorIndex = std::atoi(&attributeName.at(COLOR_STRING));
 
                     std::vector<uint8_t> data = GetAccessorData(accessor);
                     OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec4) == 0);
@@ -347,21 +347,21 @@ namespace OCASI {
             if (gltfMaterial.MetallicRoughness)
             {
 
-                ocasiMaterial.SetValue(MATERIAL_ALBEDO_COLOUR_INDEX, gltfMaterial.MetallicRoughness->BaseColour);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_ALBEDO_INDEX, CreateTexture(gltfMaterial.MetallicRoughness->BaseColourTexture));
+                ocasiMaterial.SetValue(MATERIAL_ALBEDO_COLOUR, gltfMaterial.MetallicRoughness->BaseColour);
+                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_ALBEDO, CreateTexture(gltfMaterial.MetallicRoughness->BaseColourTexture));
 
-                ocasiMaterial.SetValue(MATERIAL_USE_COMBINED_METALLIC_ROUGHNESS_TEXTURE_INDEX, true);
-                ocasiMaterial.SetValue(MATERIAL_METALLIC_INDEX, gltfMaterial.MetallicRoughness->Metallic);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_METALLIC_INDEX, CreateTexture(gltfMaterial.MetallicRoughness->MetallicRoughnessTexture));
+                ocasiMaterial.SetValue(MATERIAL_USE_COMBINED_METALLIC_ROUGHNESS_TEXTURE, true);
+                ocasiMaterial.SetValue(MATERIAL_METALLIC, gltfMaterial.MetallicRoughness->Metallic);
+                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_METALLIC, CreateTexture(gltfMaterial.MetallicRoughness->MetallicRoughnessTexture));
 
-                ocasiMaterial.SetValue(MATERIAL_ROUGHNESS_INDEX, gltfMaterial.MetallicRoughness->Roughness);
+                ocasiMaterial.SetValue(MATERIAL_ROUGHNESS, gltfMaterial.MetallicRoughness->Roughness);
             }
 
-            ocasiMaterial.SetTexture(MATERIAL_TEXTURE_NORMAL_INDEX, CreateTexture(gltfMaterial.NormalTexture));
-            ocasiMaterial.SetTexture(MATERIAL_TEXTURE_OCCLUSION_INDEX, CreateTexture(gltfMaterial.OcclusionTexture));
+            ocasiMaterial.SetTexture(MATERIAL_TEXTURE_NORMAL, CreateTexture(gltfMaterial.NormalTexture));
+            ocasiMaterial.SetTexture(MATERIAL_TEXTURE_OCCLUSION, CreateTexture(gltfMaterial.OcclusionTexture));
 
-            ocasiMaterial.SetValue(MATERIAL_EMISSIVE_COLOUR_INDEX, gltfMaterial.EmissiveColour);
-            ocasiMaterial.SetTexture(MATERIAL_TEXTURE_EMISSIVE_INDEX, CreateTexture(gltfMaterial.EmissiveTexture));
+            ocasiMaterial.SetValue(MATERIAL_EMISSIVE_COLOUR, gltfMaterial.EmissiveColour);
+            ocasiMaterial.SetTexture(MATERIAL_TEXTURE_EMISSIVE, CreateTexture(gltfMaterial.EmissiveTexture));
 
             // TODO: AlphaCutoff, AlphaMode, DoubleSided
         }
@@ -369,53 +369,53 @@ namespace OCASI {
         // Extension material parameters
         {
             if (gltfMaterial.ExtEmissiveStrength)
-                ocasiMaterial.SetValue(MATERIAL_EMISSIVE_STRENGTH_INDEX, gltfMaterial.ExtEmissiveStrength->EmissiveStrength);
+                ocasiMaterial.SetValue(MATERIAL_EMISSIVE_STRENGTH, gltfMaterial.ExtEmissiveStrength->EmissiveStrength);
 
             if (gltfMaterial.ExtSpecular)
             {
                 auto& extSpecular = gltfMaterial.ExtSpecular.value();
-                ocasiMaterial.SetValue(MATERIAL_SPECULAR_COLOUR_INDEX, extSpecular.SpecularColourFactor);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_SPECULAR_INDEX, CreateTexture(extSpecular.SpecularColourTexture));
+                ocasiMaterial.SetValue(MATERIAL_SPECULAR_COLOUR, extSpecular.SpecularColourFactor);
+                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_SPECULAR, CreateTexture(extSpecular.SpecularColourTexture));
 
-                ocasiMaterial.SetValue(MATERIAL_SPECULAR_STRENGTH_INDEX, extSpecular.SpecularFactor);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_SPECULAR_STRENGTH_INDEX, CreateTexture(extSpecular.SpecularTexture));
+                ocasiMaterial.SetValue(MATERIAL_SPECULAR_STRENGTH, extSpecular.SpecularFactor);
+                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_SPECULAR_STRENGTH, CreateTexture(extSpecular.SpecularTexture));
             }
 
             if (gltfMaterial.ExtIOR)
-                ocasiMaterial.SetValue(MATERIAL_IOR_INDEX, gltfMaterial.ExtIOR->IOR);
+                ocasiMaterial.SetValue(MATERIAL_IOR, gltfMaterial.ExtIOR->IOR);
 
             if (gltfMaterial.ExtSpecularGlossiness)
             {
                 auto& extPbrSpecular = gltfMaterial.ExtSpecularGlossiness.value();
-                ocasiMaterial.SetValue(MATERIAL_ALBEDO_COLOUR_INDEX, extPbrSpecular.DiffuseFactor);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_ALBEDO_INDEX, CreateTexture(extPbrSpecular.DiffuseTexture));
+                ocasiMaterial.SetValue(MATERIAL_ALBEDO_COLOUR, extPbrSpecular.DiffuseFactor);
+                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_ALBEDO, CreateTexture(extPbrSpecular.DiffuseTexture));
 
-                ocasiMaterial.SetValue(MATERIAL_SPECULAR_COLOUR_INDEX, extPbrSpecular.SpecularFactor);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_SPECULAR_INDEX, CreateTexture(extPbrSpecular.SpecularGlossinessTexture));
+                ocasiMaterial.SetValue(MATERIAL_SPECULAR_COLOUR, extPbrSpecular.SpecularFactor);
+                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_SPECULAR, CreateTexture(extPbrSpecular.SpecularGlossinessTexture));
 
-                ocasiMaterial.SetValue(MATERIAL_SPECULAR_STRENGTH_INDEX, extPbrSpecular.GlossinessFactor);
+                ocasiMaterial.SetValue(MATERIAL_SPECULAR_STRENGTH, extPbrSpecular.GlossinessFactor);
             }
 
             if (gltfMaterial.ExtAnisotropy)
             {
                 auto& extAnisotropy = gltfMaterial.ExtAnisotropy.value();
-                ocasiMaterial.SetValue(MATERIAL_ANISOTROPY_INDEX, extAnisotropy.AnisotropyFactor);
-                ocasiMaterial.SetValue(MATERIAL_ANISOTROPY_ROTATION_INDEX, extAnisotropy.AnisotropyDirection);
+                ocasiMaterial.SetValue(MATERIAL_ANISOTROPY, extAnisotropy.AnisotropyFactor);
+                ocasiMaterial.SetValue(MATERIAL_ANISOTROPY_ROTATION, extAnisotropy.AnisotropyDirection);
 
-                ocasiMaterial.SetValue(MATERIAL_USE_COMBINED_ANISOTROPY_ANISOTROPY_ROTATION_TEXTURE_INDEX, true);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_ANISOTROPY_INDEX, CreateTexture(extAnisotropy.AnisotropyTexture));
+                ocasiMaterial.SetValue(MATERIAL_USE_COMBINED_ANISOTROPY_ANISOTROPY_ROTATION_TEXTURE, true);
+                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_ANISOTROPY, CreateTexture(extAnisotropy.AnisotropyTexture));
             }
 
             if (gltfMaterial.ExtClearcoat)
             {
                 auto& extClearcoat = gltfMaterial.ExtClearcoat.value();
-                ocasiMaterial.SetValue(MATERIAL_CLEARCOAT_INDEX, extClearcoat.ClearcoatFactor);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_CLEARCOAT_INDEX, CreateTexture(extClearcoat.ClearcoatTexture));
+                ocasiMaterial.SetValue(MATERIAL_CLEARCOAT, extClearcoat.ClearcoatFactor);
+                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_CLEARCOAT, CreateTexture(extClearcoat.ClearcoatTexture));
 
-                ocasiMaterial.SetValue(MATERIAL_CLEARCOAT_ROUGHNESS_INDEX, extClearcoat.ClearcoatRoughnessFactor);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_CLEARCOAT_ROUGHNESS_INDEX, CreateTexture(extClearcoat.ClearcoatRoughnessTexture));
+                ocasiMaterial.SetValue(MATERIAL_CLEARCOAT_ROUGHNESS, extClearcoat.ClearcoatRoughnessFactor);
+                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_CLEARCOAT_ROUGHNESS, CreateTexture(extClearcoat.ClearcoatRoughnessTexture));
 
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_CLEARCOAT_NORMAL_INDEX, CreateTexture(extClearcoat.ClearcoatNormalTexture));
+                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_CLEARCOAT_NORMAL, CreateTexture(extClearcoat.ClearcoatNormalTexture));
             }
 
             // TODO: Iridescence, Volume, Sheen, Transmission

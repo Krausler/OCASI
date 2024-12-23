@@ -72,6 +72,12 @@ namespace OCASI {
         return m_MaterialTextures.at(index);
     }
 
+    bool Material::HasTexture(size_t index)
+    {
+        OCASI_ASSERT(index < MATERIAL_TEXTURE_ARRAY_SIZE);
+        return m_MaterialTextures.at(index) != nullptr;
+    }
+
     void Material::SetName(const std::string& name)
     {
         m_Name = name;
@@ -106,6 +112,6 @@ namespace OCASI {
             offset += MATERIAL_VALUE_OBJECT_SIZES[i];
         }
 
-        return 0;
+        return offset;
     }
 }

@@ -61,7 +61,7 @@ namespace OCASI {
         }
     }
 
-    void Image::ImportImageFromData()
+    void Image::LoadImageFromMemory()
     {
         if (!m_MemoryImage)
         {
@@ -88,5 +88,15 @@ namespace OCASI {
         {
             OCASI_FAIL(FORMAT("Failed to load image with path {0}: {1}", m_ImagePath.string(), stbi_failure_reason()));
         }
+    }
+
+    const ImageData& Image::Load()
+    {
+        if (m_MemoryImage)
+            LoadImageFromMemory();
+        else
+            LoadImageFromDisk();
+
+        return m_ImageData;
     }
 }
