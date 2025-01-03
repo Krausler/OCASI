@@ -8,7 +8,7 @@ int main()
     OCASI::Importer::Init();
 
     OCASI_LOG_ERROR("hi");
-    std::filesystem::current_path("C:/Lauri/Dev/C++/Projekte/Octopus/Projekte/OCASI/Tester");
+    std::filesystem::current_path("C:/Lauri/Dev/C++/Projekte/Octopus/Projekte/OCASI/OCASI-Tester");
 
     auto scene = OCASI::Importer::Load3DFile("Resources/GLTF/Mushroom.glb");
 

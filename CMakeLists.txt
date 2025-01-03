@@ -28,4 +28,4 @@ if (MSVC)
 endif()
 
 add_subdirectory(OCASI)
-add_subdirectory(Tester)
+add_subdirectory(OCASI-Tester)
