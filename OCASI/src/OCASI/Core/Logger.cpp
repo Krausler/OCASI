@@ -17,7 +17,7 @@ namespace OCASI {
 
     void Logger::SetFileFormatPattern(const std::string& fileFormatName)
     {
-        spdlog::set_pattern(std::format("%^[%T] %n {}: %v%$", fileFormatName));
+        spdlog::set_pattern(fmt::format("%^[%T] %n {}: %v%$", fileFormatName));
     }
 
     void Logger::ResetPattern()

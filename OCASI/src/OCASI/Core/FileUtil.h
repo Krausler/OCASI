@@ -49,11 +49,12 @@ namespace OCASI {
         std::ifstream m_FileReader;
         size_t m_FileSize;
     };
-
+    
     namespace Util {
-
+        
+        bool StartsWith(const std::string& s, const std::string& prefix);
         bool FindTokensInFirst100Lines(OCASI::FileReader& reader, const std::vector<std::string>& tokens);
-
+        
     }
 
 }

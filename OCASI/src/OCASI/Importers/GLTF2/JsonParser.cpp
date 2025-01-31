@@ -1,29 +1,38 @@
 #include "JsonParser.h"
 
-#include "glaze/glaze.hpp"
+#include "OCASI/Importers/GLTF2/Json.h"
+
+// Apparently __LINE__ has to be parsed around 2 times
+#define OCASI_FAIL_ON_SIMDJSON_ERROR_IMPL(err, msg, line) error_code error##line = err; if (error##line) { OCASI_FAIL(FORMAT("{}: {}", msg, error_message(error##line))); return false; }
+#define OCASI_FAIL_ON_SIMDJSON_ERROR_IMPL2(err, msg, line) OCASI_FAIL_ON_SIMDJSON_ERROR_IMPL(err, msg, line)
+
+#define OCASI_FAIL_ON_SIMDJSON_ERROR(err, msg) OCASI_FAIL_ON_SIMDJSON_ERROR_IMPL2(err, msg, __LINE__)
+#define OCASI_FAIL_IF_OBJ_NOT_EXISTS(json, requiredParam, outValue, msg) OCASI_FAIL_ON_SIMDJSON_ERROR(json[requiredParam].get(outValue), msg)
+
+#define OCASI_HAS_PROPERTY(json, parameter, outValue) if (!json[parameter].get(outValue))
+#define OCASI_SET_PROPERTY_IF_EXISTS(json, parameter, outValue) json[parameter].get(outValue)
+#define OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(json, parameter, T, outValue) json[parameter].get<T>().get(outValue)
+
+using namespace simdjson;
 
 namespace OCASI::GLTF {
 
-    const std::string EXTENSIONS_USED_PROPERTY = "extensionsUsed";
-    const std::string EXTENSIONS_REQUIRED_PROPERTY = "extensionsRequired";
-    const std::string ACCESSORS_PROPERTY = "accessors";
-    const std::string BUFFER_VIEWS_PROPERTY = "bufferViews";
-    const std::string BUFFERS_PROPERTY = "buffers";
-    const std::string NODES_PROPERTY = "nodes";
-    const std::string ASSET_PROPERTY = "asset";
-    const std::string MESHES_PROPERTY = "meshes";
-    const std::string MATERIALS_PROPERTY = "materials";
-    const std::string TEXTURES_PROPERTY = "textures";
-    const std::string IMAGES_PROPERTY = "images";
-    const std::string SAMPLERS_PROPERTY = "samplers";
-    const std::string SCENE_PROPERTY = "scene";
-    const std::string SCENES_PROPERTY = "scenes";
+    const std::string_view EXTENSIONS_USED_PROPERTY = "extensionsUsed";
+    const std::string_view EXTENSIONS_REQUIRED_PROPERTY = "extensionsRequired";
+    const std::string_view ACCESSORS_PROPERTY = "accessors";
+    const std::string_view BUFFER_VIEWS_PROPERTY = "bufferViews";
+    const std::string_view BUFFERS_PROPERTY = "buffers";
+    const std::string_view NODES_PROPERTY = "nodes";
+    const std::string_view ASSET_PROPERTY = "asset";
+    const std::string_view MESHES_PROPERTY = "meshes";
+    const std::string_view MATERIALS_PROPERTY = "materials";
+    const std::string_view TEXTURES_PROPERTY = "textures";
+    const std::string_view IMAGES_PROPERTY = "images";
+    const std::string_view SAMPLERS_PROPERTY = "samplers";
+    const std::string_view SCENE_PROPERTY = "scene";
+    const std::string_view SCENES_PROPERTY = "scenes";
 
-    JsonParser::JsonParser(FileReader &reader)
-        : m_FileReader(reader)
-    {}
-
-    JsonParser::JsonParser(FileReader &reader, glz::json_t* json)
+    JsonParser::JsonParser(FileReader& reader, Json* json)
         : m_FileReader(reader), m_Json(json)
     {}
 
@@ -34,25 +43,16 @@ namespace OCASI::GLTF {
 
     std::shared_ptr<Asset> JsonParser::ParseGLTFTextFile()
     {
-        if (!m_Json)
-        {
-            m_Json = new glz::json_t;
-            if (auto error = glz::read_json(m_Json, m_FileReader.GetFileString()); error)
-            {
-                OCASI_FAIL(FORMAT("Failed to load json: {}", error.custom_error_message));
-                return nullptr;
-            }
-        }
 
         m_Asset = MakeShared<Asset>();
-        glz::json_t& json = *m_Json;
+        ondemand::document& json = m_Json->Get();
 
         // The order of how things are parsed doesn't really matter, however it does make sense
         // to first read in asset and extensions, followed by all data objects and ending with
         // the connecting objects, like meshes nodes and scenes, in order to simulate scenario
         // where the order of things would be fundamental.
 
-        // Read the projects generator and version
+        // Read the project generator and version
         if(!ParseAssetDescription())
             return nullptr;
 
@@ -60,8 +60,7 @@ namespace OCASI::GLTF {
         if(!ParseExtensions())
             return nullptr;
 
-        if (json.contains(SCENE_PROPERTY))
-            m_Asset->DefaultSceneIndex = (size_t) json.at(SCENE_PROPERTY).get_number();
+        OCASI_SET_PROPERTY_IF_EXISTS(json, SCENE_PROPERTY, m_Asset->DefaultSceneIndex);
 
         if(!ParseBuffers())
             return nullptr;
@@ -89,112 +88,103 @@ namespace OCASI::GLTF {
 
         return m_Asset;
     }
-
+    
     bool JsonParser::ParseAssetDescription()
     {
-        glz::json_t& json = *m_Json;
+        auto& json = m_Json->Get();
 
-        if (!json.contains(ASSET_PROPERTY))
-        {
-            OCASI_FAIL("Required 'asset' object is not present in glTF file.");
-            return false;
-        }
-
-        glz::json_t& asset = json.at(ASSET_PROPERTY);
-
-        // The asset files version
-        if (!asset.contains("version"))
-        {
-            OCASI_FAIL("Required 'version' property in asset is not present, though mandatory.");
-            return false;
-        }
+        ondemand::object jAsset;
+        OCASI_FAIL_IF_OBJ_NOT_EXISTS(json, ASSET_PROPERTY, jAsset, "Required 'jAsset' object not present in GLTF file, though mandatory: ")
+        
+        // The jAsset files version
+        std::string version;
+        OCASI_FAIL_ON_SIMDJSON_ERROR(jAsset["version"].get_string(version), "Required 'version' property in jAsset is not present, though mandatory.");
 
         m_Asset->AssetVersion = {};
-        std::string& versionString = asset.at("version").get_string();
-        m_Asset->AssetVersion.Major = std::stoi(versionString.substr(0, versionString.find('.')));
-        m_Asset->AssetVersion.Minor = std::stoi(versionString.substr(versionString.find('.') + 1));
+        m_Asset->AssetVersion.Major = std::stoi(version.substr(0, version.find('.')));
+        m_Asset->AssetVersion.Minor = std::stoi(version.substr(version.find('.') + 1));
         OCASI_ASSERT(m_Asset->AssetVersion.Major == 2);
 
-        if (asset.contains("minVersion"))
+        std::string_view minVersionStr;
+        OCASI_HAS_PROPERTY(jAsset, "version", minVersionStr)
         {
-            m_Asset->MinimumRequiredVersion = {};
-            std::string& minVersionString = asset.at("minVersion").get_string();
-            m_Asset->MinimumRequiredVersion->Major = std::stoi(minVersionString.substr(0, minVersionString.find('.')));
-            m_Asset->MinimumRequiredVersion->Minor = std::stoi(minVersionString.substr(minVersionString.find('.')));
+            std::string minVersion(minVersionStr);
+            m_Asset->MinimumRequiredVersion.Major = std::stoi(minVersion.substr(0, minVersion.find('.')));
+            m_Asset->MinimumRequiredVersion.Minor = std::stoi(minVersion.substr(minVersion.find('.') + 1));
         }
 
-        if (asset.contains("generator"))
+        std::string_view generator;
+        OCASI_HAS_PROPERTY(jAsset, "generator", generator)
         {
-            m_Asset->Generator = asset.at("generator").get_string();
+            m_Asset->Generator = generator;
         }
-
-        if (asset.contains("copyright"))
+        
+        std::string_view copyright;
+        OCASI_HAS_PROPERTY(jAsset, "copyright", generator)
         {
-            m_Asset->CopyRight = asset.at("copyright").get_string();
+            m_Asset->CopyRight = copyright;
         }
 
         return true;
     }
+    
+    bool JsonParser::ParseExtensions()
+    {
+        auto& json = m_Json->Get();
 
-    bool JsonParser::ParseExtensions() {
-        glz::json_t& json = *m_Json;
-
-        // Return when there are no extensions required
-        if (!json.contains(EXTENSIONS_USED_PROPERTY))
+        // Return when there are no jExtensions required
+        ondemand::array jExtensions;
+        if (json[EXTENSIONS_USED_PROPERTY].get(jExtensions))
             return true;
-
-        OCASI_ASSERT(json.at(EXTENSIONS_USED_PROPERTY).is_array());
-        auto& extensions = json.at(EXTENSIONS_USED_PROPERTY).get_array();
-
-        for (auto& ext : extensions)
+        
+        for (auto jExt : jExtensions)
         {
-            std::string& extName = ext.get_string();
-            m_Asset->ExtensionsUsed.push_back(extName);
+            std::string_view extName;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(jExt.get(extName), "Failed to get jExtensions name: {}");
+            
+            m_Asset->ExtensionsUsed.push_back(std::move(std::string(extName)));
 
             if (std::find(SUPPORTED_EXTENSIONS.begin(), SUPPORTED_EXTENSIONS.end(), extName) == SUPPORTED_EXTENSIONS.end())
-                m_Asset->SupportedExtensionsUsed.push_back(extName);
+                m_Asset->SupportedExtensionsUsed.push_back(std::move(std::string(extName)));
 
         }
 
-        // OCASI currently does not support any extensions that are required, so we return when there is an 'extensionRequired' section
-        if (json.contains(EXTENSIONS_REQUIRED_PROPERTY))
+        // OCASI currently does not support any jExtensions that are required, so we return when there is an 'extensionRequired' section
+        if (!json[EXTENSIONS_REQUIRED_PROPERTY].error())
         {
-            OCASI_FAIL("Can't load glTF 2.0 file because it requires an unsupported extensions.");
+            OCASI_FAIL("Can't load glTF 2.0 file because it requires an unsupported required extension.");
             return false;
         }
 
         return true;
     }
-
+    
     bool JsonParser::ParseBuffers()
     {
-        glz::json_t& json = *m_Json;
+        auto& json = m_Json->Get();
 
-        if (!json.contains(BUFFERS_PROPERTY))
+        ondemand::array jBuffers;
+        if (json[BUFFERS_PROPERTY].get(jBuffers))
             return true;
 
-        OCASI_ASSERT(json.at(BUFFERS_PROPERTY).is_array());
-        auto& buffers = json.at(BUFFERS_PROPERTY).get_array();
-
-        for (int i = 0; i < buffers.size(); i++)
+        size_t bufferCount;
+        OCASI_FAIL_ON_SIMDJSON_ERROR(jBuffers.count_elements().get(bufferCount), "Failed to get buffer count.");
+        
+        for (size_t i = 0; i < bufferCount; i++)
         {
-            glz::json_t& jBuffer = buffers.at(i);
-
-            if (!jBuffer.contains("byteLength"))
+            ondemand::object jBuffer;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(jBuffers.at(i).get(jBuffer), "Failed to get buffer.");
+            
+            size_t byteLength;
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jBuffer, "byteLength", byteLength, "Required 'byteLength' property in jBuffer is not present, though mandatory.");
+            
+            std::string_view data;
+            OCASI_HAS_PROPERTY(jBuffer, "uri", data)
             {
-                OCASI_FAIL("Required 'byteLength' property in jBuffer is not present, though mandatory.");
-                return false;
-            }
-
-            size_t byteLength = (size_t) jBuffer.at("byteLength").get_number();
-
-
-            if (jBuffer.contains("uri"))
-            {
-                std::string& data = jBuffer.at("uri").get_string();
-                if (data.starts_with("data:"))
+                std::string s(data);
+                if (Util::StartsWith(s, "data:"))
                 {
-                    std::string uri = data.substr(data.find(':'));
+                    std::string uri = s.substr(s.find(':'));
                     m_Asset->Buffers.emplace_back(i, uri, byteLength);
                 }
                 else
@@ -211,86 +201,60 @@ namespace OCASI::GLTF {
 
         return true;
     }
-
+    
     bool JsonParser::ParseBufferViews()
     {
-        glz::json_t& json = *m_Json;
+        auto& json = m_Json->Get();
 
-        if (!json.contains(BUFFER_VIEWS_PROPERTY))
+        ondemand::array jBufferViews;
+        if (json[BUFFER_VIEWS_PROPERTY].get(jBufferViews))
             return true;
 
-        OCASI_ASSERT(json.at(BUFFER_VIEWS_PROPERTY).is_array());
-        auto& bufferViews = json.at(BUFFER_VIEWS_PROPERTY).get_array();
-
-        for (int i = 0; i < bufferViews.size(); i++)
+        size_t i = 0;
+        for (auto rJBufferView : jBufferViews)
         {
-            glz::json_t& jBufferView = bufferViews.at(i);
-
-            if (!jBufferView.contains("buffer"))
-            {
-                OCASI_FAIL("Required 'buffer' property in bufferView is not present, though mandatory.");
-                return false;
-            }
-
-            if (!jBufferView.contains("byteLength"))
-            {
-                OCASI_FAIL("Required 'byteLength' property in bufferView is not present, though mandatory.");
-                return false;
-            }
-
+            ondemand::object jBufferView;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(rJBufferView.get(jBufferView), "Failed to get bufferView");
+            
             BufferView& bufferView = m_Asset->BufferViews.emplace_back(i);
-            bufferView.Buffer = (size_t) jBufferView.at("buffer").get_number();
-            bufferView.ByteLength = (size_t) jBufferView.at("byteLength").get_number();
-
-            if (jBufferView.contains("byteOffset"))
-                bufferView.ByteOffset = (size_t) jBufferView.at("byteOffset").get_number();
-
-            if (jBufferView.contains("byteStride"))
-                bufferView.ByteStride = (size_t) jBufferView.at("byteStride").get_number();
+            
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jBufferView, "buffer", bufferView.Buffer, "Required 'buffer' property in bufferView is not present, though mandatory");
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jBufferView, "byteLength", bufferView.ByteLength, "Required 'byteLength' property in bufferView is not present, though mandatory");
+            
+            OCASI_SET_PROPERTY_IF_EXISTS(jBufferView, "byteOffset", bufferView.ByteOffset);
+            OCASI_SET_PROPERTY_IF_EXISTS(jBufferView, "byteStride", bufferView.ByteStride);
+            i++;
         }
 
         return true;
     }
-
-    bool JsonParser::ParseAccessors() {
-        glz::json_t& json = *m_Json;
-
-        if (!json.contains(ACCESSORS_PROPERTY))
+    
+    bool JsonParser::ParseAccessors()
+    {
+        auto& json = m_Json->Get();
+        
+        ondemand::array jAccessors;
+        if (json[ACCESSORS_PROPERTY].get(jAccessors))
             return true;
-
-        OCASI_ASSERT(json.at(ACCESSORS_PROPERTY).is_array());
-        auto& accessors = json.at(ACCESSORS_PROPERTY).get_array();
-
-        for (int i = 0; i < accessors.size(); i++)
+        
+        size_t i = 0;
+        for (auto rJAccessor : jAccessors)
         {
-            glz::json_t& jAccessor = accessors.at(i);
-
-            if (!jAccessor.contains("componentType"))
-            {
-                OCASI_FAIL("Required 'componentType' property in accessor is not present, though mandatory.");
-                return false;
-            }
-
-            if (!jAccessor.contains("count"))
-            {
-                OCASI_FAIL("Required 'byteLength' property in accessor is not present, though mandatory.");
-                return false;
-            }
-
-            if (!jAccessor.contains("type"))
-            {
-                OCASI_FAIL("Required 'type' property in accessor is not present, though mandatory.");
-                return false;
-            }
-
+            ondemand::object jAccessor;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(rJAccessor.get(jAccessor), "Failed to get accessor");
+            
             Accessor& accessor = m_Asset->Accessors.emplace_back(i);
-            accessor.ComponentType = (ComponentType) jAccessor.at("componentType").get_number();
-            accessor.ElementCount = (size_t) jAccessor.at("count").get_number();
+            
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jAccessor, "count", accessor.ElementCount, "Required 'byteLength' property in accessor is not present, though mandatory");
+            std::string_view dataType;
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jAccessor, "type", dataType, "Required 'type' property in accessor is not present, though mandatory");
+            size_t compType;
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jAccessor, "componentType", compType, "Required 'componentType' property in accessor is not present, though mandatory");
+
+            accessor.ComponentType = (ComponentType) compType;
 
             // Reading the data type
             {
-                std::string& dataType = jAccessor.at("type").get_string();
-
                 if (dataType == "SCALAR")
                     accessor.DataType = DataType::Scalar;
                 else if (dataType == "VEC2")
@@ -311,805 +275,670 @@ namespace OCASI::GLTF {
                     return false;
                 }
             }
+            
+            OCASI_SET_PROPERTY_IF_EXISTS(jAccessor, "bufferView", accessor.BufferView);
+            OCASI_SET_PROPERTY_IF_EXISTS(jAccessor, "byteOffset", accessor.ByteOffset);
+            OCASI_SET_PROPERTY_IF_EXISTS(jAccessor, "normalized", accessor.Normalized);
 
-            if (jAccessor.contains("bufferView"))
-                accessor.BufferView = (size_t) jAccessor.at("bufferView").get_number();
-
-            if (jAccessor.contains("byteOffset"))
-                accessor.ByteOffset = (size_t) jAccessor.at("byteOffset").get_number();
-
-            if (jAccessor.contains("normalized"))
-                accessor.Normalized = (size_t) jAccessor.at("normalized").get_number();
-
-            if (jAccessor.contains("max"))
+            ondemand::array jMax;
+            OCASI_HAS_PROPERTY(jAccessor, "max", jMax)
             {
-                OCASI_ASSERT(jAccessor.at("max").is_array());
-                auto& max = jAccessor.at("max").get_array();
-
-                for (int j = 0; j < max.size(); j++)
-                    accessor.MaxValues[j] = max.at(j).get_number();
+                size_t j = 0;
+                for (auto jMaxVal : jMax)
+                {
+                    OCASI_FAIL_ON_SIMDJSON_ERROR(jMaxVal.get(accessor.MaxValues.at(j)), "Failed to get 'max' property value.");
+                    j++;
+                }
             }
-
-            if (jAccessor.contains("min"))
+            
+            ondemand::array jMin;
+            OCASI_HAS_PROPERTY(jAccessor, "min", jMin)
             {
-                OCASI_ASSERT(jAccessor.at("min").is_array());
-                auto& min = jAccessor.at("min").get_array();
-
-                for (int j = 0; j < min.size(); j++)
-                    accessor.MinValues[j] = min.at(j).get_number();
+                size_t j = 0;
+                for (auto jMinVal : jMin)
+                {
+                    OCASI_FAIL_ON_SIMDJSON_ERROR(jMinVal.get(accessor.MinValues.at(j)), "Failed to get 'min' property value.");
+                    j++;
+                }
             }
-
-            if (jAccessor.contains("sparse"))
+            
+            ondemand::object jSparse;
+            OCASI_HAS_PROPERTY(jAccessor, "sparse", jSparse)
             {
-                if (!ParseSparseAccessor(jAccessor.at("sparse"), accessor.Sparse = Sparse()))
+                if (!ParseSparseAccessor(jSparse, accessor.Sparse = Sparse()))
                     return false;
             }
+            i++;
         }
 
         return true;
     }
-
-    void JsonParser::ParseImages()
+    
+    bool JsonParser::ParseImages()
     {
-        glz::json_t& json = *m_Json;
+        auto& json = m_Json->Get();
+        
+        ondemand::array jImages;
+        if (json[IMAGES_PROPERTY].get(jImages))
+            return true;
 
-        if (!json.contains(IMAGES_PROPERTY))
-            return;
-
-        OCASI_ASSERT(json.at(IMAGES_PROPERTY).is_array());
-        auto& images = json.at(IMAGES_PROPERTY).get_array();
-
-        for (int i = 0; i < images.size(); i++)
+        size_t i = 0;
+        for (auto rJImage : jImages)
         {
-            glz::json_t& jImage = images.at(i);
+            ondemand::object jImage;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(rJImage.get(jImage), "Failed to get image");
+            
             Image& image = m_Asset->Images.emplace_back(i);
-
-            if (jImage.contains("uri"))
-                image.URI = jImage.at("uri").get_string();
-
-            if (jImage.contains("mimeType"))
-                image.MimeType = jImage.at("mimeType").get_string();
-
-            if (jImage.contains("bufferView"))
-                image.BufferView = (size_t) jImage.at("bufferView").get_number();
+            
+            std::string_view val;
+            OCASI_SET_PROPERTY_IF_EXISTS(jImage, "uri", val);
+            image.URI = val;
+            OCASI_SET_PROPERTY_IF_EXISTS(jImage, "mimeType", val);
+            image.MimeType = val;
+            OCASI_SET_PROPERTY_IF_EXISTS(jImage, "bufferView", image.BufferView);
+            i++;
         }
+        return true;
     }
-
-    void JsonParser::ParseSamplers()
+    
+    bool JsonParser::ParseSamplers()
     {
-        glz::json_t& json = *m_Json;
-
-        if (!json.contains(SAMPLERS_PROPERTY))
-            return;
-
-        OCASI_ASSERT(json.at(SAMPLERS_PROPERTY).is_array());
-        auto& samplers = json.at(SAMPLERS_PROPERTY).get_array();
-
-        for (int i = 0; i < samplers.size(); i++)
+        auto& json = m_Json->Get();
+        
+        ondemand::array jSamplers;
+        if (json[SAMPLERS_PROPERTY].get(jSamplers))
+            return true;
+        
+        size_t i = 0;
+        for (auto rJSampler : jSamplers)
         {
-            glz::json_t& jSampler = samplers.at(i);
+            ondemand::object jSampler;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(rJSampler.get(jSampler), "Failed to get sampler");
+
             Sampler& sampler = m_Asset->Samplers.emplace_back(i);
-
-            if (jSampler.contains("magFilter"))
-                sampler.MagFilter = (MinMagFilter) jSampler.at("magFilter").get_number();
-
-            if (jSampler.contains("minFilter"))
-                sampler.MagFilter = (MinMagFilter) jSampler.at("magFilter").get_number();
-
-            if (jSampler.contains("wrapS"))
-                sampler.WrapS = (UVWrap) jSampler.at("wrapS").get_number();
-
-            if (jSampler.contains("wrapT"))
-                sampler.WrapT = (UVWrap) jSampler.at("wrapT").get_number();
+            
+            size_t val = 0;
+            OCASI_SET_PROPERTY_IF_EXISTS(jSampler, "magFilter", val);
+            sampler.MagFilter = (MinMagFilter) val;
+            OCASI_SET_PROPERTY_IF_EXISTS(jSampler, "minFilter", val);
+            sampler.MinFilter = (MinMagFilter) val;
+            
+            OCASI_SET_PROPERTY_IF_EXISTS(jSampler, "wrapS", val);
+            sampler.WrapS = (UVWrap) val;
+            OCASI_SET_PROPERTY_IF_EXISTS(jSampler, "wrapT", val);
+            sampler.WrapT = (UVWrap) val;
+            i++;
         }
+        return true;
     }
-
-    bool JsonParser::ParseSparseAccessor(const glz::json_t& jsonAccessor, std::optional<Sparse>& outSparse)
+    
+    bool JsonParser::ParseSparseAccessor(simdjson::ondemand::object& jSparse, std::optional<Sparse>& outSparse)
     {
-        const glz::json_t& jSparse = *jsonAccessor;
-
-        if (!jSparse.contains("count"))
-        {
-            OCASI_FAIL("Required 'count' property in sparse accessor is not present, though mandatory.");
-            return false;
-        }
-
-        if (!jSparse.contains("indices"))
-        {
-            OCASI_FAIL("Required 'indices' property in sparse accessor is not present, though mandatory.");
-            return false;
-        }
-
-        if (!jSparse.contains("values"))
-        {
-            OCASI_FAIL("Required 'values' property in sparse accessor is not present, though mandatory.");
-            return false;
-        }
-
-        outSparse->ElementCount = (size_t) jSparse.at("count").get_number();
+        auto& json = m_Json->Get();
+        
+        OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparse, "count", outSparse->ElementCount, "Required 'count' property in sparse accessor is not present, though mandatory.");
+        ondemand::object jSparseIndices;
+        OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparse, "indices", jSparseIndices, "Required 'indices' property in sparse accessor is not present, though mandatory.");
+        ondemand::object jSparseValues;
+        OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparse, "values", jSparseValues, "Required 'values' property in sparse accessor is not present, though mandatory.");
 
         // Indices
         {
-            const glz::json_t& jSparseIndices = jSparse.at("indices");
-
-            if (!jSparseIndices.contains("bufferView"))
-            {
-                OCASI_FAIL("Required 'bufferView' property in sparse accessor indices is not present, though mandatory.");
-                return false;
-            }
-
-            if (!jSparseIndices.contains("componentType"))
-            {
-                OCASI_FAIL("Required 'componentType' property in sparse accessor indices is not present, though mandatory.");
-                return false;
-            }
-
-            SparseIndices& indices = outSparse->Indices;
-            indices.BufferView = (size_t) jSparseIndices.at("bufferView").get_number();
-            indices.ComponentType = (ComponentType) jSparseIndices.at("componentType").get_number();
-
-            if (jSparseIndices.contains("byteOffset"))
-                indices.BufferView = (size_t) jSparseIndices.at("byteOffset").get_number();
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparseIndices, "bufferView", outSparse->Indices.BufferView, "Required 'bufferView' property in sparse accessor indices is not present, though mandatory.")
+            size_t compType;
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparseIndices, "componentType", compType, "Required 'componentType' property in sparse accessor indices is not present, though mandatory.")
+            
+            OCASI_SET_PROPERTY_IF_EXISTS(jSparseIndices, "byteOffset", outSparse->Indices.ByteOffset);
         }
 
         // Values
         {
-            const glz::json_t& jSparseValues = jSparse.at("values");
-
-            if (!jSparseValues.contains("bufferView"))
-            {
-                OCASI_FAIL("Required 'bufferView' property in sparse accessor indices is not present, though mandatory.");
-                return false;
-            }
-
-            SparseValues& values = outSparse->Values;
-            values.BufferView = (size_t) jSparseValues.at("bufferView").get_number();
-            values.ByteOffset = (size_t) jSparseValues.at("byteOffset").get_number();
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparseValues, "bufferView", outSparse->Values.BufferView, "Required 'bufferView' property in sparse accessor values is not present, though mandatory.")
+            OCASI_SET_PROPERTY_IF_EXISTS(jSparseValues, "byteOffset", outSparse->Values.ByteOffset);
         }
 
         return true;
     }
-
-    void JsonParser::ParseTextures()
+    
+    bool JsonParser::ParseTextures()
     {
-        glz::json_t& json = *m_Json;
-
-        if (!json.contains(TEXTURES_PROPERTY))
-            return;
-
-        OCASI_ASSERT(json.at(TEXTURES_PROPERTY).is_array());
-        auto& textures = json.at(TEXTURES_PROPERTY).get_array();
-
-        for (int i = 0; i < textures.size(); i++)
-        {
-            glz::json_t& jTexture = textures.at(i);
-            Texture& texture = m_Asset->Textures.emplace_back(i);
-
-            if (jTexture.contains("source"))
-                texture.Source = (size_t) jTexture.at("source").get_number();
-
-            if (jTexture.contains("sampler"))
-                texture.Sampler = (size_t) jTexture.at("sampler").get_number();
-        }
-    }
-
-    bool JsonParser::ParseMaterials()
-    {
-        glz::json_t& json = *m_Json;
-
-        if (!json.contains(MATERIALS_PROPERTY))
+        auto& json = m_Json->Get();
+        
+        ondemand::array jTextures;
+        if (json[TEXTURES_PROPERTY].get(jTextures))
             return true;
 
-        OCASI_ASSERT(json.at(MATERIALS_PROPERTY).is_array());
-        auto& materials = json.at(MATERIALS_PROPERTY).get_array();
-
-        for (int i = 0; i < materials.size(); i++)
+        size_t i = 0;
+        for (auto rJTexture : jTextures)
         {
-            glz::json_t& jMaterial = materials.at(i);
+            ondemand::object jTexture;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(rJTexture.get(jTexture), "Failed to get texture");
+            
+            Texture& texture = m_Asset->Textures.emplace_back(i);
+            OCASI_SET_PROPERTY_IF_EXISTS(jTexture, "source", texture.Source);
+            OCASI_SET_PROPERTY_IF_EXISTS(jTexture, "sampler", texture.Sampler);
+            i++;
+        }
+        
+        return true;
+    }
+    
+    
+    bool JsonParser::ParseMaterials()
+    {
+        auto& json = m_Json->Get();
+        
+        ondemand::array jMaterials;
+        if (json[MATERIALS_PROPERTY].get(jMaterials))
+            return true;
+
+        size_t i = 0;
+        for (auto rJMaterial : jMaterials)
+        {
+            ondemand::object jMaterial;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(rJMaterial.get(jMaterial), "Failed to get material");
             Material& material = m_Asset->Materials.emplace_back(i);
-
-            if (jMaterial.contains("name"))
-                material.Name = jMaterial.at("name").get_string();
-
-            if (jMaterial.contains("pbrMetallicRoughness"))
+            
+            std::string_view name;
+            OCASI_SET_PROPERTY_IF_EXISTS(jMaterial, "name", name);
+            material.Name = name;
+            
+            ondemand::object jPbrMetallicRoughness;
+            OCASI_HAS_PROPERTY(jMaterial, "pbrMetallicRoughness", jPbrMetallicRoughness)
             {
-                if (!ParsePbrMetallicRoughness(jMaterial.at("pbrMetallicRoughness"), material.MetallicRoughness = PBRMetallicRoughness()))
+                if (!ParsePbrMetallicRoughness(jPbrMetallicRoughness, material.MetallicRoughness = PBRMetallicRoughness()))
                     return false;
             }
-
-            if (jMaterial.contains("normalTexture"))
+            
+            
+            if (!ParseTextureInfo(jMaterial, "normalTexture", material.NormalTexture))
+                return false;
+            
+            if (!ParseTextureInfo(jMaterial, "occlusionTexture", material.OcclusionTexture))
+                return false;
+            
+            
+            if (!ParseTextureInfo(jMaterial, "emissiveTexture", material.EmissiveTexture))
+                return false;
+            
+            
+            if (!ParseVec3(jMaterial, "emissiveFactor", material.EmissiveColour))
+                return false;
+            
+            std::string_view alphaMode;
+            OCASI_HAS_PROPERTY(jMaterial, "alphaMode", alphaMode)
             {
-                if (!ParseTextureInfo(jMaterial.at("normalTexture"), material.NormalTexture = TextureInfo()))
-                    return false;
-            }
-
-            if (jMaterial.contains("occlusionTexture"))
-            {
-                if (!ParseTextureInfo(jMaterial.at("occlusionTexture"), material.OcclusionTexture = TextureInfo()))
-                    return false;
-            }
-
-            if (jMaterial.contains("emissiveTexture"))
-            {
-                if (!ParseTextureInfo(jMaterial.at("emissiveTexture"), material.EmissiveTexture = TextureInfo()))
-                    return false;
-            }
-
-            if (jMaterial.contains("emissiveFactor"))
-            {
-                auto& jEmissiveFactor = jMaterial.at("emissiveFactor").get_array();
-
-                material.EmissiveColour = glm::vec3(
-                        (float) jEmissiveFactor.at(0).get_number(),
-                        (float) jEmissiveFactor.at(1).get_number(),
-                        (float) jEmissiveFactor.at(2).get_number());
-            }
-
-            if (jMaterial.contains("alphaMode"))
-            {
-                std::string& jAlphaMode = jMaterial.at("alphaMode").get_string();
-
-                if (jAlphaMode == "OPAQUE")
+                if (alphaMode == "OPAQUE")
                     material.AlphaMode = AlphaMode::Opaque;
-                else if (jAlphaMode == "MASK")
+                else if (alphaMode == "MASK")
                     material.AlphaMode = AlphaMode::Mask;
-                else if (jAlphaMode == "BLEND")
+                else if (alphaMode == "BLEND")
                     material.AlphaMode = AlphaMode::Blend;
                 else
                 {
-                    OCASI_FAIL(FORMAT("Invalid value for alphaMode in material of index {}. Value: {}", i, jAlphaMode));
+                    OCASI_FAIL(FORMAT("Invalid value for alphaMode in material of index {}. Value: {}", i, alphaMode));
                 }
             }
-
-            if (jMaterial.contains("alphaCutoff"))
-                material.AlphaCutoff = (float) jMaterial.at("alphaCutoff").get_number();
-
-            if (jMaterial.contains("doubleSided"))
-                material.IsDoubleSided = jMaterial.at("doubleSided").get_boolean();
+            
+            auto t  = jMaterial.at_path("").get<float>();
+            
+            OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jMaterial, "alphaCutoff", float, material.AlphaCutoff);
+            OCASI_SET_PROPERTY_IF_EXISTS(jMaterial, "doubleSided", material.IsDoubleSided);
 
             /// Extensions
-            if (jMaterial.contains("extensions"))
+            ondemand::array jExtensions;
+            OCASI_HAS_PROPERTY(jMaterial, "extensions", jExtensions)
             {
-                glz::json_t& jExtensions = jMaterial.at("extensions");
-
-                if (jExtensions.contains("KHR_materials_pbrSpecularGlossiness"))
-                    ParsePbrSpecularGlossiness(jExtensions.at("KHR_materials_pbrSpecularGlossiness"), material.ExtSpecularGlossiness = KHRMaterialPbrSpecularGlossiness());
-
-                if (jExtensions.contains("KHR_materials_specular"))
-                    ParseSpecular(jExtensions.at("KHR_materials_specular"), material.ExtSpecular = KHRMaterialSpecular());
-
-                if (jExtensions.contains("KHR_materials_clearcoat"))
-                    ParseClearcoat(jExtensions.at("KHR_materials_clearcoat"), material.ExtClearcoat = KHRMaterialClearcoat());
-
-                if (jExtensions.contains("KHR_materials_sheen"))
-                    ParseSheen(jExtensions.at("KHR_materials_sheen"), material.ExtSheen = KHRMaterialSheen());
-
-                if (jExtensions.contains("KHR_materials_transmission"))
-                    ParseTransmission(jExtensions.at("KHR_materials_transmission"), material.ExtTransmission = KHRMaterialTransmission());
-
-                if (jExtensions.contains("KHR_materials_volume"))
-                    ParseVolume(jExtensions.at("KHR_materials_volume"), material.ExtVolume = KHRMaterialVolume());
-
-                if (jExtensions.contains("KHR_materials_ior"))
-                    ParseIOR(jExtensions.at("KHR_materials_ior"), material.ExtIOR = KHRMaterialIOR());
-
-                if (jExtensions.contains("KHR_materials_emissive_strength"))
-                    ParseEmissiveStrength(jExtensions.at("KHR_materials_emissive_strength"), material.ExtEmissiveStrength = KHRMaterialEmissiveStrength());
-
-                if (jExtensions.contains("KHR_materials_iridescence"))
-                    ParseIridescence(jExtensions.at("KHR_materials_iridescence"), material.ExtIridescence = KHRMaterialIridescence());
-
-                if (jExtensions.contains("KHR_materials_anisotropy"))
-                    ParseAnisotropy(jExtensions.at("KHR_materials_pbrSpecularGlossiness"), material.ExtAnisotropy = KHRMaterialAnisotropy());
+                ondemand::object jExt;
+                OCASI_FAIL_ON_SIMDJSON_ERROR(jExtensions.at(i).get(jExt), "Failed to get extension");
+                
+                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_pbrSpecularGlossiness", jExt)
+                    if(!ParsePbrSpecularGlossiness(jExt, material.ExtSpecularGlossiness = KHRMaterialPbrSpecularGlossiness()))
+                        return false;
+                
+                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_specular", jExt)
+                    if(!ParseSpecular(jExt, material.ExtSpecular = KHRMaterialSpecular()))
+                        return false;
+                
+                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_clearcoat", jExt)
+                    if(!ParseClearcoat(jExt, material.ExtClearcoat = KHRMaterialClearcoat()))
+                        return false;
+                
+                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_sheen", jExt)
+                    if(!ParseSheen(jExt, material.ExtSheen = KHRMaterialSheen()))
+                        return false;
+                
+                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_transmission", jExt)
+                    if(!ParseTransmission(jExt, material.ExtTransmission = KHRMaterialTransmission()))
+                        return false;
+                
+                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_volume", jExt)
+                    if(!ParseVolume(jExt, material.ExtVolume = KHRMaterialVolume()))
+                        return false;
+                
+                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_ior", jExt)
+                    if(!ParseIOR(jExt, material.ExtIOR = KHRMaterialIOR()))
+                        return false;
+                
+                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_emissive_strength", jExt)
+                    if(!ParseEmissiveStrength(jExt, material.ExtEmissiveStrength = KHRMaterialEmissiveStrength()))
+                        return false;
+                
+                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_iridescence", jExt)
+                    if(!ParseIridescence(jExt, material.ExtIridescence = KHRMaterialIridescence()))
+                        return false;
+                
+                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_anisotropy", jExt)
+                    if(ParseAnisotropy(jExt, material.ExtAnisotropy = KHRMaterialAnisotropy()))
+                        return false;
             }
+            i++;
         }
 
         return true;
     }
-
-
+    
     bool JsonParser::ParseMeshes()
     {
-        glz::json_t& json = *m_Json;
-
-        if (!json.contains(MESHES_PROPERTY))
+        auto& json = m_Json->Get();
+        
+        ondemand::array jMeshes;
+        if (json[MESHES_PROPERTY].get(jMeshes))
             return true;
 
-        OCASI_ASSERT(json.at(MESHES_PROPERTY).is_array());
-        auto& meshes = json.at(MESHES_PROPERTY).get_array();
-
-        for (int i = 0; i < meshes.size(); i++)
+        size_t i = 0;
+        for (auto rJMesh : jMeshes)
         {
-            glz::json_t& jMesh = meshes.at(i);
-
-            if (!jMesh.contains("primitives"))
-            {
-                OCASI_FAIL("Required 'primitives' property in mesh is not present, though mandatory.");
-                return false;
-            }
-
+            ondemand::object jMesh;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(rJMesh.get(jMesh), "Failed to get mesh");
             Mesh& mesh = m_Asset->Meshes.emplace_back(i);
-            if(!ParsePrimitives(jMesh.at("primitives"), mesh))
+            
+            ondemand::array jPrimitives;
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jMesh, "primitives", jPrimitives, "Required 'primitives' property in mesh is not present, though mandatory");
+            if(!ParsePrimitives(jPrimitives, mesh))
                 return false;
-
-            if (jMesh.contains("weights"))
+            
+            ondemand::array jWeights;
+            OCASI_HAS_PROPERTY(jMesh, "weights", jWeights)
             {
-                auto& weights = jMesh.at("weights").get_array();
-                mesh.Weights.resize(weights.size());
-
-                for (int j = 0; j < weights.size(); j++)
+                for (auto jWeight : jWeights)
                 {
-                    mesh.Weights[j] = (float) weights.at(j).get_number();
+                    OCASI_FAIL_ON_SIMDJSON_ERROR(jWeight.get<float>().get(mesh.Weights.emplace_back()), "Failed to get mesh weight");
                 }
             }
+            i++;
         }
 
         return true;
     }
-
-    void JsonParser::ParseNodes()
+    
+    bool JsonParser::ParseNodes()
     {
-        glz::json_t& json = *m_Json;
+        auto& json = m_Json->Get();
+        
+        ondemand::array jNodes;
+        if (json[NODES_PROPERTY].get(jNodes))
+            return true;
 
-        if (!json.contains(NODES_PROPERTY))
-            return;
-
-        OCASI_ASSERT(json.at(NODES_PROPERTY).is_array());
-        auto& nodes = json.at(NODES_PROPERTY).get_array();
-
-        for (int i = 0; i < nodes.size(); i++)
+        size_t i = 0;
+        for (auto rJNode : jNodes)
         {
-            glz::json_t& jNode = nodes.at(i);
+            ondemand::object jNode;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(rJNode.get(jNode), "Failed to get node");
             Node& node = m_Asset->Nodes.emplace_back(i);
 
             // Cameras and animations are not supported
-
-            if (jNode.contains("children"))
+            ondemand::array jChildren;
+            OCASI_HAS_PROPERTY(jNode, "children", jChildren)
             {
-                auto& children = jNode.at("children").get_array();
-                node.Children.resize(children.size());
-                for (int j = 0; j < children.size(); j++)
+                for (auto jChild : jChildren)
                 {
-                    node.Children[j] = (size_t) children.at(i).get_number();
+                    OCASI_FAIL_ON_SIMDJSON_ERROR(jChild.get(node.Children.emplace_back()), "Failed to get node child")
                 }
             }
-
-            if (jNode.contains("name"))
-                node.Name = jNode.at("name").get_string();
-
-            if (jNode.contains("mesh"))
-                node.Mesh = (size_t) jNode.at("mesh").get_number();
-
-            if (jNode.contains("translation"))
-                ParseVec3(jNode.at("translation"), node.TrsComponent->Translation);
-
-
-            if (jNode.contains("rotation"))
+            
+            std::string_view name;
+            OCASI_SET_PROPERTY_IF_EXISTS(jNode, "name", name);
+            node.Name = name;
+            
+            OCASI_SET_PROPERTY_IF_EXISTS(jNode, "mesh", node.Mesh);
+            
+            if(!ParseVec3(jNode, "translation", node.TrsComponent.Translation))
+                return false;
+            
+            glm::vec4 rotVec;
+            if(!ParseVec4(jNode, "rotation", rotVec))
+                return false;
+            else
+                node.TrsComponent.Rotation = glm::quat(rotVec.w, rotVec.x, rotVec.y, rotVec.z);
+            
+            if(!ParseVec3(jNode, "scale", node.TrsComponent.Scale))
+                return false;
+            
+            
+            ondemand::array jMatrix;
+            OCASI_HAS_PROPERTY(jNode, "matrix", jMatrix)
             {
-                glm::vec4 v;
-                ParseVec4(jNode.at("rotation"), v);
-                node.TrsComponent->Rotation = glm::quat(v);
-            }
-
-            if (jNode.contains("size"))
-                ParseVec3(jNode.at("size"), node.TrsComponent->Scale);
-
-
-            if (jNode.contains("matrix"))
-            {
-                auto& matrixValues = jNode.at("matrix").get_array();
-
-                for (int j = 0; i < matrixValues.size(); j++)
+                size_t j = 0;
+                for (auto jMatrixVal : jMatrix)
                 {
-                    node.LocalTranslationMatrix.value()[j % 4][j / 4] = (float) matrixValues.at(j).get_number();
+                    OCASI_FAIL_ON_SIMDJSON_ERROR(jMatrixVal.get<float>().get(node.LocalTranslationMatrix[j % 4][j / 4]), "Failed to get matrix value");
+                    j++;
+                }
+                
+                OCASI_ASSERT(j == 16);
+            }
+            
+            ondemand::array jWeights;
+            OCASI_HAS_PROPERTY(jNode, "weights", jMatrix)
+            {
+                for (auto jWeight : jWeights)
+                {
+                    OCASI_FAIL_ON_SIMDJSON_ERROR(jWeight.get<float>().get(node.Weights.emplace_back()), "Failed to get matrix value");
                 }
             }
-
-            if (jNode.contains("weights"))
-            {
-                auto& weights = jNode.at("weights").get_array();
-                node.Weights.resize(weights.size());
-
-                for (int j = 0; i < weights.size(); j++)
-                {
-                    node.Weights[j] = (float) weights.at(j).get_number();
-                }
-            }
+            i++;
         }
+        
+        return true;
     }
-
+    
     bool JsonParser::ParseScenes()
     {
-        glz::json_t& json = *m_Json;
-
-        if (!json.contains(SCENES_PROPERTY))
+        auto& json = m_Json->Get();
+        
+        ondemand::array jScenes;
+        if (json[SCENES_PROPERTY].get(jScenes))
             return true;
 
-        OCASI_ASSERT(json.at(SCENES_PROPERTY).is_array());
-        auto& scenes = json.at(SCENES_PROPERTY).get_array();
-
-        for (int i = 0; i < scenes.size(); i++)
+        size_t i = 0;
+        for (auto rJScene : jScenes)
         {
-            glz::json_t& jScene = scenes.at(i);
+            ondemand::object jScene;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(rJScene.get(jScene), "Failed to get scene");
             Scene& scene = m_Asset->Scenes.emplace_back(i);
-
-            if (jScene.contains("name"))
-                scene.Name = jScene.at("name").get_string();
-
-            if (jScene.contains("nodes"))
+            
+            std::string_view name;
+            OCASI_SET_PROPERTY_IF_EXISTS(jScene, "name", name);
+            scene.Name = name;
+            
+            ondemand::array jRootNodes;
+            OCASI_HAS_PROPERTY(jScene, "nodes", jRootNodes)
             {
-                auto& rootNodes = jScene.at("nodes").get_array();
-                scene.RootNodes.resize(rootNodes.size());
-                for (int j = 0; j < scenes.size(); j++)
+                size_t rootNodesCount;
+                OCASI_FAIL_ON_SIMDJSON_ERROR(jRootNodes.count_elements().get(rootNodesCount), "Failed to get root nodes count");
+                scene.RootNodes.resize(rootNodesCount);
+                for (size_t j = 0; j < rootNodesCount; j++)
                 {
-                    scene.RootNodes[j] = (size_t) rootNodes.at(j).get_number();
+                    OCASI_FAIL_ON_SIMDJSON_ERROR(jRootNodes.at(j).get(scene.RootNodes.at(j)), "Failed to get root node");
                 }
             }
+            i++;
         }
 
         return true;
     }
-
-    bool JsonParser::ParseTextureInfo(const glz::json_t& jTextureInfo, std::optional<TextureInfo>& outTextureInfo)
+    
+    bool JsonParser::ParseTextureInfo(simdjson::fallback::ondemand::object& jObject, std::string_view name, std::optional<TextureInfo>& outTextureInfo)
     {
-        if (!jTextureInfo.contains("index"))
+        ondemand::object jTextureInfo;
+        OCASI_HAS_PROPERTY(jObject, name, jTextureInfo)
         {
-            OCASI_FAIL("Required 'index' property in texture info is not present, though mandatory.");
+            outTextureInfo = TextureInfo();
+            
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jTextureInfo, "index", outTextureInfo->Texture, "Required 'index' property in texture info is not present, though mandatory");
+            
+            OCASI_SET_PROPERTY_IF_EXISTS(jTextureInfo, "texCoord", outTextureInfo->TexCoords);
+            OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jTextureInfo, "scale", float, outTextureInfo->Scale);
+            OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jTextureInfo, "strength", float, outTextureInfo->Scale);
+        }
+
+        return true;
+    }
+    
+    bool JsonParser::ParsePbrMetallicRoughness(simdjson::fallback::ondemand::object& jPbrMetallicRoughness, std::optional<PBRMetallicRoughness>& outMetallicRoughness)
+    {
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jPbrMetallicRoughness, "metallicFactor", float, outMetallicRoughness->Metallic);
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jPbrMetallicRoughness, "roughnessFactor", float, outMetallicRoughness->Roughness);
+        
+        if (!ParseVec4(jPbrMetallicRoughness, "baseColorFactor", outMetallicRoughness->BaseColour))
             return false;
-        }
-
-        outTextureInfo->Texture = (size_t) jTextureInfo.at("index").get_number();
-
-        if (jTextureInfo.contains("texCoord"))
-            outTextureInfo->TexCoords = (size_t) jTextureInfo.at("texCoord").get_number();
-
-        if (jTextureInfo.contains("scale"))
-            outTextureInfo->Scale = (float) jTextureInfo.at("scale").get_number();
-
-        if (jTextureInfo.contains("strength"))
-            outTextureInfo->Scale = (float) jTextureInfo.at("strength").get_number();
+        
+        if (!ParseTextureInfo(jPbrMetallicRoughness, "baseColorTexture", outMetallicRoughness->BaseColourTexture))
+            return false;
+        
+        if (!ParseTextureInfo(jPbrMetallicRoughness, "metallicRoughnessTexture", outMetallicRoughness->MetallicRoughnessTexture))
+            return false;
 
         return true;
     }
-
-    bool JsonParser::ParsePbrMetallicRoughness(const glz::json_t& jPbrMetallicRoughness, std::optional<PBRMetallicRoughness>& outMetallicRoughness)
+    
+    bool JsonParser::ParsePbrSpecularGlossiness(simdjson::fallback::ondemand::object& jPbrSpecularGlossiness, std::optional<KHRMaterialPbrSpecularGlossiness> &outSpecularGlossiness)
     {
-        if (jPbrMetallicRoughness.contains("baseColorFactor"))
-        {
-            const auto& jBaseColorFactor = jPbrMetallicRoughness.at("baseColorFactor").get_array();
-
-            OCASI_ASSERT(jBaseColorFactor.size() == 4);
-
-            // TODO: Consider using 64 floating point number
-            outMetallicRoughness->BaseColour = glm::vec4(
-                    (float) jBaseColorFactor.at(0).get_number(),
-                    (float) jBaseColorFactor.at(1).get_number(),
-                    (float) jBaseColorFactor.at(2).get_number(),
-                    (float) jBaseColorFactor.at(3).get_number());
-        }
-
-        if (jPbrMetallicRoughness.contains("baseColorTexture"))
-        {
-            if (!ParseTextureInfo(jPbrMetallicRoughness.at("baseColorTexture"), outMetallicRoughness->BaseColourTexture = TextureInfo()))
-                return false;
-        }
-
-        if (jPbrMetallicRoughness.contains("metallicFactor"))
-            outMetallicRoughness->Metallic = (float) jPbrMetallicRoughness.at("metallicFactor").get_number();
-
-        if (jPbrMetallicRoughness.contains("roughnessFactor"))
-            outMetallicRoughness->Roughness = (float) jPbrMetallicRoughness.at("roughnessFactor").get_number();
-
-        if (jPbrMetallicRoughness.contains("metallicRoughnessTexture"))
-        {
-            if (!ParseTextureInfo(jPbrMetallicRoughness.at("metallicRoughnessTexture") , outMetallicRoughness->MetallicRoughnessTexture = TextureInfo()))
-                return false;
-        }
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jPbrSpecularGlossiness, "glossinessFactor", float, outSpecularGlossiness->GlossinessFactor);
+        
+        if (!ParseVec4(jPbrSpecularGlossiness, "diffuseFactor", outSpecularGlossiness->DiffuseFactor))
+            return false;
+        
+        if (!ParseTextureInfo(jPbrSpecularGlossiness, "diffuseTexture", outSpecularGlossiness->DiffuseTexture))
+            return false;
+        
+        if (!ParseVec3(jPbrSpecularGlossiness, "specularFactor", outSpecularGlossiness->SpecularFactor))
+            return false;
+        
+        if (!ParseTextureInfo(jPbrSpecularGlossiness, "specularGlossinessTexture", outSpecularGlossiness->SpecularGlossinessTexture))
+            return false;
+            
 
         return true;
     }
-
-    bool JsonParser::ParsePbrSpecularGlossiness(const glz::json_t& jPbrSpecularGlossiness, std::optional<KHRMaterialPbrSpecularGlossiness> &outMetallicRoughness)
+    
+    bool JsonParser::ParseSpecular(simdjson::fallback::ondemand::object& jSpecular, std::optional<KHRMaterialSpecular> &outSpecular)
     {
-        if (jPbrSpecularGlossiness.contains("diffuseFactor"))
-        {
-            outMetallicRoughness->DiffuseFactor = glm::vec4(
-                    jPbrSpecularGlossiness["diffuseFactor"][0].get_number(), jPbrSpecularGlossiness["diffuseFactor"][1].get_number(),
-                    jPbrSpecularGlossiness["diffuseFactor"][2].get_number(), jPbrSpecularGlossiness["diffuseFactor"][3].get_number()
-            );
-        }
-
-        if (jPbrSpecularGlossiness.contains("diffuseTexture"))
-        {
-            if (!ParseTextureInfo(jPbrSpecularGlossiness.at("diffuseTexture"), outMetallicRoughness->DiffuseTexture = TextureInfo()))
-                return false;
-        }
-
-        if (jPbrSpecularGlossiness.contains("specularFactor"))
-        {
-            outMetallicRoughness->SpecularFactor = glm::vec3(
-                    jPbrSpecularGlossiness["specularFactor"][0].get_number(), jPbrSpecularGlossiness["specularFactor"][1].get_number(),
-                    jPbrSpecularGlossiness["specularFactor"][2].get_number()
-            );
-        }
-
-        if (jPbrSpecularGlossiness.contains("specularGlossinessTexture"))
-        {
-            if (!ParseTextureInfo(jPbrSpecularGlossiness.at("specularGlossinessTexture"), outMetallicRoughness->SpecularGlossinessTexture = TextureInfo()))
-                return false;
-        }
-
-        if (jPbrSpecularGlossiness.contains("glossinessFactor"))
-            outMetallicRoughness->GlossinessFactor = (float) jPbrSpecularGlossiness["glossinessFactor"].get_number();
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jSpecular, "specularFactor", float, outSpecular->SpecularFactor);
+        
+        if (!ParseTextureInfo(jSpecular, "specularTexture", outSpecular->SpecularTexture))
+            return false;
+        
+        if (!ParseVec3(jSpecular, "specularColorFactor", outSpecular->SpecularColourFactor))
+            return false;
+        
+        if (!ParseTextureInfo(jSpecular, "specularColorTexture", outSpecular->SpecularColourTexture))
+            return false;
 
         return true;
     }
-
-    bool JsonParser::ParseSpecular(const glz::json_t& jSpecular, std::optional<KHRMaterialSpecular> &outSpecular)
+    
+    bool JsonParser::ParseClearcoat(simdjson::fallback::ondemand::object& jClearCoat, std::optional<KHRMaterialClearcoat>& outClearcoat)
     {
-        if (jSpecular.contains("specularFactor"))
-            outSpecular->SpecularFactor = (float) jSpecular["specularFactor"].get_number();
+        
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jClearCoat, "clearcoatFactor", float, outClearcoat->ClearcoatFactor);
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jClearCoat, "clearcoatRoughnessFactor", float, outClearcoat->ClearcoatRoughnessFactor);
 
-
-        if (jSpecular.contains("specularTexture"))
-        {
-            if (!ParseTextureInfo(jSpecular.at("specularTexture"), outSpecular->SpecularTexture = TextureInfo()))
-                return false;
-        }
-
-        if (jSpecular.contains("specularColorFactor"))
-        {
-            auto& jSpecularColorFactor = jSpecular.at("specularColorFactor").get_array();
-            outSpecular->SpecularColourFactor = glm::vec3(
-                    jSpecularColorFactor.at(0).get_number(),
-                    jSpecularColorFactor.at(1).get_number(),
-                    jSpecularColorFactor.at(2).get_number());
-        }
-
-        if (jSpecular.contains("specularColorTexture"))
-        {
-            if (!ParseTextureInfo(jSpecular.at("specularColorTexture"), outSpecular->SpecularColourTexture = TextureInfo()))
-                return false;
-        }
+        if (!ParseTextureInfo(jClearCoat, "clearcoatTexture", outClearcoat->ClearcoatTexture))
+            return false;
+        
+        if (!ParseTextureInfo(jClearCoat, "clearcoatRoughnessTexture", outClearcoat->ClearcoatRoughnessTexture))
+            return false;
+        
+        if (!ParseTextureInfo(jClearCoat, "clearcoatNormalTexture", outClearcoat->ClearcoatNormalTexture))
+            return false;
 
         return true;
     }
-
-    bool JsonParser::ParseClearcoat(const glz::json_t& jClearcoat, std::optional<KHRMaterialClearcoat>& outClearcoat)
+    
+    bool JsonParser::ParseSheen(simdjson::fallback::ondemand::object& jSheen, std::optional<KHRMaterialSheen>& outSheen)
     {
-        if (jClearcoat.contains("clearcoatFactor"))
-            outClearcoat->ClearcoatFactor = (float) jClearcoat["clearcoatFactor"].get_number();
-
-        if (jClearcoat.contains("clearcoatRoughnessFactor"))
-            outClearcoat->ClearcoatRoughnessFactor = (float) jClearcoat["clearcoatRoughnessFactor"].get_number();
-
-        if (jClearcoat.contains("clearcoatTexture"))
-        {
-            if (!ParseTextureInfo(jClearcoat.at("clearcoatTexture"), outClearcoat->ClearcoatTexture = TextureInfo()))
-                return false;
-        }
-
-        if (jClearcoat.contains("clearcoatRoughnessTexture"))
-        {
-            if (!ParseTextureInfo(jClearcoat.at("clearcoatRoughnessTexture"), outClearcoat->ClearcoatRoughnessTexture = TextureInfo()))
-                return false;
-        }
-
-        if (jClearcoat.contains("clearcoatNormalTexture"))
-        {
-            if (!ParseTextureInfo(jClearcoat.at("clearcoatNormalTexture"), outClearcoat->ClearcoatNormalTexture = TextureInfo()))
-                return false;
-        }
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jSheen, "sheenRoughnessFactor", float, outSheen->SheenRoughnessFactor);
+        
+        if (!ParseVec3(jSheen, "sheenColorFactor", outSheen->SheenColourFactor))
+            return false;
+        
+        if (!ParseTextureInfo(jSheen, "sheenColourTexture", outSheen->SheenColourTexture))
+            return false;
+        
+        if (!ParseTextureInfo(jSheen, "sheenRoughnessTexture", outSheen->SheenRoughnessTexture))
+            return false;
 
         return true;
     }
-
-    bool JsonParser::ParseSheen(const glz::json_t& jSheen, std::optional<KHRMaterialSheen>& outSheen)
+    
+    bool JsonParser::ParseTransmission(simdjson::fallback::ondemand::object& jTransmission, std::optional<KHRMaterialTransmission>& outTransmission)
     {
-        if (jSheen.contains("sheenColourTexture"))
-        {
-            if (!ParseTextureInfo(jSheen.at("sheenColourTexture"), outSheen->SheenColourTexture = TextureInfo()))
-                return false;
-        }
-
-        if (jSheen.contains("sheenRoughnessTexture"))
-        {
-            if (!ParseTextureInfo(jSheen.at("sheenRoughnessTexture"), outSheen->SheenRoughnessTexture = TextureInfo()))
-                return false;
-
-        }
-
-        if (jSheen.contains("sheenColourFactor"))
-        {
-            auto& jSheenColourFactor = jSheen.at("sheenColourFactor").get_array();
-
-            outSheen->SheenColourFactor = glm::vec3(
-                    jSheenColourFactor.at(0).get_number(),
-                    jSheenColourFactor.at(1).get_number(),
-                    jSheenColourFactor.at(2).get_number());
-        }
-
-        if (jSheen.contains("sheenRoughnessFactor"))
-            outSheen->SheenRoughnessFactor = (float) jSheen.at("sheenRoughnessFactor").get_number();
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jTransmission, "transmissionFactor", float, outTransmission->TransmissionFactor);
+        
+        if (!ParseTextureInfo(jTransmission, "transmissionTexture", outTransmission->TransmissionTexture))
+            return false;
 
         return true;
     }
-
-    bool JsonParser::ParseTransmission(const glz::json_t& jTransmission, std::optional<KHRMaterialTransmission>& outTransmission)
+    
+    bool JsonParser::ParseVolume(simdjson::fallback::ondemand::object& jVolume, std::optional<KHRMaterialVolume>& outVolume)
     {
-        if (jTransmission.contains("transmissionFactor"))
-            outTransmission->TransmissionFactor = (float) jTransmission.at("transmissionFactor").get_number();
-
-        if (jTransmission.contains("transmissionTexture"))
-        {
-            if (!ParseTextureInfo(jTransmission.at("transmissionTexture"), outTransmission->TransmissionTexture = TextureInfo()))
-                return false;
-        }
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jVolume, "thicknessFactor", float, outVolume->ThicknessFactor);
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jVolume, "attenuationDistance", float, outVolume->AttenuationDistance);
+        
+        if (!ParseVec3(jVolume, "attenuationColor", outVolume->AttenuationColour))
+            return false;
+        
+        if (!ParseTextureInfo(jVolume, "thicknessTexture", outVolume->ThicknessTexture))
+            return false;
+        
+        return true;
+    }
+    
+    bool JsonParser::ParseIOR(simdjson::fallback::ondemand::object& jIOR, std::optional<KHRMaterialIOR>& outIOR)
+    {
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jIOR, "ior", float, outIOR->IOR);
+        return true;
+    }
+    
+    bool JsonParser::ParseEmissiveStrength(simdjson::fallback::ondemand::object& jEmissiveStrength, std::optional<KHRMaterialEmissiveStrength>& outEmissiveStrength)
+    {
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jEmissiveStrength, "emissiveStrength", float, outEmissiveStrength->EmissiveStrength);
+        return true;
+    }
+    
+    bool JsonParser::ParseIridescence(simdjson::fallback::ondemand::object& jIridescence, std::optional<KHRMaterialIridescence>& outIridescence)
+    {
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jIridescence, "iridescenceFactor", float, outIridescence->IridescenceFactor);
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jIridescence, "iridescenceIor", float, outIridescence->IridescenceIor);
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jIridescence, "iridescenceThicknessMinimum", float, outIridescence->IridescenceThicknessMinimum);
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jIridescence, "iridescenceThicknessMaximum", float, outIridescence->IridescenceThicknessMaximum);
+        
+        if (!ParseTextureInfo(jIridescence, "iridescenceTexture", outIridescence->IridescenceTexture))
+            return false;
+        
+        if (!ParseTextureInfo(jIridescence, "iridescenceThicknessTexture", outIridescence->IridescenceThicknessTexture))
+            return false;
 
         return true;
     }
-
-    bool JsonParser::ParseVolume(const glz::json_t& jVolume, std::optional<KHRMaterialVolume>& outVolume)
+    
+    bool JsonParser::ParseAnisotropy(simdjson::fallback::ondemand::object& jAnisotropy, std::optional<KHRMaterialAnisotropy>& outAnisotropy)
     {
-        if (jVolume.contains("thicknessFactor"))
-            outVolume->ThicknessFactor = (float) jVolume.at("thicknessFactor").get_number();
-
-        if (jVolume.contains("thicknessTexture"))
-        {
-            if (!ParseTextureInfo(jVolume.at("thicknessTexture"), outVolume->ThicknessTexture = TextureInfo()))
-                return false;
-        }
-
-        if (jVolume.contains("attenuationDistance"))
-            outVolume->AttenuationDistance = (float) jVolume["attenuationDistance"].get_number();
-
-        if (jVolume.contains("attenuationColor"))
-        {
-            auto& jAttenuationColour = jVolume.at("attenuationColor").get_array();
-            outVolume->AttenuationColour = glm::vec3(
-                    jAttenuationColour.at(0).get_number(),
-                    jAttenuationColour.at(1).get_number(),
-                    jAttenuationColour.at(2).get_number());
-        }
-
+        OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jAnisotropy, "anisotropyFactor", float, outAnisotropy->AnisotropyFactor);
+        
+        if (!ParseVec3(jAnisotropy, "anisotropyDirection", outAnisotropy->AnisotropyDirection))
+            return false;
+        
+        if (!ParseTextureInfo(jAnisotropy, "anisotropyTexture", outAnisotropy->AnisotropyTexture))
+            return false;
+            
         return true;
     }
-
-    void JsonParser::ParseIOR(const glz::json_t& jIOR, std::optional<KHRMaterialIOR>& outIOR)
+    
+    bool JsonParser::ParsePrimitives(simdjson::fallback::ondemand::array& jPrimitives, Mesh& mesh)
     {
-        if (jIOR.contains("ior")) {
-            outIOR->IOR = (float) jIOR.at("ior").get_number();
-        }
-    }
-
-    void JsonParser::ParseEmissiveStrength(const glz::json_t& jEmissiveStrength, std::optional<KHRMaterialEmissiveStrength>& outEmissiveStrength)
-    {
-        if (jEmissiveStrength.contains("emissiveStrength"))
-            outEmissiveStrength->EmissiveStrength = (float) jEmissiveStrength.at("emissiveStrength").get_number();
-
-    }
-
-    bool JsonParser::ParseIridescence(const glz::json_t& jIridescence, std::optional<KHRMaterialIridescence>& outIridescence)
-    {
-        if (jIridescence.contains("iridescenceFactor"))
-            outIridescence->IridescenceFactor = (float)jIridescence["iridescenceFactor"].get_number();
-
-        if (jIridescence.contains("iridescenceTexture"))
+        size_t i = 0;
+        for (auto rJPrimitive : jPrimitives)
         {
-            if (!ParseTextureInfo(jIridescence.at("iridescenceTexture"), outIridescence->IridescenceTexture = TextureInfo()))
-                return false;
-        }
-
-        if (jIridescence.contains("iridescenceIor"))
-            outIridescence->IridescenceIor = (float)jIridescence["iridescenceIor"].get_number();
-
-        if (jIridescence.contains("iridescenceThicknessMinimum"))
-            outIridescence->IridescenceThicknessMinimum = (float)jIridescence["iridescenceThicknessMinimum"].get_number();
-
-        if (jIridescence.contains("iridescenceThicknessMaximum"))
-            outIridescence->IridescenceThicknessMaximum = (float)jIridescence["iridescenceThicknessMaximum"].get_number();
-
-
-        if (jIridescence.contains("iridescenceThicknessTexture"))
-        {
-            if (!ParseTextureInfo(jIridescence.at("iridescenceThicknessTexture"), outIridescence->IridescenceThicknessTexture = TextureInfo()))
-                return false;
-        }
-
-        return true;
-    }
-
-    bool JsonParser::ParseAnisotropy(const glz::json_t& jAnisotropy, std::optional<KHRMaterialAnisotropy>& outAnisotropy)
-    {
-        if (jAnisotropy.contains("anisotropyFactor"))
-            outAnisotropy->AnisotropyFactor = (float)jAnisotropy["anisotropyFactor"].get_number();
-
-        if (jAnisotropy.contains("anisotropyTexture"))
-        {
-            if (!ParseTextureInfo(jAnisotropy.at("anisotropyTexture"), outAnisotropy->AnisotropyTexture = TextureInfo()))
-                return false;
-        }
-
-        if (jAnisotropy.contains("anisotropyDirection"))
-        {
-            auto& jAnisotropyDirection = jAnisotropy.at("anisotropyDirection").get_array();
-            outAnisotropy->AnisotropyDirection = glm::vec3(
-                    jAnisotropyDirection.at(0).get_number(),
-                    jAnisotropyDirection.at(1).get_number(),
-                    jAnisotropyDirection.at(2).get_number());
-        }
-
-        return true;
-    }
-
-    bool JsonParser::ParsePrimitives(const glz::json_t& jPrimitives, Mesh& mesh)
-    {
-        auto& primitives = jPrimitives.get_array();
-
-        for (int i = 0; i < primitives.size(); i++)
-        {
-            const glz::json_t& jPrimitive = primitives.at(i);
-
-            if (!jPrimitive.contains("attributes"))
-            {
-                OCASI_FAIL("Required 'primitives' property in mesh primitive is not present, though mandatory.");
-                return false;
-            }
-
+            ondemand::object jPrimitive;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(rJPrimitive.get(jPrimitive), "Failed to get mesh primitive");
             Primitive& primitive = mesh.Primitives.emplace_back(i);
-            ParseVertexAttributes(jPrimitive.at("attributes"), primitive.Attributes);
+            
+            ondemand::object jAttributes;
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jPrimitive, "attributes", jAttributes, "Required 'primitives' property in mesh primitive is not present, though mandatory");
 
-            if (jPrimitive.contains("indices"))
-                primitive.Indices = (size_t) jPrimitive.at("indices").get_number();
-
-            if (jPrimitive.contains("material"))
-                primitive.MaterialIndex = (size_t) jPrimitive.at("material").get_number();
-
-            if (jPrimitive.contains("mode"))
-                primitive.Type = (PrimitiveType) jPrimitive.at("mode").get_number();
-
-            if (jPrimitive.contains("targets"))
+            if (!ParseVertexAttributes(jAttributes, primitive.Attributes))
+                return false;
+            
+            OCASI_SET_PROPERTY_IF_EXISTS(jPrimitive, "indices", primitive.Indices);
+            OCASI_SET_PROPERTY_IF_EXISTS(jPrimitive, "material", primitive.MaterialIndex);
+            size_t mode;
+            OCASI_SET_PROPERTY_IF_EXISTS(jPrimitive, "mode", mode);
+            primitive.Type = (PrimitiveType) mode;
+            
+            ondemand::array jTargets;
+            OCASI_HAS_PROPERTY(jPrimitive, "targets", jTargets)
             {
-                auto& targets = jPrimitive.at("targets").get_array();
-
-                for (int j = 0; j < targets.size(); j++)
+                
+                size_t j = 0;
+                for (auto rJTarget : jTargets)
                 {
-                    ParseVertexAttributes(targets.at(j), primitive.MorphTargets.at(j));
+                    ondemand::object jTarget;
+                    OCASI_FAIL_ON_SIMDJSON_ERROR(rJTarget.get(jTarget), "Failed to get morph target");
+                    
+                    if (!ParseVertexAttributes(jTarget, primitive.MorphTargets.emplace_back(j)))
+                        return false;
+                    j++;
                 }
             }
         }
-
         return true;
     }
 
-    void JsonParser::ParseVertexAttributes(const glz::json_t& jVertexAttribute, VertexAttributes &outAttributes)
+    bool JsonParser::ParseVertexAttributes(simdjson::fallback::ondemand::object& jVertexAttributes, VertexAttributes& outAttributes)
     {
-        auto& attributes = jVertexAttribute.get_object();
-
-        for (auto& [key, value] : attributes)
+        size_t vertexAttributeCount;
+        
+        for (auto attribute : jVertexAttributes)
         {
-            outAttributes[key] = (size_t) value.get_number();
+            std::string_view key;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(attribute.escaped_key().get(key), "Failed to get vertex attribute key");
+            OCASI_FAIL_ON_SIMDJSON_ERROR(attribute.value().get(outAttributes[std::string(key)]), "Failed to get vertex attribute value");
         }
+        
+        return true;
     }
-
-    void JsonParser::ParseVec3(const glz::json_t& jVec, glm::vec3& out)
+    
+    bool JsonParser::ParseVec3(simdjson::fallback::ondemand::object& jObject, std::string_view name, glm::vec3& out)
     {
-        auto& vec = jVec.get_array();
-
-        out = glm::vec3(
-                vec.at(0).get_number(),
-                vec.at(1).get_number(),
-                vec.at(2).get_number());
+        ondemand::array jVec;
+        OCASI_HAS_PROPERTY(jObject, name, jVec)
+        {
+            size_t i = 0;
+            for (auto rJVecVal : jVec) {
+                
+                float element;
+                OCASI_FAIL_ON_SIMDJSON_ERROR(rJVecVal.get<float>().get(element), "Failed to parse vec3 array element");
+                
+                out[(int)i] = element;
+                
+                i++;
+            }
+            OCASI_ASSERT(i == 3);
+        }
+        return true;
     }
-
-    void JsonParser::ParseVec4(const glz::json_t& jVec, glm::vec4& out)
+    
+    bool JsonParser::ParseVec4(simdjson::fallback::ondemand::object& jObject, std::string_view name, glm::vec4& out)
     {
-        auto& vec = jVec.get_array();
-
-        out = glm::vec4(
-                vec.at(0).get_number(),
-                vec.at(1).get_number(),
-                vec.at(2).get_number(),
-                vec.at(3).get_number());
+        ondemand::array jVec;
+        OCASI_HAS_PROPERTY(jObject, name, jVec)
+        {
+            size_t i = 0;
+            for (auto rJVecVal : jVec) {
+                
+                float element;
+                OCASI_FAIL_ON_SIMDJSON_ERROR(rJVecVal.get<float>().get(element), "Failed to parse vec4 array element");
+                
+                out[(int)i] = element;
+                
+                i++;
+            }
+            OCASI_ASSERT(i == 4);
+        }
+        return true;
     }
 }

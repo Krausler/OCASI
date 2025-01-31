@@ -1,5 +1,7 @@
 #include "StringUtil.h"
 
+#include <sstream>
+
 namespace OCASI::Util {
 
     std::vector<std::string> Split(const std::string& target, char token)
@@ -49,7 +51,7 @@ namespace OCASI::Util {
     }
 
 
-    uint8_t* DecodeBase64(const std::string &dataString, size_t& outSize)
+    uint8_t* DecodeBase64(const std::string& dataString, size_t& outSize)
     {
         // Base 64 splits binary data into 3 bytes (24 bits) each which then get decomposed into groups of 4 (6 bits each)
         constexpr size_t BASE64_BYTE_CHUNK_SIZE = 3;
@@ -88,7 +90,7 @@ namespace OCASI::Util {
         for (int i = 0; i < dataSize;)
         {
             // Extract the binary data representation of each chunk of 6 bits. If the current processed character is a padding character 0 otherwise
-            // it gets decoded an AND operation is performed for each of the read in data to clear the first bit of the ASCII decoding as ASCII only
+            // it gets decoded and an AND operation is performed for each of the read in data to clear the first bit of the ASCII decoding as ASCII only
             // uses 7 bits to identify characters (Some random binary value: 10101010 & 01111111 (0x7F) = 00101010)
             uint32_t bitGroup1 = dataString[i] == '=' ? 0 : base64DecodingTable[dataString.at(i)] & 0x7F;
             i++;
@@ -115,21 +117,27 @@ namespace OCASI::Util {
     }
 
     // Thank you, ChatGPT
-    std::string URIUnescapedString(const std::string &input)
+    std::string URIUnescapedString(const std::string& input)
     {
-        std::ostringstream decoded;
+        std::basic_ostringstream<char> decoded;
         size_t i = 0;
-        while (i < input.length()) {
-            if (input.at(i) == '%' && i + 2 < input.length()) {
+        while (i < input.length())
+        {
+            if (input.at(i) == '%' && i + 2 < input.length())
+            {
                 std::istringstream hex(input.substr(i + 1, 2));
                 int value;
                 hex >> std::hex >> value;
                 decoded << static_cast<char>(value);
                 i += 3; // Move past '%xx'
-            } else if (input[i] == '+') {
+            }
+            else if (input[i] == '+')
+            {
                 decoded << ' '; // Replace '+' with space
                 ++i;
-            } else {
+            }
+            else
+            {
                 decoded << input[i];
                 ++i;
             }

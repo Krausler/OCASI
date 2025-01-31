@@ -1,13 +1,14 @@
 #pragma once
 
-#include <utility>
-
 #include "OCASI/Core/Base.h"
 
 #include "OCASI/Core/Image.h"
 #include "OCASI/Core/Model.h"
 
 #include "glm/glm.hpp"
+
+#include <utility>
+#include <optional>
 
 namespace OCASI::OBJ {
 

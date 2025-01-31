@@ -46,9 +46,9 @@ namespace OCASI {
             sizeof(bool) // combined anisotropy
     };
 
-    consteval size_t GetMaterialValueObjectSizesArraySize() { return sizeof(MATERIAL_VALUE_OBJECT_SIZES) / sizeof(MATERIAL_VALUE_OBJECT_SIZES[0]); }
-
-    consteval size_t CalculateMaterialBufferByteSize()
+    constexpr size_t GetMaterialValueObjectSizesArraySize() { return sizeof(MATERIAL_VALUE_OBJECT_SIZES) / sizeof(MATERIAL_VALUE_OBJECT_SIZES[0]); }
+    
+    constexpr size_t CalculateMaterialBufferByteSize()
     {
         size_t byteSize = 0;
         for (size_t i = 0; i < GetMaterialValueObjectSizesArraySize(); i++)

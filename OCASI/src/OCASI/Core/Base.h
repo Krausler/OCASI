@@ -26,6 +26,5 @@ constexpr UniquePtr<T> MakeUnique(Args&&... args)
     return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
-
 #include "OCASI/Core/Logger.h"
 #include "OCASI/Core/Debug.h"

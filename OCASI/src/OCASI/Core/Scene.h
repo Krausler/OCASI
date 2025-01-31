@@ -21,8 +21,8 @@ namespace OCASI {
             LocalTransform = other.LocalTransform;
         }
 
-        std::shared_ptr<Node> Parent;
-        std::vector<std::shared_ptr<Node>> Children;
+        SharedPtr<Node> Parent;
+        std::vector<SharedPtr<Node>> Children;
 
         size_t ModelIndex = INVALID_ID;
         glm::mat4 LocalTransform = glm::mat4(1.0f);
@@ -32,7 +32,7 @@ namespace OCASI {
     {
         std::vector<Model> Models;
         std::vector<Material> Materials;
-        std::vector<std::shared_ptr<Node>> RootNodes;
+        std::vector<SharedPtr<Node>> RootNodes;
     };
 
 }

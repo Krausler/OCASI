@@ -7,6 +7,8 @@
 #include "glm/glm.hpp"
 #include "glm/ext/quaternion_float.hpp"
 
+#include <optional>
+
 namespace OCASI {
     class GLTFImporter;
 }
@@ -15,9 +17,10 @@ namespace OCASI::GLTF {
 
     const size_t INVALID_ID = -1;
     const float INVALID_ID_FLOAT = -1;
-    const size_t MAX_MIN_ARRAY_SIZE = 16;
+    const size_t MIN_MAX_ARRAY_SIZE = 16;
 
-    const std::vector<std::string> SUPPORTED_EXTENSIONS = {
+    const std::vector<std::string> SUPPORTED_EXTENSIONS =
+    {
                 "KHR_materials_anisotropy",
                 "KHR_materials_clearcoat",
                 "KHR_materials_dispersion",
@@ -30,7 +33,7 @@ namespace OCASI::GLTF {
                 "KHR_materials_unlit",
                 "KHR_materials_variants",
                 "KHR_materials_volume"
-            };
+    };
 
     // The values specify the glTF enum values as stated in the glTF 2.0 spec
     enum class ComponentType
@@ -74,6 +77,7 @@ namespace OCASI::GLTF {
 
     enum class AlphaMode
     {
+        None = 0,
         Opaque,
         Mask,
         Blend
@@ -81,6 +85,7 @@ namespace OCASI::GLTF {
 
     enum class MinMagFilter
     {
+        None = 0,
         Nearest = 9728,
         Linear = 9729,
         NearestMipMapNearest = 9984,
@@ -123,24 +128,24 @@ namespace OCASI::GLTF {
         // The bufferView.target property is not implemented as it's useless
     };
 
-    struct SparseIndices
-    {
-        size_t BufferView = INVALID_ID;
-        size_t ByteOffset = 0;
-        ComponentType ComponentType = ComponentType::None;
-    };
-
-    struct SparseValues
-    {
-        size_t BufferView = INVALID_ID;
-        size_t ByteOffset = 0;
-    };
-
     struct Sparse
     {
+        struct Indices
+        {
+            size_t BufferView = INVALID_ID;
+            size_t ByteOffset = 0;
+            ComponentType ComponentType = ComponentType::None;
+        };
+        
+        struct Values
+        {
+            size_t BufferView = INVALID_ID;
+            size_t ByteOffset = 0;
+        };
+        
         size_t ElementCount = INVALID_ID;
-        SparseIndices Indices;
-        SparseValues Values;
+        Indices Indices;
+        Values Values;
     };
 
     struct Accessor : public Object
@@ -149,14 +154,14 @@ namespace OCASI::GLTF {
             : Object(index)
         {}
 
-        std::optional<size_t> BufferView;
+        size_t BufferView = INVALID_ID;
         size_t ElementCount = INVALID_ID;
         size_t ByteOffset = 0;
         ComponentType ComponentType = ComponentType::None;
         bool Normalized = false;
         DataType DataType = DataType::None;
-        std::array<double, MAX_MIN_ARRAY_SIZE> MinValues;
-        std::array<double, MAX_MIN_ARRAY_SIZE> MaxValues;
+        std::array<double, MIN_MAX_ARRAY_SIZE> MinValues;
+        std::array<double, MIN_MAX_ARRAY_SIZE> MaxValues;
         std::optional<Sparse> Sparse;
     };
 
@@ -172,8 +177,8 @@ namespace OCASI::GLTF {
         PrimitiveType Type = PrimitiveType::Triangle;
         // Stores the accessors index using the string key in JSON
         VertexAttributes Attributes;
-        std::optional<size_t> MaterialIndex;
-        std::optional<size_t> Indices; // The accessor corresponding to the indices
+        size_t MaterialIndex;
+        size_t Indices; // The accessor corresponding to the indices
         std::vector<VertexAttributes> MorphTargets;
     };
 
@@ -193,10 +198,10 @@ namespace OCASI::GLTF {
             : Object(index)
         {}
 
-        std::optional<std::string> URI;
+        std::string URI;
 
-        std::optional<size_t> BufferView;
-        std::optional<std::string> MimeType;
+        size_t BufferView = INVALID_ID;
+        std::string MimeType;
     };
 
     struct Sampler : public Object
@@ -205,8 +210,8 @@ namespace OCASI::GLTF {
             : Object(index)
         {}
 
-        std::optional<MinMagFilter> MagFilter;
-        std::optional<MinMagFilter> MinFilter;
+        MinMagFilter MagFilter = MinMagFilter::None;
+        MinMagFilter MinFilter = MinMagFilter::None;
         UVWrap WrapS = UVWrap::Repeat; // Default specified in glTF 2.0 Spec
         UVWrap WrapT = UVWrap::Repeat; // Default specified in glTF 2.0 Spec
     };
@@ -217,8 +222,8 @@ namespace OCASI::GLTF {
             : Object(index)
         {}
 
-        std::optional<size_t> Sampler;
-        std::optional<size_t> Source;
+        size_t Sampler = INVALID_ID;
+        size_t Source = INVALID_ID;
     };
 
     struct TextureInfo
@@ -264,7 +269,7 @@ namespace OCASI::GLTF {
     {
         float ThicknessFactor = 0.0f;
         std::optional<TextureInfo> ThicknessTexture;
-        std::optional<float> AttenuationDistance;
+        float AttenuationDistance = 0.0f;
         glm::vec3 AttenuationColour = glm::vec3(1.0f, 1.0f, 1.0f);
     };
 
@@ -370,8 +375,8 @@ namespace OCASI::GLTF {
     struct TRS
     {
         glm::vec3 Translation = glm::vec3(0);
-        glm::vec3 Scale = glm::vec3(1);
         glm::quat Rotation = glm::quat(1, 0, 0, 0);
+        glm::vec3 Scale = glm::vec3(1);
     };
 
     struct Node : public Object
@@ -381,11 +386,11 @@ namespace OCASI::GLTF {
         {}
 
         std::string Name;
-        std::optional<size_t> Mesh;
+        size_t Mesh = INVALID_ID;
         std::vector<size_t> Children;
 
-        std::optional<TRS> TrsComponent;
-        std::optional<glm::mat4> LocalTranslationMatrix; // This is only local, when this node is not a root node
+        TRS TrsComponent;
+        glm::mat4 LocalTranslationMatrix = glm::mat4(1.0f); // This is only local, when this node is not a root node
         std::vector<float> Weights;
     };
 
@@ -402,8 +407,8 @@ namespace OCASI::GLTF {
 
     struct Version
     {
-        uint32_t Major;
-        uint32_t Minor;
+        size_t Major = INVALID_ID;
+        size_t Minor = INVALID_ID;
 
         std::string AsString() const
         {
@@ -414,11 +419,11 @@ namespace OCASI::GLTF {
     struct Asset
     {
         Version AssetVersion;
-        std::optional<std::string> CopyRight;
-        std::optional<std::string> Generator;
-        std::optional<Version> MinimumRequiredVersion;
+        std::string CopyRight;
+        std::string Generator;
+        Version MinimumRequiredVersion;
 
-        std::optional<size_t> DefaultSceneIndex;
+        size_t DefaultSceneIndex = INVALID_ID;
 
         std::vector<Mesh> Meshes;
         std::vector<Accessor> Accessors;

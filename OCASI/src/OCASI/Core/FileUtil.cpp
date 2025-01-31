@@ -29,7 +29,8 @@ namespace OCASI {
         return r;
     }
 
-    void FileReader::Close() {
+    void FileReader::Close()
+    {
         m_FileReader.close();
     }
 
@@ -84,6 +85,11 @@ namespace OCASI {
     }
 
     namespace Util {
+        
+        bool StartsWith(const std::string& s, const std::string& prefix)
+        {
+            return s.size() >= s.size() && s.substr(0, prefix.size()) == prefix;
+        }
 
         bool FindTokensInFirst100Lines(OCASI::FileReader& reader, const std::vector<std::string>& tokens)
         {
@@ -94,7 +100,7 @@ namespace OCASI {
                 {
                     for (auto& token : tokens)
                     {
-                        if (currentLine.starts_with(token))
+                        if (StartsWith(currentLine, token))
                         {
                             reader.Reset();
                             return true;

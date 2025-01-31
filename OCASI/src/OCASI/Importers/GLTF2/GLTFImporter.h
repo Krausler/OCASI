@@ -2,20 +2,18 @@
 
 #include "OCASI/Core/BaseImporter.h"
 #include "OCASI/Core/FileUtil.h"
+#include "OCASI/Core/BinaryReader.h"
+
 #include "OCASI/Importers/GLTF2/JsonParser.h"
 
-namespace glz {
-    class json_t;
-}
-
 namespace OCASI {
-    class BinaryReader;
+    struct Json;
 
     struct GLBHeader
     {
         uint32_t Magic; // binary header expands to "glTF" string
         uint32_t Version; // Is only valid if it equals 2
-        uint32_t FileLength; // The spec defines a maximum file size of 4GB, however for simplicity std::numerical_limits<uint32_t>::max() is used
+        uint32_t FileLength; // The spec defines a maximum file size of 4GB, however, for simplicity std::numerical_limits<uint32_t>::max() is used
     };
 
     struct GLBChunk
@@ -31,7 +29,7 @@ namespace OCASI {
         GLTFImporter(FileReader& reader);
 
         virtual bool CanLoad() override;
-        virtual std::shared_ptr<Scene> Load3DFile() override;
+        virtual SharedPtr<Scene> Load3DFile() override;
     private:
         bool LoadBinary();
         GLBChunk LoadChunk(BinaryReader& bReader);
@@ -40,7 +38,7 @@ namespace OCASI {
 
         bool CheckBinaryHeader();
         void CreateNodes(size_t sceneIndex);
-        void TraverseNodes(GLTF::Node& gltfNode, std::shared_ptr<Node> ocasiNode);
+        void TraverseNodes(GLTF::Node& gltfNode, SharedPtr<Node> ocasiNode);
         void CreateMesh(size_t meshIndex);
         void CreateMaterial(size_t materialIndex);
         std::unique_ptr<Image> CreateTexture(std::optional<GLTF::TextureInfo>& texInfo);
@@ -51,10 +49,10 @@ namespace OCASI {
         ImageType ConvertMimeTypeToImagType(const std::string& mimeType);
     private:
         FileReader& m_FileReader;
-        glz::json_t* m_Json = nullptr;
+        GLTF::Json* m_Json = nullptr;
 
-        std::shared_ptr<Scene> m_Scene;
-        std::shared_ptr<GLTF::Asset> m_Asset;
+        SharedPtr<Scene> m_Scene;
+        SharedPtr<GLTF::Asset> m_Asset;
     };
 
 }

@@ -1,31 +1,62 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.6)
 
-set(OCTOPUS_ASSET_IMPORTER_VERSION 0.1.1)
+set(OCASI_VERSION 0.1.1)
+project("Octopus Asset Importer" VERSION ${OCASI_VERSION})
 
-project("Octopus Asset Importer" VERSION ${OCTOPUS_ASSET_IMPORTER_VERSION})
+option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
+option(OCASI_BUILD_TESTS "Build the OCASI-Tests project" ON)
 
-set(OCTOPUS_ASSET_IMPORTER_BUILD_TYPES "Debug" "Release")
-get_property(multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-if (multi_config)
-  set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "list of supported configuration types" FORCE)
-elseif (NOT CMAKE_BUILD_TYPE STREQUAL "")
-  if (NOT CMAKE_BUILD_TYPE IN_LIST OCTOPUS_ASSET_IMPORTER_BUILD_TYPES)
-    message(FATAL_ERROR
-      "Invalid build type '${CMAKE_BUILD_TYPE}'.
-      CMAKE_BUILD_TYPE must be any one of the possible values:
-      ${OCTOPUS_BUILD_TYPES}")
-  endif()
-else()
-  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build Type of the project.")
-endif()
+#------------------------------------------------------------------------------
+# Build configuration and platform
+#------------------------------------------------------------------------------
 
-message("Octopus Asset Importer: Build Configuration: ${CMAKE_BUILD_TYPE}")
+set(OCASI_CONFIGURATION ${CMAKE_BUILD_TYPE})
+set(OCASI_AVAILABLE_CONFIGURATIONS "Debug" "Release")
 
-set(CMAKE_CXX_STANDARD 23)
+if (OCASI_CONFIGURATION IN_LIST OCASI_AVAILABLE_CONFIGURATIONS)
+  message(STATUS "OCASI: Building OCASI using ${OCASI_CONFIGURATION} configuration")
+else ()
+  message(FATAL_ERROR "OCASI: Unsupported configuration. Please use one of these: ${OCASI_AVAILABLE_CONFIGURATIONS}")
+endif ()
+
+if (WIN32)
+  message(STATUS "OCASI: Detected platform WIN32")
+  set(OCASI_PLATFORM_MACRO "OCASI_PLATFORM_WINDOWS")
+elseif (UNIX AND NOT APPLE)
+  message(STATUS "OCASI: Detected platform UNIX")
+  set(OCASI_PLATFORM_MACRO "OCASI_PLATFORM_LINUX")
+else ()
+  message(FATAL_ERROR "OCASI: Unsupported platform")
+endif ()
+
+#------------------------------------------------------------------------------
+# Library type
+#------------------------------------------------------------------------------
+
+if (BUILD_SHARED_LIBS)
+  set(OCASI_LIBRARY_TYPE "SHARED")
+else ()
+  set(OCASI_LIBRARY_TYPE "STATIC")
+endif ()
+
+message(STATUS "OCASI: Building OCASI with library type ${OCASI_LIBRARY_TYPE}")
+
+#------------------------------------------------------------------------------
+# Global compile/link settings
+#------------------------------------------------------------------------------
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED YES)
+
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 if (MSVC)
-  add_compile_options("/utf-8" "/MP" "/Zc:preprocessor")
-endif()
+  add_compile_options(/utf-8 /Zc:preprocessor)
+endif ()
+
 
 add_subdirectory(OCASI)
-add_subdirectory(OCASI-Tester)
+
+if (OCASI_BUILD_TESTS)
+  add_subdirectory(Tests)
+endif ()

@@ -22,7 +22,7 @@ namespace OCASI {
 namespace std {
 
     template <>
-    struct std::hash<OCASI::VertexIndices>
+    struct hash<OCASI::VertexIndices>
     {
         std::size_t operator()(const OCASI::VertexIndices& v) const
         {

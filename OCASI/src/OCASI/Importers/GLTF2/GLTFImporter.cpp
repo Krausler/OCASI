@@ -2,9 +2,11 @@
 
 #include "OCASI/Core/BinaryReader.h"
 #include "OCASI/Core/StringUtil.h"
+#include "Json.h"
 
 #include "glm/gtc/quaternion.hpp"
-#include "glaze/glaze.hpp"
+
+using namespace simdjson;
 
 namespace OCASI {
 
@@ -31,16 +33,19 @@ namespace OCASI {
         }
         else
         {
-            m_Json = new glz::json_t;
-            if (auto error = glz::read_json(m_Json, m_FileReader.GetFileString()); !error)
+            m_Json = new GLTF::Json;
+            if(padded_string::load(m_FileReader.GetPath().string()).get(m_Json->PaddedJsonString))
+                return false;
+            
+            if (!m_Json->Parser.iterate(m_Json->PaddedJsonString).get(m_Json->Json))
                 return true;
         }
         return false;
     }
 
-    std::shared_ptr<Scene> GLTFImporter::Load3DFile()
+    SharedPtr<Scene> GLTFImporter::Load3DFile()
     {
-        std::shared_ptr<GLTF::Asset> asset = nullptr;
+        SharedPtr<GLTF::Asset> asset = nullptr;
         if (m_FileReader.IsBinary())
         {
             if (!LoadBinary())
@@ -70,16 +75,17 @@ namespace OCASI {
             OCASI_FAIL("First binary chunk of GLB file must be a json chunk.");
             return false;
         }
-
-        glz::json_t* json = new glz::json_t;
-        std::string jsonString((char*)jsonChunk.Data, jsonChunk.ChunkLength);
-        if (auto error = glz::read_json(json, jsonString); error)
+        padded_string str();
+        m_Json = new GLTF::Json;
+        m_Json->PaddedJsonString = padded_string((char*)jsonChunk.Data, jsonChunk.ChunkLength);
+        
+        if (auto error = m_Json->Parser.iterate(m_Json->PaddedJsonString).get(m_Json->Json); error != error_code::SUCCESS)
         {
-            OCASI_FAIL(FORMAT("Failed to load json: {}", error.custom_error_message));
+            OCASI_FAIL(FORMAT("Invalid json string in binary glTF 2.0 file: {}.", simdjson::error_message(error)));
             return false;
         }
 
-        GLTF::JsonParser parser(m_FileReader, json);
+        GLTF::JsonParser parser(m_FileReader, m_Json);
         if (!(m_Asset = parser.ParseGLTFTextFile()))
             return false;
 
@@ -155,7 +161,7 @@ namespace OCASI {
         m_Scene = MakeShared<Scene>();
 
         auto& gltfAsset = *m_Asset;
-
+        
         for (auto& gltfScene: gltfAsset.Scenes)
         {
             CreateNodes(gltfScene.GetIndex());
@@ -181,63 +187,51 @@ namespace OCASI {
         auto& gltfScene = gltfAsset.Scenes.at(sceneIndex);
 
         // When there are multiple scenes, each scene has a root node
-        std::shared_ptr<Node> ocasiRootNode = nullptr;
+        SharedPtr<Node> ocasiRootNode = nullptr;
         if (m_Asset->Scenes.size() > 1)
-        {
-            auto& node = m_Scene->RootNodes.emplace_back();
-            ocasiRootNode = node;
-        }
+            ocasiRootNode = m_Scene->RootNodes.emplace_back();;
 
         for (size_t& gltfRootNodeIndex : gltfScene.RootNodes)
         {
             GLTF::Node& gltfRootNode = gltfAsset.Nodes.at(gltfRootNodeIndex);
             auto ocasiNode = MakeShared<Node>();
-            ocasiScene.RootNodes.push_back(ocasiNode);
-
+            
             if (ocasiRootNode)
             {
                 ocasiNode->Parent = ocasiRootNode;
                 ocasiRootNode->Children.push_back(ocasiNode);
             }
-
-            if (gltfRootNode.Mesh.has_value())
-                ocasiNode->ModelIndex = gltfRootNode.Mesh.value();
-            if (gltfRootNode.TrsComponent.has_value())
-            {
-                glm::mat4 translation = glm::translate(translation, gltfRootNode.TrsComponent->Translation);
-                glm::mat4 rotation = glm::mat4_cast(gltfRootNode.TrsComponent->Rotation);
-                glm::mat4 scale = glm::translate(translation, gltfRootNode.TrsComponent->Scale);
-
-                ocasiNode->LocalTransform = translation * rotation * scale;
-            }
+            else
+                ocasiScene.RootNodes.push_back(ocasiNode);
+            
+            if (gltfRootNode.Mesh != INVALID_ID)
+                ocasiNode->ModelIndex = gltfRootNode.Mesh;
+            
+            glm::mat4 translation = glm::translate(translation, gltfRootNode.TrsComponent.Translation);
+            glm::mat4 rotation = glm::mat4_cast(gltfRootNode.TrsComponent.Rotation);
+            glm::mat4 scale = glm::translate(translation, gltfRootNode.TrsComponent.Scale);
+            ocasiNode->LocalTransform = gltfRootNode.LocalTranslationMatrix * translation * rotation * scale;
 
             TraverseNodes(gltfRootNode, ocasiNode);
         }
     }
 
-    void GLTFImporter::TraverseNodes(GLTF::Node& gltfNode, std::shared_ptr<Node> ocasiNode)
+    void GLTFImporter::TraverseNodes(GLTF::Node& gltfNode, SharedPtr<Node> ocasiNode)
     {
         for (size_t child : gltfNode.Children)
         {
             auto& childGltfNode = m_Asset->Nodes.at(child);
 
-            std::shared_ptr<Node> childOcasiNode = MakeShared<Node>();
+            SharedPtr<Node> childOcasiNode = MakeShared<Node>();
             childOcasiNode->Parent = ocasiNode;
             ocasiNode->Children.push_back(childOcasiNode);
-
-            if (childGltfNode.Mesh.has_value())
-                childOcasiNode->ModelIndex = gltfNode.Mesh.value();
-            if (childGltfNode.TrsComponent.has_value())
-            {
-                glm::mat4 translation = glm::translate(translation, childGltfNode.TrsComponent->Translation);
-                glm::mat4 rotation = glm::mat4_cast(childGltfNode.TrsComponent->Rotation);
-                glm::mat4 scale = glm::translate(translation, childGltfNode.TrsComponent->Scale);
-
-                childOcasiNode->LocalTransform = translation * rotation * scale;
-            }
-
-            if (childGltfNode.LocalTranslationMatrix.has_value())
-                childOcasiNode->LocalTransform = childGltfNode.LocalTranslationMatrix.value();
+            
+            childOcasiNode->ModelIndex = gltfNode.Mesh;
+            
+            glm::mat4 translation = glm::translate(translation, childGltfNode.TrsComponent.Translation);
+            glm::mat4 rotation = glm::mat4_cast(childGltfNode.TrsComponent.Rotation);
+            glm::mat4 scale = glm::translate(translation, childGltfNode.TrsComponent.Scale);
+            childOcasiNode->LocalTransform = childGltfNode.LocalTranslationMatrix * translation * rotation * scale;
 
             TraverseNodes(childGltfNode, ocasiNode);
         }
@@ -256,21 +250,19 @@ namespace OCASI {
         for (auto& gltfPrimitive : gltfMesh.Primitives)
         {
             auto& ocasiMesh = ocasiModel.Meshes.emplace_back();
-            ocasiMesh.MaterialIndex = gltfPrimitive.MaterialIndex.has_value() ? gltfPrimitive.MaterialIndex.value() : INVALID_ID;
+            ocasiMesh.MaterialIndex = gltfPrimitive.MaterialIndex;
 
-            if (gltfPrimitive.Indices.has_value())
+            if (gltfPrimitive.Indices != INVALID_ID)
             {
-                std::vector<uint8_t> data = GetAccessorData(gltfPrimitive.Indices.value());
+                std::vector<uint8_t> data = GetAccessorData(gltfPrimitive.Indices);
                 OCASI_ASSERT(!data.empty());
 
-                size_t indexDataTypeSize = GLTF::ComponentTypeToBytes(gltfAsset.Accessors.at(gltfPrimitive.Indices.value()).ComponentType);
-
+                size_t indexDataTypeSize = GLTF::ComponentTypeToBytes(gltfAsset.Accessors.at(gltfPrimitive.Indices).ComponentType);
+                OCASI_ASSERT(data.size() % indexDataTypeSize == 0)
+                
+                ocasiMesh.Indices.resize(data.size() / indexDataTypeSize);
                 for (size_t i = 0; i < data.size(); i += indexDataTypeSize)
-                {
-                    uint32_t index = 0;
-                    std::memcpy(&index, &data[i], indexDataTypeSize);
-                    ocasiMesh.Indices.push_back(index);
-                }
+                    std::memcpy(&ocasiMesh.Indices[(i == 0 ? 0 : i / indexDataTypeSize)], &data[i], indexDataTypeSize);
             }
 
             for (auto& [attributeName, accessor] : gltfPrimitive.Attributes)
@@ -301,7 +293,7 @@ namespace OCASI {
                     ocasiMesh.Tangents.resize(data.size() / sizeof(glm::vec4));
                     std::memcpy(ocasiMesh.Tangents.data(), data.data(), data.size());
                 }
-                else if (attributeName.starts_with("TEXCOORD_"))
+                else if (Util::StartsWith(attributeName, "TEXCOORD_"))
                 {
                     const size_t TEX_COORD_STRING = 9;
                     size_t texCoordIndex = std::atoi(&attributeName.at(TEX_COORD_STRING));
@@ -315,7 +307,7 @@ namespace OCASI {
                     texCoords.resize(data.size() / sizeof(glm::vec2));
                     std::memcpy(texCoords.data(), data.data(), data.size());
                 }
-                else if (attributeName.starts_with("COLOR_"))
+                else if (Util::StartsWith(attributeName, "COLOR_"))
                 {
                     const size_t COLOR_STRING = 6;
                     size_t colorIndex = std::atoi(&attributeName.at(COLOR_STRING));
@@ -435,43 +427,42 @@ namespace OCASI {
         OCASI_ASSERT(gltfInfo.Texture < gltfAsset.Textures.size());
         GLTF::Texture& gltfTexture = gltfAsset.Textures.at(gltfInfo.Texture);
 
-        OCASI_ASSERT_MSG(gltfTexture.Source.has_value(), FORMAT("Do not know what to do with a texture that does not contain an image source. Texture json index: {}", texInfo->Texture));
+        OCASI_ASSERT_MSG(gltfTexture.Source != INVALID_ID, FORMAT("Do not know what to do with a texture that does not contain an image source. Texture json index: {}", texInfo->Texture));
         OCASI_ASSERT(gltfTexture.Source < gltfAsset.Images.size());
-        GLTF::Image& gltfImage = gltfAsset.Images.at(gltfTexture.Source.value());
+        GLTF::Image& gltfImage = gltfAsset.Images.at(gltfTexture.Source);
 
         ImageSettings settings = {};
-        if (gltfTexture.Sampler.has_value())
+        if (gltfTexture.Sampler != INVALID_ID)
         {
             OCASI_ASSERT(gltfTexture.Sampler < gltfAsset.Samplers.size());
-            GLTF::Sampler& gltfSampler = gltfAsset.Samplers.at(gltfTexture.Sampler.value());
+            GLTF::Sampler& gltfSampler = gltfAsset.Samplers.at(gltfTexture.Sampler);
 
-            // For implementation purposes and ease of use, the clamp option
+            // For implementation and ease of use, the clamp option
             // will be using the UVWrapT value.
             settings.Clamp = gltfSampler.WrapT == GLTF::UVWrap::Repeat ? ClampOption::ClampRepeat : (gltfSampler.WrapT == GLTF::UVWrap::ClampToEdge ? ClampOption::ClampToEdge : ClampOption::ClampMirroredRepeat);
 
-            if (gltfSampler.MagFilter.has_value())
-                settings.MagFilter = ConvertToOCASIFilterOption(gltfSampler.MagFilter.value());
-            if (gltfSampler.MinFilter.has_value())
-                settings.MinFilter = ConvertToOCASIFilterOption(gltfSampler.MinFilter.value());
+            settings.MagFilter = ConvertToOCASIFilterOption(gltfSampler.MagFilter);
+            settings.MinFilter = ConvertToOCASIFilterOption(gltfSampler.MinFilter);
         }
 
-        if (gltfImage.BufferView.has_value())
+        if (gltfImage.BufferView != INVALID_ID)
         {
             size_t unused;
-            std::vector<uint8_t> data = GetBufferViewData(gltfImage.BufferView.value(), 0, unused);
+            std::vector<uint8_t> data = GetBufferViewData(gltfImage.BufferView, 0, unused);
 
+            // TODO: Maybe remove this as it is not used
             // When bufferView is defined, mimeType must also be defined
-            OCASI_ASSERT(gltfImage.MimeType.has_value());
-            ImageType type = ConvertMimeTypeToImagType(gltfImage.MimeType.value());
+            OCASI_ASSERT(!gltfImage.MimeType.empty());
+            ImageType type = ConvertMimeTypeToImagType(gltfImage.MimeType);
 
             return std::make_unique<Image>(std::move(data), settings);
         }
-        else if (gltfImage.URI.has_value())
+        else if (!gltfImage.URI.empty())
         {
-            std::string uri = Util::URIUnescapedString(gltfImage.URI.value());
-            if (uri.starts_with("data:"))
+            std::string uri = Util::URIUnescapedString(gltfImage.URI);
+            if (Util::StartsWith(uri, "data:"))
             {
-                std::string data = gltfImage.URI.value().substr(uri.find(':'));
+                std::string data = gltfImage.URI.substr(uri.find(':'));
                 size_t readSize = 0;
                 uint8_t* binaryData = Util::DecodeBase64(data, readSize);
                 std::vector<uint8_t> binaryDataVector(readSize);
@@ -517,13 +508,13 @@ namespace OCASI {
 
         OCASI_ASSERT(accessorIndex < asset.Accessors.size());
         auto& accessor = asset.Accessors.at(accessorIndex);
-        OCASI_ASSERT_MSG(accessor.BufferView.has_value(), "Don't know what to do with an accessor that does not contain a buffer view.");
+        OCASI_ASSERT_MSG(accessor.BufferView != INVALID_ID, "Don't know what to do with an accessor that does not contain a buffer view.");
 
-        // This is the accessor offset not the buffer view offset
+        // This is the accessor offset, not the buffer view offset
         size_t elementSize = GLTF::ComponentTypeToBytes(accessor.ComponentType) * (size_t) accessor.DataType;
 
         size_t byteStride = 0;
-        std::vector<uint8_t> data = GetBufferViewData(accessor.BufferView.value(), accessor.ByteOffset, byteStride);
+        std::vector<uint8_t> data = GetBufferViewData(accessor.BufferView, accessor.ByteOffset, byteStride);
         OCASI_ASSERT(!data.empty());
 
         // The byte stride specifies the number of bytes for each element. It is not the element size, but
@@ -551,6 +542,7 @@ namespace OCASI {
             std::vector<uint8_t> sparseValuesData = GetBufferViewData(sparse.Values.BufferView, sparse.Values.ByteOffset, sparseValuesByteStride);
             OCASI_ASSERT(!sparseValuesData.empty());
 
+            // TODO: Create a new vector, copying over the indices
             // HACK: For indexing a conversion from bytes to a number is needed
             for (size_t i = 0; i < sparse.ElementCount; i++)
             {

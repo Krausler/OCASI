@@ -1,4 +1,4 @@
-add_library(OCASI STATIC
+add_library(OCASI ${OCASI_LIBRARY_TYPE}
         "src/OCASI/Core/Base.h"
         "src/OCASI/Core/Debug.h"
         "src/OCASI/Core/Importer.h"
@@ -31,22 +31,23 @@ add_library(OCASI STATIC
         src/OCASI/Core/BinaryReader.h
         src/OCASI/Core/BinaryReader.cpp
         src/OCASI/Core/Material.cpp
+        src/OCASI/Importers/GLTF2/Json.h
 )
+
+target_sources(OCASI PRIVATE vendor/simdjson/simdjson.cpp)
 
 target_include_directories(OCASI PUBLIC
         src
         vendor/spdlog/include
         vendor/stbimage
         vendor/glm
-        vendor/glaze/include
+        vendor/simdjson
 )
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-        target_compile_definitions(OCASI PUBLIC
-            "OCASI_DEBUG"
-        )
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-        target_compile_definitions(OCASI PUBLIC
-            "OCASI_RELEASE"
-        )
+target_compile_definitions(OCASI PUBLIC ${OCASI_PLATFORM_MACRO} SIMDJSON_EXCEPTIONS=OFF)
+
+if (OCASI_CONFIGURATION STREQUAL "Debug")
+        target_compile_definitions(OCASI PUBLIC "OCASI_DEBUG")
+elseif(OCASI_CONFIGURATION STREQUAL "Release")
+        target_compile_definitions(OCASI PUBLIC "OCASI_RELEASE")
 endif()
