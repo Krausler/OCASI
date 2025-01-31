@@ -24,4 +24,11 @@ namespace OCASI {
     {
         spdlog::set_pattern(DEFAULT_PATTERN);
     }
+    
+    std::shared_ptr<spdlog::logger> Logger::GetLogger()
+    {
+        if (!s_Logger)
+            Init();
+        return s_Logger;
+    }
 }

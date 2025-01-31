@@ -12,7 +12,7 @@ namespace OCASI {
         static void SetFileFormatPattern(const std::string& fileFormatName);
         static void ResetPattern();
 
-        static std::shared_ptr<spdlog::logger> GetLogger() { return s_Logger; }
+        static std::shared_ptr<spdlog::logger> GetLogger();
     private:
         static std::shared_ptr<spdlog::logger> s_Logger;    
     };
