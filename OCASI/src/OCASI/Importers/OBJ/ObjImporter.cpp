@@ -72,11 +72,11 @@ namespace OCASI {
         m_OutputScene = MakeShared<Scene>();
 
         // Converting from a RHCS to LHCS
-        for (glm::vec3& v : m_OBJModel->Vertices)
-            v = { v.x, v.y, -v.z };
-
-        for (glm::vec3& n : m_OBJModel->Normals)
-            n = { n.x, n.y, -n.z };
+//        for (glm::vec3& v : m_OBJModel->Vertices)
+//            v = { v.x, v.y, -v.z };
+//
+//        for (glm::vec3& n : m_OBJModel->Normals)
+//            n = { n.x, n.y, -n.z };
 
         /// Material conversion
 
@@ -160,8 +160,8 @@ namespace OCASI {
 
         Mesh outMesh = {};
         outMesh.Name = m.Name;
-        // In order to generate indices and remove duplicate vertices, we have to keep track of all unique VertexIndices.
-        // This means that for every face the indices into the global vertex arrays (vertex array, normal array, texture
+        // To generate indices and remove duplicate vertices, we have to keep track of all unique VertexIndices.
+        // This means that for every face, the indices into the global vertex arrays (vertex array, normal array, texture
         // coordinate array) have to be checked against all already loaded indices. If there is a match, we just use the
         // index of that matching vertex in the indices array.
         std::unordered_map<VertexIndices, size_t> lookUpTable;
