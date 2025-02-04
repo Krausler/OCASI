@@ -1,5 +1,7 @@
 #include "FileUtil.h"
 
+#include "OCASI/Core/StringUtil.h"
+
 namespace OCASI {
 
     FileReader::FileReader(const Path &path, bool isBinary)
@@ -85,11 +87,6 @@ namespace OCASI {
     }
 
     namespace Util {
-        
-        bool StartsWith(const std::string& s, const std::string& prefix)
-        {
-            return s.size() >= s.size() && s.substr(0, prefix.size()) == prefix;
-        }
 
         bool FindTokensInFirst100Lines(OCASI::FileReader& reader, const std::vector<std::string>& tokens)
         {

@@ -32,6 +32,16 @@ add_library(OCASI ${OCASI_LIBRARY_TYPE}
         src/OCASI/Core/BinaryReader.cpp
         src/OCASI/Core/Material.cpp
         src/OCASI/Importers/GLTF2/Json.h
+        src/OCASI/Core/PostProcessor.cpp
+        src/OCASI/Core/PostProcessor.h
+        src/OCASI/Core/PostProcessorOptions.h
+        src/OCASI/Core/BasePostProcess.cpp
+        src/OCASI/Core/BasePostProcess.h
+        src/OCASI/PostProcessing/TriangulateProcess.cpp
+        src/OCASI/PostProcessing/TriangulateProcess.h
+        src/OCASI/Core/Error.h
+        src/OCASI/PostProcessing/ConverToRHCProcess.cpp
+        src/OCASI/PostProcessing/ConverToRHCProcess.h
 )
 
 target_sources(OCASI PRIVATE vendor/simdjson/simdjson.cpp)

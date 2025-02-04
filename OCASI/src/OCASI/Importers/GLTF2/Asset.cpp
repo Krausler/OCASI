@@ -31,8 +31,7 @@ namespace OCASI::GLTF {
     {
         if (!reader.IsOpen())
         {
-            OCASI_FAIL(FORMAT("glTF binary data file does not exist: {}", reader.GetPath().string()));
-            return;
+            throw FailedImportError(FORMAT("Cannot open .bin file at location {}", reader.GetPath().string()));
         }
 
         size_t fileSize = reader.GetFileSize();
@@ -60,10 +59,8 @@ namespace OCASI::GLTF {
     std::vector<uint8_t> Buffer::Get(size_t byteLength, size_t offset)
     {
         if (offset + byteLength > m_ByteSize)
-        {
-            OCASI_FAIL("Tried to read glTF buffer data that was out of range");
-            return {};
-        }
+            throw FailedImportError("Cannot read data that lies outside the buffers memory.");
+        
         std::vector<uint8_t> result;
         result.resize(byteLength);
         std::memcpy(result.data(), m_Data + offset, byteLength);

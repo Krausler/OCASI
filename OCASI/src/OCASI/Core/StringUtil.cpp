@@ -70,10 +70,8 @@ namespace OCASI::Util {
         };
 
         if (dataString.size() % BASE64_GROUP_COUNT_PER_CHUNK > 0)
-        {
-            OCASI_FAIL("Failed to decode base64 data. Data is not aligned with 3 bytes.");
-            return nullptr;
-        }
+            throw FailedImportError("Could not decode Base64 string, as data is not divisible by 4.");
+        
 
         size_t dataSize = dataString.size();
         size_t base64OutputByteSize = dataSize;
@@ -144,6 +142,10 @@ namespace OCASI::Util {
         }
         return decoded.str();
     }
-
+    
+    bool StartsWith(const std::string& s, const std::string& prefix)
+    {
+        return s.size() >= s.size() && s.substr(0, prefix.size()) == prefix;
+    }
 }
 

@@ -9,13 +9,10 @@ namespace OCASI::OBJ {
     {
     }
 
-    bool MtlParser::ParseMTLFile()
+    void MtlParser::ParseMTLFile()
     {
         if (!m_Reader.IsOpen())
-        {
-            OCASI_FAIL(FORMAT("Failed to open material file with path: {}", m_Reader.GetPath().string()));
-            return false;
-        }
+            throw FailedImportError(FORMAT("Cannot open MTL file {}", m_Reader.GetPath().string()));
 
         std::vector<char> line;
         while (m_Reader.NextLineC(line))
@@ -26,15 +23,11 @@ namespace OCASI::OBJ {
             if (m_Begin == m_End)
                 continue;
 
-            if(!ParseParameter(*m_Begin == 'm'))
-                return false;
-
+            ParseParameter(*m_Begin == 'm');
         }
-
-        return true;
     }
 
-    bool MtlParser::ParseParameter(bool isMap)
+    void MtlParser::ParseParameter(bool isMap)
     {
         if (isMap)
         {
@@ -53,14 +46,14 @@ namespace OCASI::OBJ {
                 break;
             }
             case 'K': {
-                if (!CheckMaterial())
-                    return false;
+                CheckMaterial();
 
                 m_Begin += 3;
                 switch (*(m_Begin - 2))
                 {
                     // Diffuse colour
-                    case 'd': {
+                    case 'd':
+                    {
                         // Skipping the parameter identifier and the space separating the value
                         if (isMap)
                             ParseTexture(TextureType::Diffuse);
@@ -69,7 +62,7 @@ namespace OCASI::OBJ {
 
                         break;
                     }
-                        // ExtSpecular colour
+                    // ExtSpecular colour
                     case 's':
                     {
                         if (isMap)
@@ -79,7 +72,7 @@ namespace OCASI::OBJ {
 
                         break;
                     }
-                        // Emissive colour
+                    // Emissive colour
                     case 'e':
                     {
                         if (isMap)
@@ -89,7 +82,7 @@ namespace OCASI::OBJ {
 
                         break;
                     }
-                        // Ambient colour
+                    // Ambient colour
                     case 'a':
                     {
                         if (isMap)
@@ -106,8 +99,7 @@ namespace OCASI::OBJ {
                 break;
             }
             case 'N': {
-                if (!CheckMaterial())
-                    return false;
+                CheckMaterial();
 
                 m_Begin += 2;
                 if (*(m_Begin - 1) == 'i')
@@ -128,8 +120,7 @@ namespace OCASI::OBJ {
             }
             case 'T':
             case 'd': {
-                if (!CheckMaterial())
-                    return false;
+                CheckMaterial();
 
                 m_Begin += 2;
                 if (isMap)
@@ -139,8 +130,7 @@ namespace OCASI::OBJ {
                 break;
             }
             case 'i': {
-                if (!CheckMaterial())
-                    return false;
+                CheckMaterial();
 
                 m_Begin += 5;
                 m_CurrentMaterial->Opacity = ParseFloat();
@@ -148,8 +138,7 @@ namespace OCASI::OBJ {
             }
             // PBR optional extension
             case 'P': {
-                if (!CheckMaterial())
-                    return false;
+                CheckMaterial();
 
                 CreatePBRMaterialExtension();
 
@@ -208,8 +197,7 @@ namespace OCASI::OBJ {
             }
             // ExtAnisotropy
             case 'a': {
-                if (!CheckMaterial())
-                    return false;
+                CheckMaterial();
 
                 CreatePBRMaterialExtension();
                 size_t charactersToNextSpace = Util::GetToNextToken(m_Begin, m_End, ' ').size();
@@ -232,8 +220,7 @@ namespace OCASI::OBJ {
             }
                 // Occlusion map
             case 'o': {
-                if (!CheckMaterial())
-                    return false;
+                CheckMaterial();
 
                 if (isMap)
                     ParseTexture(TextureType::Occlusion);
@@ -249,8 +236,6 @@ namespace OCASI::OBJ {
             default:
                 break;
         }
-
-        return true;
     }
 
     void MtlParser::CreateNewMaterial(const std::string& name)
@@ -297,23 +282,18 @@ namespace OCASI::OBJ {
         return { f1, f2, f3, f4 };
     }
 
-    bool MtlParser::CheckMaterial()
+    void MtlParser::CheckMaterial()
     {
         if (!m_CurrentMaterial)
         {
-            OCASI_FAIL("Trying to write to a material, when there was none initialized.");
-            return false;
+            throw FailedImportError("Cannot write to a material when there is no defined.");
         }
-        return true;
     }
 
     void MtlParser::ParseTexture(TextureType type)
     {
         if (m_Begin == m_End)
-        {
-            OCASI_FAIL("Tried to parse texture, while end of line was already reached.");
-            return;
-        }
+            throw FailedImportError("Cannot start parsing a texture when the end of line is already reached.");
 
         while (true)
         {

@@ -29,3 +29,4 @@ namespace OCASI {
 }
 #include "OCASI/Core/Logger.h"
 #include "OCASI/Core/Debug.h"
+#include "OCASI/Core/Error.h"

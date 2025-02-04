@@ -190,11 +190,11 @@ namespace OCASI::OBJ {
                 stage++;
                 if(stage == Stage::TexCoord && !hasTexCoords)
                 {
-                    OCASI_FAIL("OBJ file contains face texture coordinate indices without defined texture coordinates.");
+                    throw FailedImportError("Cannot request face indices for texture coordinates, when there are no texture coordinates defined.");
                 }
                 else if(stage == Stage::Normal && !hasNormals)
                 {
-                    OCASI_FAIL("OBJ file contains face normal indices without defined normals.");
+                    throw FailedImportError("Cannot request face indices for normals, when there are no normals defined.");
                 }
             }
             else
@@ -228,8 +228,7 @@ namespace OCASI::OBJ {
                         break;
                     }
                     default:
-                        OCASI_FAIL("OBJ: Invalid Stage for face assembly.");
-                        break;
+                        throw FailedImportError(FORMAT("Unsupported face assembly stage {}", stage));
                 }
             }
 

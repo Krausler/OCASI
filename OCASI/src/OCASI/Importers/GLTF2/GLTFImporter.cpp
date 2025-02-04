@@ -17,15 +17,13 @@ namespace OCASI {
     const uint32_t CHUNK_TYPE_JSON = 0x4E4F534A;
     const uint32_t CHUNK_TYPE_BINARY = 0x004E4942;
 
-    GLTFImporter::GLTFImporter(FileReader &reader)
-        : m_FileReader(reader)
-    {}
-
-    bool GLTFImporter::CanLoad()
+    bool GLTFImporter::CanLoad(FileReader& reader)
     {
-        if (m_FileReader.IsBinary())
+        m_FileReader = &reader;
+        
+        if (m_FileReader->IsBinary())
         {
-            if (m_FileReader.GetFileSize() >= std::numeric_limits<uint32_t>::max())
+            if (m_FileReader->GetFileSize() >= std::numeric_limits<uint32_t>::max())
                 return false;
 
             if (CheckBinaryHeader())
@@ -34,7 +32,7 @@ namespace OCASI {
         else
         {
             m_Json = new GLTF::Json;
-            if(padded_string::load(m_FileReader.GetPath().string()).get(m_Json->PaddedJsonString))
+            if(padded_string::load(m_FileReader->GetPath().string()).get(m_Json->PaddedJsonString))
                 return false;
             
             if (!m_Json->Parser.iterate(m_Json->PaddedJsonString).get(m_Json->Json))
@@ -43,17 +41,18 @@ namespace OCASI {
         return false;
     }
 
-    SharedPtr<Scene> GLTFImporter::Load3DFile()
+    SharedPtr<Scene> GLTFImporter::Load3DFile(FileReader& reader)
     {
-        SharedPtr<GLTF::Asset> asset = nullptr;
-        if (m_FileReader.IsBinary())
+        m_FileReader = &reader;
+        
+        if (m_FileReader->IsBinary())
         {
             if (!LoadBinary())
                 return nullptr;
         }
         else
         {
-            GLTF::JsonParser parser(m_FileReader, m_Json);
+            GLTF::JsonParser parser(*m_FileReader, m_Json);
             if (!(m_Asset = parser.ParseGLTFTextFile()))
                 return nullptr;
         }
@@ -65,27 +64,21 @@ namespace OCASI {
 
     bool GLTFImporter::LoadBinary()
     {
-        BinaryReader bReader(m_FileReader);
+        BinaryReader bReader(*m_FileReader);
         // Skip the header, as it has already been checked to be valid in the CheckBinaryHeader function
         bReader.SetPointer(BINARY_HEADER_BYTE_SIZE);
 
         GLBChunk jsonChunk = LoadChunk(bReader);
         if (jsonChunk.Type != CHUNK_TYPE_JSON)
-        {
-            OCASI_FAIL("First binary chunk of GLB file must be a json chunk.");
-            return false;
-        }
-        padded_string str();
+            throw FailedImportError("First binary chunk must be of type json.");
+            
         m_Json = new GLTF::Json;
         m_Json->PaddedJsonString = padded_string((char*)jsonChunk.Data, jsonChunk.ChunkLength);
         
         if (auto error = m_Json->Parser.iterate(m_Json->PaddedJsonString).get(m_Json->Json); error != error_code::SUCCESS)
-        {
-            OCASI_FAIL(FORMAT("Invalid json string in binary glTF 2.0 file: {}.", simdjson::error_message(error)));
-            return false;
-        }
+            throw FailedImportError(FORMAT("Can't read json file: {}", simdjson::error_message(error)));
 
-        GLTF::JsonParser parser(m_FileReader, m_Json);
+        GLTF::JsonParser parser(*m_FileReader, m_Json);
         if (!(m_Asset = parser.ParseGLTFTextFile()))
             return false;
 
@@ -93,14 +86,11 @@ namespace OCASI {
 
         // 2 * chunk info + minimum buffers size (data needs to be aligned to 4)
         constexpr size_t byteSizeToAdd = sizeof(uint32_t) * 2 + 4;
-        if (bReader.GetPointer() + byteSizeToAdd < m_FileReader.GetFileSize())
+        if (bReader.GetPointer() + byteSizeToAdd < m_FileReader->GetFileSize())
         {
             GLBChunk bufferChunk = LoadChunk(bReader);
-            if (jsonChunk.Type != CHUNK_TYPE_JSON)
-            {
-                OCASI_FAIL("First binary chunk of GLB file must be a json chunk.");
-                return false;
-            }
+            if (bufferChunk.Type != CHUNK_TYPE_BINARY)
+                throw FailedImportError("Second binary chunk must be of type binary.");
 
             bool found = false;
             for (GLTF::Buffer& buffer : m_Asset->Buffers)
@@ -112,11 +102,9 @@ namespace OCASI {
                 }
                 else
                 {
-                    OCASI_FAIL("GlB file has more then one binary chunk defined in it's json definition.");
-                    return false;
+                    throw FailedImportError("GLB file defines more then one binary chunk.");
                 }
             }
-
         }
 
         delete jsonChunk.Data;
@@ -146,12 +134,12 @@ namespace OCASI {
     bool GLTFImporter::CheckBinaryHeader()
     {
         uint8_t data[BINARY_HEADER_BYTE_SIZE];
-        m_FileReader.GetBytes(data, BINARY_HEADER_BYTE_SIZE);
-        m_FileReader.Set0();
+        m_FileReader->GetBytes(data, BINARY_HEADER_BYTE_SIZE);
+        m_FileReader->Set0();
         BinaryReader bReader(data, BINARY_HEADER_BYTE_SIZE);
         GLBHeader header = bReader.GetType<GLBHeader>();
 
-        if (!(header.Magic == BINARY_HEADER_MAGIC_VALUE && header.Version == BINARY_HEADER_VERSION && header.FileLength == m_FileReader.GetFileSize()))
+        if (!(header.Magic == BINARY_HEADER_MAGIC_VALUE && header.Version == BINARY_HEADER_VERSION && header.FileLength == m_FileReader->GetFileSize()))
             return false;
         return true;
     }
@@ -171,7 +159,6 @@ namespace OCASI {
         {
             CreateMesh(gltfMesh.GetIndex());
         }
-
 
         for (auto& gltfMaterial : gltfAsset.Materials)
         {
@@ -251,6 +238,7 @@ namespace OCASI {
         {
             auto& ocasiMesh = ocasiModel.Meshes.emplace_back();
             ocasiMesh.MaterialIndex = gltfPrimitive.MaterialIndex;
+            ocasiMesh.FaceType = ConvertPrimitiveTypeToFaceType(gltfPrimitive.Type);
 
             if (gltfPrimitive.Indices != INVALID_ID)
             {
@@ -275,7 +263,6 @@ namespace OCASI {
 
                     ocasiMesh.Vertices.resize(data.size() / sizeof(glm::vec3));
                     std::memcpy(ocasiMesh.Vertices.data(), data.data(), data.size());
-
                 }
                 else if (attributeName == "NORMAL")
                 {
@@ -441,8 +428,8 @@ namespace OCASI {
             // will be using the UVWrapT value.
             settings.Clamp = gltfSampler.WrapT == GLTF::UVWrap::Repeat ? ClampOption::ClampRepeat : (gltfSampler.WrapT == GLTF::UVWrap::ClampToEdge ? ClampOption::ClampToEdge : ClampOption::ClampMirroredRepeat);
 
-            settings.MagFilter = ConvertToOCASIFilterOption(gltfSampler.MagFilter);
-            settings.MinFilter = ConvertToOCASIFilterOption(gltfSampler.MinFilter);
+            settings.MagFilter = ConvertMinMagFilterToFilterOption(gltfSampler.MagFilter);
+            settings.MinFilter = ConvertMinMagFilterToFilterOption(gltfSampler.MinFilter);
         }
 
         if (gltfImage.BufferView != INVALID_ID)
@@ -465,28 +452,28 @@ namespace OCASI {
                 std::string data = gltfImage.URI.substr(uri.find(':'));
                 size_t readSize = 0;
                 uint8_t* binaryData = Util::DecodeBase64(data, readSize);
+                if (!binaryData)
+                    throw FailedImportError("Could not read Base64 encoded string.");
+                
                 std::vector<uint8_t> binaryDataVector(readSize);
 
                 std::memcpy(binaryDataVector.data(), binaryData, readSize);
 
                 return std::make_unique<Image>(std::move(binaryDataVector), settings);
             }
-            else if (Path path = m_FileReader.GetParentPath() / uri; std::filesystem::exists(path))
+            else if (Path path = m_FileReader->GetParentPath() / uri; std::filesystem::exists(path))
             {
                 return std::make_unique<Image>(path, settings);
             }
             else
             {
-                OCASI_FAIL("Invalid URI. URI is neither a Base64 encoded data string, nor a valid path to an image coexisting in the same directory as the GLTF file.");
-                return nullptr;
+                throw FailedImportError("Image URI must either be a valid Base64 encoded string or a valid relative path to an image file.");
             }
         }
         else
         {
-            OCASI_FAIL("Not a valid way to define an image. Neither a bufferView, nor a data uri was supplied.");
-            return nullptr;
+            throw FailedImportError("Image must either define a valid buffer view or an URI property.");
         }
-        return nullptr;
     }
 
     std::vector<uint8_t> GLTFImporter::GetBufferViewData(size_t bufferViewIndex, size_t accessorOffset, size_t& outByteStride)
@@ -561,7 +548,7 @@ namespace OCASI {
                         break;
                     }
                     default:
-                        OCASI_FAIL(FORMAT("Invalid component type for sparse indices: {}", (size_t) sparse.Indices.ComponentType));
+                        throw FailedImportError(FORMAT("Unsupported component type used for sparse accessor {}.", (int) sparse.Indices.ComponentType));
                 }
 
                 std::memcpy(&data[index * elementSize], &sparseValuesData[i * elementSize], elementSize);
@@ -572,7 +559,7 @@ namespace OCASI {
     }
 
     // TODO: Use the already existing FilterOption struct for the GLTF implementation. This is completely unnecessary!
-    FilterOption GLTFImporter::ConvertToOCASIFilterOption(GLTF::MinMagFilter filter)
+    FilterOption GLTFImporter::ConvertMinMagFilterToFilterOption(GLTF::MinMagFilter filter)
     {
         switch (filter)
         {
@@ -588,10 +575,27 @@ namespace OCASI {
                 return FilterOption::LinearMipMapNearest;
             case GLTF::MinMagFilter::LinearMipMapLinear:
                 return FilterOption::LinearMipMapLinear;
+            default:
+                throw FailedImportError("Image filter option has value None");
         }
         return FilterOption::Linear;
     }
-
+    
+    FaceType GLTFImporter::ConvertPrimitiveTypeToFaceType(GLTF::PrimitiveType primitive)
+    {
+        switch (primitive)
+        {
+            case GLTF::PrimitiveType::Point:
+                return FaceType::Point;
+            case GLTF::PrimitiveType::Line:
+                return FaceType::Line;
+            case GLTF::PrimitiveType::Triangle:
+                return FaceType::Triangle;
+            default:
+                throw FailedImportError(FORMAT("Unsupported primitive type: {}", (int) primitive));
+        }
+    }
+    
     ImageType GLTFImporter::ConvertMimeTypeToImagType(const std::string& mimeType)
     {
         if (mimeType == "image/png")

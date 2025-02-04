@@ -1,7 +1,5 @@
 #pragma once
 
-#include "OCASI/Core/Base.h"
-
 #include "spdlog/spdlog.h"
 
 namespace OCASI {
@@ -11,10 +9,12 @@ namespace OCASI {
         static void Init();
         static void SetFileFormatPattern(const std::string& fileFormatName);
         static void ResetPattern();
+        static const std::string& GetPattern();
 
         static std::shared_ptr<spdlog::logger> GetLogger();
     private:
-        static std::shared_ptr<spdlog::logger> s_Logger;    
+        static std::shared_ptr<spdlog::logger> s_Logger;
+        static std::string s_CurrentPattern;
     };
 }
 

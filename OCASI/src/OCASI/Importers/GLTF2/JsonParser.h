@@ -22,41 +22,40 @@ namespace OCASI::GLTF {
 
         std::shared_ptr<Asset> ParseGLTFTextFile();
     private:
-        bool ParseAssetDescription(); // This is for parsing the Scene's generator and required version
-        bool ParseExtensions();
-        bool ParseBuffers();
-        bool ParseBufferViews();
-        bool ParseAccessors();
-        bool ParseImages();
-        bool ParseSamplers();
-        bool ParseTextures();
-        bool ParseMaterials();
-        bool ParseMeshes();
-        bool ParseNodes();
-        bool ParseScenes();
-
-        bool ParseSparseAccessor(simdjson::fallback::ondemand::object& jsonAccessor, std::optional<Sparse> &outSparse);
-        bool ParseTextureInfo(simdjson::fallback::ondemand::object& jObject, std::string_view name, std::optional<TextureInfo>& outTextureInfo);
+        void ParseAssetDescription(); // This is for parsing the Scene's generator and required version
+        void ParseExtensions();
+        void ParseBuffers();
+        void ParseBufferViews();
+        void ParseAccessors();
+        void ParseSparseAccessor(simdjson::fallback::ondemand::object& jsonAccessor, std::optional<Sparse> &outSparse);
+        void ParseImages();
+        void ParseSamplers();
+        void ParseTextures();
+        void ParseTextureInfo(simdjson::fallback::ondemand::object& jObject, std::string_view name, std::optional<TextureInfo>& outTextureInfo);
+        void ParseMaterials();
+        void ParseMeshes();
+        void ParsePrimitives(simdjson::fallback::ondemand::array& jPrimitives, Mesh& mesh);
+        void ParseNodes();
+        void ParseScenes();
 
         // Materials
-        bool ParsePbrMetallicRoughness(simdjson::fallback::ondemand::object& jPbrMetallicRoughness, std::optional<PBRMetallicRoughness>& outMaterial);
+        void ParsePbrMetallicRoughness(simdjson::fallback::ondemand::object& jPbrMetallicRoughness, std::optional<PBRMetallicRoughness>& outMaterial);
         // Material extensions
-        bool ParsePbrSpecularGlossiness(simdjson::fallback::ondemand::object& jPbrSpecularGlossiness, std::optional<KHRMaterialPbrSpecularGlossiness>& outSpecularGlossiness);
-        bool ParseSpecular(simdjson::fallback::ondemand::object& jSpecular, std::optional<KHRMaterialSpecular>& outMaterial);
-        bool ParseClearcoat(simdjson::fallback::ondemand::object& jClearcoat, std::optional<KHRMaterialClearcoat>& outMaterial);
-        bool ParseSheen(simdjson::fallback::ondemand::object& jSheen, std::optional<KHRMaterialSheen>& outMaterial);
-        bool ParseTransmission(simdjson::fallback::ondemand::object& jTransmission, std::optional<KHRMaterialTransmission>& outMaterial);
-        bool ParseVolume(simdjson::fallback::ondemand::object& jVolume, std::optional<KHRMaterialVolume>& outMaterial);
-        bool ParseIOR(simdjson::fallback::ondemand::object& jIOR, std::optional<KHRMaterialIOR>& outMaterial);
-        bool ParseEmissiveStrength(simdjson::fallback::ondemand::object& jEmissiveStrength, std::optional<KHRMaterialEmissiveStrength>& outMaterial);
-        bool ParseIridescence(simdjson::fallback::ondemand::object& jIridescence, std::optional<KHRMaterialIridescence>& outMaterial);
-        bool ParseAnisotropy(simdjson::fallback::ondemand::object& jAnisotropy, std::optional<KHRMaterialAnisotropy>& outMaterial);
+        void ParsePbrSpecularGlossiness(simdjson::fallback::ondemand::object& jPbrSpecularGlossiness, std::optional<KHRMaterialPbrSpecularGlossiness>& outSpecularGlossiness);
+        void ParseSpecular(simdjson::fallback::ondemand::object& jSpecular, std::optional<KHRMaterialSpecular>& outMaterial);
+        void ParseClearcoat(simdjson::fallback::ondemand::object& jClearcoat, std::optional<KHRMaterialClearcoat>& outMaterial);
+        void ParseSheen(simdjson::fallback::ondemand::object& jSheen, std::optional<KHRMaterialSheen>& outMaterial);
+        void ParseTransmission(simdjson::fallback::ondemand::object& jTransmission, std::optional<KHRMaterialTransmission>& outMaterial);
+        void ParseVolume(simdjson::fallback::ondemand::object& jVolume, std::optional<KHRMaterialVolume>& outMaterial);
+        void ParseIOR(simdjson::fallback::ondemand::object& jIOR, std::optional<KHRMaterialIOR>& outMaterial);
+        void ParseEmissiveStrength(simdjson::fallback::ondemand::object& jEmissiveStrength, std::optional<KHRMaterialEmissiveStrength>& outMaterial);
+        void ParseIridescence(simdjson::fallback::ondemand::object& jIridescence, std::optional<KHRMaterialIridescence>& outMaterial);
+        void ParseAnisotropy(simdjson::fallback::ondemand::object& jAnisotropy, std::optional<KHRMaterialAnisotropy>& outMaterial);
 
         // Mesh data loading
-        bool ParsePrimitives(simdjson::fallback::ondemand::array& jPrimitives, Mesh& mesh);
-        bool ParseVertexAttributes(simdjson::fallback::ondemand::object& jVertexAttributes, VertexAttributes& outAttributes);
-        bool ParseVec3(simdjson::fallback::ondemand::object& jObject, std::string_view name, glm::vec3& out);
-        bool ParseVec4(simdjson::fallback::ondemand::object& jObject, std::string_view name, glm::vec4& out);
+        void ParseVertexAttributes(simdjson::fallback::ondemand::object& jVertexAttributes, VertexAttributes& outAttributes);
+        void ParseVec3(simdjson::fallback::ondemand::object& jObject, std::string_view name, glm::vec3& out);
+        void ParseVec4(simdjson::fallback::ondemand::object& jObject, std::string_view name, glm::vec4& out);
     private:
         FileReader& m_FileReader;
 

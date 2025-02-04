@@ -52,7 +52,6 @@ namespace OCASI {
     
     namespace Util {
         
-        bool StartsWith(const std::string& s, const std::string& prefix);
         bool FindTokensInFirst100Lines(OCASI::FileReader& reader, const std::vector<std::string>& tokens);
         
     }

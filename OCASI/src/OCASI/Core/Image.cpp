@@ -56,9 +56,8 @@ namespace OCASI {
             stbi_image_free(data);
         }
         else
-        {
-            OCASI_FAIL(FORMAT("Failed to load image with path {0}: {1}", m_ImagePath.string(), stbi_failure_reason()));
-        }
+            throw FailedImportError(FORMAT("Failed to load image {}: {}", m_ImagePath.string(), stbi_failure_reason()));
+        
     }
 
     void Image::LoadImageFromMemory()
@@ -85,9 +84,8 @@ namespace OCASI {
             stbi_image_free(data);
         }
         else
-        {
-            OCASI_FAIL(FORMAT("Failed to load image with path {0}: {1}", m_ImagePath.string(), stbi_failure_reason()));
-        }
+            throw FailedImportError(FORMAT("Failed to load image from memory: {}", stbi_failure_reason()));
+        
     }
 
     const ImageData& Image::Load()

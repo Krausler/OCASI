@@ -1,9 +1,11 @@
 #include "JsonParser.h"
 
+#include "OCASI/Core/StringUtil.h"
+
 #include "OCASI/Importers/GLTF2/Json.h"
 
 // Apparently __LINE__ has to be parsed around 2 times
-#define OCASI_FAIL_ON_SIMDJSON_ERROR_IMPL(err, msg, line) error_code error##line = err; if (error##line) { OCASI_FAIL(FORMAT("{}: {}", msg, error_message(error##line))); return false; }
+#define OCASI_FAIL_ON_SIMDJSON_ERROR_IMPL(err, msg, line) error_code error##line = err; if (error##line) { throw OCASI::FailedImportError(msg); }
 #define OCASI_FAIL_ON_SIMDJSON_ERROR_IMPL2(err, msg, line) OCASI_FAIL_ON_SIMDJSON_ERROR_IMPL(err, msg, line)
 
 #define OCASI_FAIL_ON_SIMDJSON_ERROR(err, msg) OCASI_FAIL_ON_SIMDJSON_ERROR_IMPL2(err, msg, __LINE__)
@@ -53,53 +55,40 @@ namespace OCASI::GLTF {
         // where the order of things would be fundamental.
 
         // Read the project generator and version
-        if(!ParseAssetDescription())
-            return nullptr;
-
-        // Read in all used extensions and check for their support
-        if(!ParseExtensions())
-            return nullptr;
+        ParseAssetDescription();
+        ParseExtensions();
 
         OCASI_SET_PROPERTY_IF_EXISTS(json, SCENE_PROPERTY, m_Asset->DefaultSceneIndex);
 
-        if(!ParseBuffers())
-            return nullptr;
-
-        if(!ParseBufferViews())
-            return nullptr;
-
-        if(!ParseAccessors())
-            return nullptr;
+        ParseBuffers();
+        ParseBufferViews();
+        ParseAccessors();
 
         ParseImages();
         ParseSamplers();
         ParseTextures();
 
-        if(!ParseMaterials())
-            return nullptr;
-
-        if(!ParseMeshes())
-            return nullptr;
+        ParseMaterials();
+        ParseMeshes();
 
         ParseNodes();
-
-        if(!ParseScenes())
-            return nullptr;
+        ParseScenes();
 
         return m_Asset;
     }
     
-    bool JsonParser::ParseAssetDescription()
+    void JsonParser::ParseAssetDescription()
     {
         auto& json = m_Json->Get();
 
         ondemand::object jAsset;
-        OCASI_FAIL_IF_OBJ_NOT_EXISTS(json, ASSET_PROPERTY, jAsset, "Required 'jAsset' object not present in GLTF file, though mandatory: ")
+        OCASI_FAIL_IF_OBJ_NOT_EXISTS(json, ASSET_PROPERTY, jAsset, "Required 'jAsset' object not present in GLTF file, though mandatory")
         
         // The jAsset files version
-        std::string version;
-        OCASI_FAIL_ON_SIMDJSON_ERROR(jAsset["version"].get_string(version), "Required 'version' property in jAsset is not present, though mandatory.");
+        std::string_view strVersion;
+        OCASI_FAIL_IF_OBJ_NOT_EXISTS(jAsset, "version", strVersion, "Required 'version' property in jAsset is not present, though mandatory");
 
+        std::string version(strVersion);
         m_Asset->AssetVersion = {};
         m_Asset->AssetVersion.Major = std::stoi(version.substr(0, version.find('.')));
         m_Asset->AssetVersion.Minor = std::stoi(version.substr(version.find('.') + 1));
@@ -124,18 +113,16 @@ namespace OCASI::GLTF {
         {
             m_Asset->CopyRight = copyright;
         }
-
-        return true;
     }
     
-    bool JsonParser::ParseExtensions()
+    void JsonParser::ParseExtensions()
     {
         auto& json = m_Json->Get();
 
         // Return when there are no jExtensions required
         ondemand::array jExtensions;
         if (json[EXTENSIONS_USED_PROPERTY].get(jExtensions))
-            return true;
+            return;
         
         for (auto jExt : jExtensions)
         {
@@ -151,21 +138,16 @@ namespace OCASI::GLTF {
 
         // OCASI currently does not support any jExtensions that are required, so we return when there is an 'extensionRequired' section
         if (!json[EXTENSIONS_REQUIRED_PROPERTY].error())
-        {
-            OCASI_FAIL("Can't load glTF 2.0 file because it requires an unsupported required extension.");
-            return false;
-        }
-
-        return true;
+            throw FailedImportError("The GLTF importer currently does not support any extensions that are mandatory for parsing.");
     }
     
-    bool JsonParser::ParseBuffers()
+    void JsonParser::ParseBuffers()
     {
         auto& json = m_Json->Get();
 
         ondemand::array jBuffers;
         if (json[BUFFERS_PROPERTY].get(jBuffers))
-            return true;
+            return;
 
         size_t bufferCount;
         OCASI_FAIL_ON_SIMDJSON_ERROR(jBuffers.count_elements().get(bufferCount), "Failed to get buffer count.");
@@ -198,17 +180,15 @@ namespace OCASI::GLTF {
                 m_Asset->Buffers.emplace_back(i, byteLength);
             }
         }
-
-        return true;
     }
     
-    bool JsonParser::ParseBufferViews()
+    void JsonParser::ParseBufferViews()
     {
         auto& json = m_Json->Get();
 
         ondemand::array jBufferViews;
         if (json[BUFFER_VIEWS_PROPERTY].get(jBufferViews))
-            return true;
+            return;
 
         size_t i = 0;
         for (auto rJBufferView : jBufferViews)
@@ -225,17 +205,15 @@ namespace OCASI::GLTF {
             OCASI_SET_PROPERTY_IF_EXISTS(jBufferView, "byteStride", bufferView.ByteStride);
             i++;
         }
-
-        return true;
     }
     
-    bool JsonParser::ParseAccessors()
+    void JsonParser::ParseAccessors()
     {
         auto& json = m_Json->Get();
         
         ondemand::array jAccessors;
         if (json[ACCESSORS_PROPERTY].get(jAccessors))
-            return true;
+            return;
         
         size_t i = 0;
         for (auto rJAccessor : jAccessors)
@@ -271,8 +249,7 @@ namespace OCASI::GLTF {
                     accessor.DataType = DataType::Mat4;
                 else
                 {
-                    OCASI_FAIL(FORMAT("The accessor data type string didn't match any case: {}", dataType));
-                    return false;
+                    throw FailedImportError(FORMAT("Unsupported accessor data type {}", dataType));
                 }
             }
             
@@ -304,23 +281,45 @@ namespace OCASI::GLTF {
             
             ondemand::object jSparse;
             OCASI_HAS_PROPERTY(jAccessor, "sparse", jSparse)
-            {
-                if (!ParseSparseAccessor(jSparse, accessor.Sparse = Sparse()))
-                    return false;
-            }
+                ParseSparseAccessor(jSparse, accessor.Sparse = Sparse());
+            
             i++;
         }
-
-        return true;
     }
     
-    bool JsonParser::ParseImages()
+    void JsonParser::ParseSparseAccessor(simdjson::ondemand::object& jSparse, std::optional<Sparse>& outSparse)
+    {
+        auto& json = m_Json->Get();
+        
+        OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparse, "count", outSparse->ElementCount, "Required 'count' property in sparse accessor is not present, though mandatory.");
+        ondemand::object jSparseIndices;
+        OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparse, "indices", jSparseIndices, "Required 'indices' property in sparse accessor is not present, though mandatory.");
+        ondemand::object jSparseValues;
+        OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparse, "values", jSparseValues, "Required 'values' property in sparse accessor is not present, though mandatory.");
+        
+        // Indices
+        {
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparseIndices, "bufferView", outSparse->Indices.BufferView, "Required 'bufferView' property in sparse accessor indices is not present, though mandatory.")
+            size_t compType;
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparseIndices, "componentType", compType, "Required 'componentType' property in sparse accessor indices is not present, though mandatory.")
+            
+            OCASI_SET_PROPERTY_IF_EXISTS(jSparseIndices, "byteOffset", outSparse->Indices.ByteOffset);
+        }
+        
+        // Values
+        {
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparseValues, "bufferView", outSparse->Values.BufferView, "Required 'bufferView' property in sparse accessor values is not present, though mandatory.")
+            OCASI_SET_PROPERTY_IF_EXISTS(jSparseValues, "byteOffset", outSparse->Values.ByteOffset);
+        }
+    }
+    
+    void JsonParser::ParseImages()
     {
         auto& json = m_Json->Get();
         
         ondemand::array jImages;
         if (json[IMAGES_PROPERTY].get(jImages))
-            return true;
+            return;
 
         size_t i = 0;
         for (auto rJImage : jImages)
@@ -338,16 +337,15 @@ namespace OCASI::GLTF {
             OCASI_SET_PROPERTY_IF_EXISTS(jImage, "bufferView", image.BufferView);
             i++;
         }
-        return true;
     }
     
-    bool JsonParser::ParseSamplers()
+    void JsonParser::ParseSamplers()
     {
         auto& json = m_Json->Get();
         
         ondemand::array jSamplers;
         if (json[SAMPLERS_PROPERTY].get(jSamplers))
-            return true;
+            return;
         
         size_t i = 0;
         for (auto rJSampler : jSamplers)
@@ -369,45 +367,16 @@ namespace OCASI::GLTF {
             sampler.WrapT = (UVWrap) val;
             i++;
         }
-        return true;
     }
     
-    bool JsonParser::ParseSparseAccessor(simdjson::ondemand::object& jSparse, std::optional<Sparse>& outSparse)
-    {
-        auto& json = m_Json->Get();
-        
-        OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparse, "count", outSparse->ElementCount, "Required 'count' property in sparse accessor is not present, though mandatory.");
-        ondemand::object jSparseIndices;
-        OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparse, "indices", jSparseIndices, "Required 'indices' property in sparse accessor is not present, though mandatory.");
-        ondemand::object jSparseValues;
-        OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparse, "values", jSparseValues, "Required 'values' property in sparse accessor is not present, though mandatory.");
-
-        // Indices
-        {
-            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparseIndices, "bufferView", outSparse->Indices.BufferView, "Required 'bufferView' property in sparse accessor indices is not present, though mandatory.")
-            size_t compType;
-            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparseIndices, "componentType", compType, "Required 'componentType' property in sparse accessor indices is not present, though mandatory.")
-            
-            OCASI_SET_PROPERTY_IF_EXISTS(jSparseIndices, "byteOffset", outSparse->Indices.ByteOffset);
-        }
-
-        // Values
-        {
-            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparseValues, "bufferView", outSparse->Values.BufferView, "Required 'bufferView' property in sparse accessor values is not present, though mandatory.")
-            OCASI_SET_PROPERTY_IF_EXISTS(jSparseValues, "byteOffset", outSparse->Values.ByteOffset);
-        }
-
-        return true;
-    }
-    
-    bool JsonParser::ParseTextures()
+    void JsonParser::ParseTextures()
     {
         auto& json = m_Json->Get();
         
         ondemand::array jTextures;
         if (json[TEXTURES_PROPERTY].get(jTextures))
-            return true;
-
+            return;
+        
         size_t i = 0;
         for (auto rJTexture : jTextures)
         {
@@ -419,19 +388,33 @@ namespace OCASI::GLTF {
             OCASI_SET_PROPERTY_IF_EXISTS(jTexture, "sampler", texture.Sampler);
             i++;
         }
-        
-        return true;
     }
     
+    void JsonParser::ParseTextureInfo(simdjson::fallback::ondemand::object& jObject, std::string_view name, std::optional<TextureInfo>& outTextureInfo)
+    {
+        ondemand::object jTextureInfo;
+        OCASI_HAS_PROPERTY(jObject, name, jTextureInfo)
+        {
+            outTextureInfo = TextureInfo();
+            
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jTextureInfo, "index", outTextureInfo->Texture, "Required 'index' property in texture info is not present, though mandatory");
+            
+            OCASI_SET_PROPERTY_IF_EXISTS(jTextureInfo, "texCoord", outTextureInfo->TexCoords);
+            OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jTextureInfo, "scale", float, outTextureInfo->Scale);
+            OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jTextureInfo, "strength", float, outTextureInfo->Scale);
+        }
+        
+        return;
+    }
     
-    bool JsonParser::ParseMaterials()
+    void JsonParser::ParseMaterials()
     {
         auto& json = m_Json->Get();
         
         ondemand::array jMaterials;
         if (json[MATERIALS_PROPERTY].get(jMaterials))
-            return true;
-
+            return;
+        
         size_t i = 0;
         for (auto rJMaterial : jMaterials)
         {
@@ -445,25 +428,12 @@ namespace OCASI::GLTF {
             
             ondemand::object jPbrMetallicRoughness;
             OCASI_HAS_PROPERTY(jMaterial, "pbrMetallicRoughness", jPbrMetallicRoughness)
-            {
-                if (!ParsePbrMetallicRoughness(jPbrMetallicRoughness, material.MetallicRoughness = PBRMetallicRoughness()))
-                    return false;
-            }
+                ParsePbrMetallicRoughness(jPbrMetallicRoughness, material.MetallicRoughness = PBRMetallicRoughness());
             
-            
-            if (!ParseTextureInfo(jMaterial, "normalTexture", material.NormalTexture))
-                return false;
-            
-            if (!ParseTextureInfo(jMaterial, "occlusionTexture", material.OcclusionTexture))
-                return false;
-            
-            
-            if (!ParseTextureInfo(jMaterial, "emissiveTexture", material.EmissiveTexture))
-                return false;
-            
-            
-            if (!ParseVec3(jMaterial, "emissiveFactor", material.EmissiveColour))
-                return false;
+            ParseTextureInfo(jMaterial, "normalTexture", material.NormalTexture);
+            ParseTextureInfo(jMaterial, "occlusionTexture", material.OcclusionTexture);
+            ParseTextureInfo(jMaterial, "emissiveTexture", material.EmissiveTexture);
+            ParseVec3(jMaterial, "emissiveFactor", material.EmissiveColour);
             
             std::string_view alphaMode;
             OCASI_HAS_PROPERTY(jMaterial, "alphaMode", alphaMode)
@@ -476,7 +446,7 @@ namespace OCASI::GLTF {
                     material.AlphaMode = AlphaMode::Blend;
                 else
                 {
-                    OCASI_FAIL(FORMAT("Invalid value for alphaMode in material of index {}. Value: {}", i, alphaMode));
+                    throw FailedImportError(FORMAT("Unsupported alphaMode option {}.", alphaMode));
                 }
             }
             
@@ -484,7 +454,7 @@ namespace OCASI::GLTF {
             
             OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jMaterial, "alphaCutoff", float, material.AlphaCutoff);
             OCASI_SET_PROPERTY_IF_EXISTS(jMaterial, "doubleSided", material.IsDoubleSided);
-
+            
             /// Extensions
             ondemand::array jExtensions;
             OCASI_HAS_PROPERTY(jMaterial, "extensions", jExtensions)
@@ -493,58 +463,46 @@ namespace OCASI::GLTF {
                 OCASI_FAIL_ON_SIMDJSON_ERROR(jExtensions.at(i).get(jExt), "Failed to get extension");
                 
                 OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_pbrSpecularGlossiness", jExt)
-                    if(!ParsePbrSpecularGlossiness(jExt, material.ExtSpecularGlossiness = KHRMaterialPbrSpecularGlossiness()))
-                        return false;
+                    ParsePbrSpecularGlossiness(jExt, material.ExtSpecularGlossiness = KHRMaterialPbrSpecularGlossiness());
                 
                 OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_specular", jExt)
-                    if(!ParseSpecular(jExt, material.ExtSpecular = KHRMaterialSpecular()))
-                        return false;
+                    ParseSpecular(jExt, material.ExtSpecular = KHRMaterialSpecular());
                 
                 OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_clearcoat", jExt)
-                    if(!ParseClearcoat(jExt, material.ExtClearcoat = KHRMaterialClearcoat()))
-                        return false;
+                    ParseClearcoat(jExt, material.ExtClearcoat = KHRMaterialClearcoat());
                 
                 OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_sheen", jExt)
-                    if(!ParseSheen(jExt, material.ExtSheen = KHRMaterialSheen()))
-                        return false;
+                    ParseSheen(jExt, material.ExtSheen = KHRMaterialSheen());
                 
                 OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_transmission", jExt)
-                    if(!ParseTransmission(jExt, material.ExtTransmission = KHRMaterialTransmission()))
-                        return false;
+                    ParseTransmission(jExt, material.ExtTransmission = KHRMaterialTransmission());
                 
                 OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_volume", jExt)
-                    if(!ParseVolume(jExt, material.ExtVolume = KHRMaterialVolume()))
-                        return false;
+                    ParseVolume(jExt, material.ExtVolume = KHRMaterialVolume());
                 
                 OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_ior", jExt)
-                    if(!ParseIOR(jExt, material.ExtIOR = KHRMaterialIOR()))
-                        return false;
+                    ParseIOR(jExt, material.ExtIOR = KHRMaterialIOR());
                 
                 OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_emissive_strength", jExt)
-                    if(!ParseEmissiveStrength(jExt, material.ExtEmissiveStrength = KHRMaterialEmissiveStrength()))
-                        return false;
+                    ParseEmissiveStrength(jExt, material.ExtEmissiveStrength = KHRMaterialEmissiveStrength());
                 
                 OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_iridescence", jExt)
-                    if(!ParseIridescence(jExt, material.ExtIridescence = KHRMaterialIridescence()))
-                        return false;
+                    ParseIridescence(jExt, material.ExtIridescence = KHRMaterialIridescence());
                 
                 OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_anisotropy", jExt)
-                    if(ParseAnisotropy(jExt, material.ExtAnisotropy = KHRMaterialAnisotropy()))
-                        return false;
+                    ParseAnisotropy(jExt, material.ExtAnisotropy = KHRMaterialAnisotropy());
             }
             i++;
         }
-
-        return true;
     }
     
-    bool JsonParser::ParseMeshes()
+    void JsonParser::ParseMeshes()
     {
         auto& json = m_Json->Get();
         
         ondemand::array jMeshes;
         if (json[MESHES_PROPERTY].get(jMeshes))
-            return true;
+            return;
 
         size_t i = 0;
         for (auto rJMesh : jMeshes)
@@ -555,8 +513,8 @@ namespace OCASI::GLTF {
             
             ondemand::array jPrimitives;
             OCASI_FAIL_IF_OBJ_NOT_EXISTS(jMesh, "primitives", jPrimitives, "Required 'primitives' property in mesh is not present, though mandatory");
-            if(!ParsePrimitives(jPrimitives, mesh))
-                return false;
+            
+            ParsePrimitives(jPrimitives, mesh);
             
             ondemand::array jWeights;
             OCASI_HAS_PROPERTY(jMesh, "weights", jWeights)
@@ -568,17 +526,51 @@ namespace OCASI::GLTF {
             }
             i++;
         }
-
-        return true;
     }
     
-    bool JsonParser::ParseNodes()
+    void JsonParser::ParsePrimitives(simdjson::fallback::ondemand::array& jPrimitives, Mesh& mesh)
+    {
+        size_t i = 0;
+        for (auto rJPrimitive : jPrimitives)
+        {
+            ondemand::object jPrimitive;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(rJPrimitive.get(jPrimitive), "Failed to get mesh primitive");
+            Primitive& primitive = mesh.Primitives.emplace_back(i);
+            
+            ondemand::object jAttributes;
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jPrimitive, "attributes", jAttributes, "Required 'primitives' property in mesh primitive is not present, though mandatory");
+            ParseVertexAttributes(jAttributes, primitive.Attributes);
+            
+            OCASI_SET_PROPERTY_IF_EXISTS(jPrimitive, "indices", primitive.Indices);
+            OCASI_SET_PROPERTY_IF_EXISTS(jPrimitive, "material", primitive.MaterialIndex);
+            size_t mode;
+            OCASI_SET_PROPERTY_IF_EXISTS(jPrimitive, "mode", mode);
+            primitive.Type = (PrimitiveType) mode;
+            
+            ondemand::array jTargets;
+            OCASI_HAS_PROPERTY(jPrimitive, "targets", jTargets)
+            {
+                
+                size_t j = 0;
+                for (auto rJTarget : jTargets)
+                {
+                    ondemand::object jTarget;
+                    OCASI_FAIL_ON_SIMDJSON_ERROR(rJTarget.get(jTarget), "Failed to get morph target");
+                    
+                    ParseVertexAttributes(jTarget, primitive.MorphTargets.emplace_back(j));
+                    j++;
+                }
+            }
+        }
+    }
+    
+    void JsonParser::ParseNodes()
     {
         auto& json = m_Json->Get();
         
         ondemand::array jNodes;
         if (json[NODES_PROPERTY].get(jNodes))
-            return true;
+            return;
 
         size_t i = 0;
         for (auto rJNode : jNodes)
@@ -603,18 +595,12 @@ namespace OCASI::GLTF {
             
             OCASI_SET_PROPERTY_IF_EXISTS(jNode, "mesh", node.Mesh);
             
-            if(!ParseVec3(jNode, "translation", node.TrsComponent.Translation))
-                return false;
+            ParseVec3(jNode, "translation", node.TrsComponent.Translation);
             
             glm::vec4 rotVec;
-            if(!ParseVec4(jNode, "rotation", rotVec))
-                return false;
-            else
-                node.TrsComponent.Rotation = glm::quat(rotVec.w, rotVec.x, rotVec.y, rotVec.z);
-            
-            if(!ParseVec3(jNode, "scale", node.TrsComponent.Scale))
-                return false;
-            
+            ParseVec4(jNode, "rotation", rotVec);
+            node.TrsComponent.Rotation = glm::quat(rotVec.w, rotVec.x, rotVec.y, rotVec.z);
+            ParseVec3(jNode, "scale", node.TrsComponent.Scale);
             
             ondemand::array jMatrix;
             OCASI_HAS_PROPERTY(jNode, "matrix", jMatrix)
@@ -639,17 +625,15 @@ namespace OCASI::GLTF {
             }
             i++;
         }
-        
-        return true;
     }
     
-    bool JsonParser::ParseScenes()
+    void JsonParser::ParseScenes()
     {
         auto& json = m_Json->Get();
         
         ondemand::array jScenes;
         if (json[SCENES_PROPERTY].get(jScenes))
-            return true;
+            return;
 
         size_t i = 0;
         for (auto rJScene : jScenes)
@@ -675,220 +659,107 @@ namespace OCASI::GLTF {
             }
             i++;
         }
-
-        return true;
     }
     
-    bool JsonParser::ParseTextureInfo(simdjson::fallback::ondemand::object& jObject, std::string_view name, std::optional<TextureInfo>& outTextureInfo)
-    {
-        ondemand::object jTextureInfo;
-        OCASI_HAS_PROPERTY(jObject, name, jTextureInfo)
-        {
-            outTextureInfo = TextureInfo();
-            
-            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jTextureInfo, "index", outTextureInfo->Texture, "Required 'index' property in texture info is not present, though mandatory");
-            
-            OCASI_SET_PROPERTY_IF_EXISTS(jTextureInfo, "texCoord", outTextureInfo->TexCoords);
-            OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jTextureInfo, "scale", float, outTextureInfo->Scale);
-            OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jTextureInfo, "strength", float, outTextureInfo->Scale);
-        }
-
-        return true;
-    }
-    
-    bool JsonParser::ParsePbrMetallicRoughness(simdjson::fallback::ondemand::object& jPbrMetallicRoughness, std::optional<PBRMetallicRoughness>& outMetallicRoughness)
+    void JsonParser::ParsePbrMetallicRoughness(simdjson::fallback::ondemand::object& jPbrMetallicRoughness, std::optional<PBRMetallicRoughness>& outMetallicRoughness)
     {
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jPbrMetallicRoughness, "metallicFactor", float, outMetallicRoughness->Metallic);
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jPbrMetallicRoughness, "roughnessFactor", float, outMetallicRoughness->Roughness);
         
-        if (!ParseVec4(jPbrMetallicRoughness, "baseColorFactor", outMetallicRoughness->BaseColour))
-            return false;
+        ParseVec4(jPbrMetallicRoughness, "baseColorFactor", outMetallicRoughness->BaseColour);
+        ParseTextureInfo(jPbrMetallicRoughness, "baseColorTexture", outMetallicRoughness->BaseColourTexture);
         
-        if (!ParseTextureInfo(jPbrMetallicRoughness, "baseColorTexture", outMetallicRoughness->BaseColourTexture))
-            return false;
-        
-        if (!ParseTextureInfo(jPbrMetallicRoughness, "metallicRoughnessTexture", outMetallicRoughness->MetallicRoughnessTexture))
-            return false;
-
-        return true;
+        ParseTextureInfo(jPbrMetallicRoughness, "metallicRoughnessTexture", outMetallicRoughness->MetallicRoughnessTexture);
     }
     
-    bool JsonParser::ParsePbrSpecularGlossiness(simdjson::fallback::ondemand::object& jPbrSpecularGlossiness, std::optional<KHRMaterialPbrSpecularGlossiness> &outSpecularGlossiness)
+    void JsonParser::ParsePbrSpecularGlossiness(simdjson::fallback::ondemand::object& jPbrSpecularGlossiness, std::optional<KHRMaterialPbrSpecularGlossiness> &outSpecularGlossiness)
     {
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jPbrSpecularGlossiness, "glossinessFactor", float, outSpecularGlossiness->GlossinessFactor);
+        ParseTextureInfo(jPbrSpecularGlossiness, "specularGlossinessTexture", outSpecularGlossiness->SpecularGlossinessTexture);
         
-        if (!ParseVec4(jPbrSpecularGlossiness, "diffuseFactor", outSpecularGlossiness->DiffuseFactor))
-            return false;
+        ParseVec4(jPbrSpecularGlossiness, "diffuseFactor", outSpecularGlossiness->DiffuseFactor);
+        ParseTextureInfo(jPbrSpecularGlossiness, "diffuseTexture", outSpecularGlossiness->DiffuseTexture);
         
-        if (!ParseTextureInfo(jPbrSpecularGlossiness, "diffuseTexture", outSpecularGlossiness->DiffuseTexture))
-            return false;
-        
-        if (!ParseVec3(jPbrSpecularGlossiness, "specularFactor", outSpecularGlossiness->SpecularFactor))
-            return false;
-        
-        if (!ParseTextureInfo(jPbrSpecularGlossiness, "specularGlossinessTexture", outSpecularGlossiness->SpecularGlossinessTexture))
-            return false;
-            
-
-        return true;
+        ParseVec3(jPbrSpecularGlossiness, "specularFactor", outSpecularGlossiness->SpecularFactor);
     }
     
-    bool JsonParser::ParseSpecular(simdjson::fallback::ondemand::object& jSpecular, std::optional<KHRMaterialSpecular> &outSpecular)
+    void JsonParser::ParseSpecular(simdjson::fallback::ondemand::object& jSpecular, std::optional<KHRMaterialSpecular> &outSpecular)
     {
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jSpecular, "specularFactor", float, outSpecular->SpecularFactor);
+        ParseTextureInfo(jSpecular, "specularTexture", outSpecular->SpecularTexture);
         
-        if (!ParseTextureInfo(jSpecular, "specularTexture", outSpecular->SpecularTexture))
-            return false;
+        ParseVec3(jSpecular, "specularColorFactor", outSpecular->SpecularColourFactor);
+        ParseTextureInfo(jSpecular, "specularColorTexture", outSpecular->SpecularColourTexture);
         
-        if (!ParseVec3(jSpecular, "specularColorFactor", outSpecular->SpecularColourFactor))
-            return false;
-        
-        if (!ParseTextureInfo(jSpecular, "specularColorTexture", outSpecular->SpecularColourTexture))
-            return false;
-
-        return true;
     }
     
-    bool JsonParser::ParseClearcoat(simdjson::fallback::ondemand::object& jClearCoat, std::optional<KHRMaterialClearcoat>& outClearcoat)
+    void JsonParser::ParseClearcoat(simdjson::fallback::ondemand::object& jClearCoat, std::optional<KHRMaterialClearcoat>& outClearcoat)
     {
-        
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jClearCoat, "clearcoatFactor", float, outClearcoat->ClearcoatFactor);
+        ParseTextureInfo(jClearCoat, "clearcoatTexture", outClearcoat->ClearcoatTexture);
+        
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jClearCoat, "clearcoatRoughnessFactor", float, outClearcoat->ClearcoatRoughnessFactor);
-
-        if (!ParseTextureInfo(jClearCoat, "clearcoatTexture", outClearcoat->ClearcoatTexture))
-            return false;
+        ParseTextureInfo(jClearCoat, "clearcoatRoughnessTexture", outClearcoat->ClearcoatRoughnessTexture);
         
-        if (!ParseTextureInfo(jClearCoat, "clearcoatRoughnessTexture", outClearcoat->ClearcoatRoughnessTexture))
-            return false;
-        
-        if (!ParseTextureInfo(jClearCoat, "clearcoatNormalTexture", outClearcoat->ClearcoatNormalTexture))
-            return false;
+        ParseTextureInfo(jClearCoat, "clearcoatNormalTexture", outClearcoat->ClearcoatNormalTexture);
 
-        return true;
     }
     
-    bool JsonParser::ParseSheen(simdjson::fallback::ondemand::object& jSheen, std::optional<KHRMaterialSheen>& outSheen)
+    void JsonParser::ParseSheen(simdjson::fallback::ondemand::object& jSheen, std::optional<KHRMaterialSheen>& outSheen)
     {
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jSheen, "sheenRoughnessFactor", float, outSheen->SheenRoughnessFactor);
+        ParseTextureInfo(jSheen, "sheenRoughnessTexture", outSheen->SheenRoughnessTexture);
         
-        if (!ParseVec3(jSheen, "sheenColorFactor", outSheen->SheenColourFactor))
-            return false;
+        ParseVec3(jSheen, "sheenColorFactor", outSheen->SheenColourFactor);
+        ParseTextureInfo(jSheen, "sheenColourTexture", outSheen->SheenColourTexture);
         
-        if (!ParseTextureInfo(jSheen, "sheenColourTexture", outSheen->SheenColourTexture))
-            return false;
-        
-        if (!ParseTextureInfo(jSheen, "sheenRoughnessTexture", outSheen->SheenRoughnessTexture))
-            return false;
-
-        return true;
     }
     
-    bool JsonParser::ParseTransmission(simdjson::fallback::ondemand::object& jTransmission, std::optional<KHRMaterialTransmission>& outTransmission)
+    void JsonParser::ParseTransmission(simdjson::fallback::ondemand::object& jTransmission, std::optional<KHRMaterialTransmission>& outTransmission)
     {
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jTransmission, "transmissionFactor", float, outTransmission->TransmissionFactor);
-        
-        if (!ParseTextureInfo(jTransmission, "transmissionTexture", outTransmission->TransmissionTexture))
-            return false;
+        ParseTextureInfo(jTransmission, "transmissionTexture", outTransmission->TransmissionTexture);
 
-        return true;
     }
     
-    bool JsonParser::ParseVolume(simdjson::fallback::ondemand::object& jVolume, std::optional<KHRMaterialVolume>& outVolume)
+    void JsonParser::ParseVolume(simdjson::fallback::ondemand::object& jVolume, std::optional<KHRMaterialVolume>& outVolume)
     {
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jVolume, "thicknessFactor", float, outVolume->ThicknessFactor);
+        ParseTextureInfo(jVolume, "thicknessTexture", outVolume->ThicknessTexture);
+        
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jVolume, "attenuationDistance", float, outVolume->AttenuationDistance);
-        
-        if (!ParseVec3(jVolume, "attenuationColor", outVolume->AttenuationColour))
-            return false;
-        
-        if (!ParseTextureInfo(jVolume, "thicknessTexture", outVolume->ThicknessTexture))
-            return false;
-        
-        return true;
+        ParseVec3(jVolume, "attenuationColor", outVolume->AttenuationColour);
     }
     
-    bool JsonParser::ParseIOR(simdjson::fallback::ondemand::object& jIOR, std::optional<KHRMaterialIOR>& outIOR)
+    void JsonParser::ParseIOR(simdjson::fallback::ondemand::object& jIOR, std::optional<KHRMaterialIOR>& outIOR)
     {
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jIOR, "ior", float, outIOR->IOR);
-        return true;
     }
     
-    bool JsonParser::ParseEmissiveStrength(simdjson::fallback::ondemand::object& jEmissiveStrength, std::optional<KHRMaterialEmissiveStrength>& outEmissiveStrength)
+    void JsonParser::ParseEmissiveStrength(simdjson::fallback::ondemand::object& jEmissiveStrength, std::optional<KHRMaterialEmissiveStrength>& outEmissiveStrength)
     {
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jEmissiveStrength, "emissiveStrength", float, outEmissiveStrength->EmissiveStrength);
-        return true;
     }
     
-    bool JsonParser::ParseIridescence(simdjson::fallback::ondemand::object& jIridescence, std::optional<KHRMaterialIridescence>& outIridescence)
+    void JsonParser::ParseIridescence(simdjson::fallback::ondemand::object& jIridescence, std::optional<KHRMaterialIridescence>& outIridescence)
     {
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jIridescence, "iridescenceFactor", float, outIridescence->IridescenceFactor);
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jIridescence, "iridescenceIor", float, outIridescence->IridescenceIor);
+        ParseTextureInfo(jIridescence, "iridescenceTexture", outIridescence->IridescenceTexture);
+        
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jIridescence, "iridescenceThicknessMinimum", float, outIridescence->IridescenceThicknessMinimum);
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jIridescence, "iridescenceThicknessMaximum", float, outIridescence->IridescenceThicknessMaximum);
-        
-        if (!ParseTextureInfo(jIridescence, "iridescenceTexture", outIridescence->IridescenceTexture))
-            return false;
-        
-        if (!ParseTextureInfo(jIridescence, "iridescenceThicknessTexture", outIridescence->IridescenceThicknessTexture))
-            return false;
-
-        return true;
+        ParseTextureInfo(jIridescence, "iridescenceThicknessTexture", outIridescence->IridescenceThicknessTexture);
     }
     
-    bool JsonParser::ParseAnisotropy(simdjson::fallback::ondemand::object& jAnisotropy, std::optional<KHRMaterialAnisotropy>& outAnisotropy)
+    void JsonParser::ParseAnisotropy(simdjson::fallback::ondemand::object& jAnisotropy, std::optional<KHRMaterialAnisotropy>& outAnisotropy)
     {
         OCASI_SET_PROPERTY_IF_EXISTS_TEMPLATE(jAnisotropy, "anisotropyFactor", float, outAnisotropy->AnisotropyFactor);
-        
-        if (!ParseVec3(jAnisotropy, "anisotropyDirection", outAnisotropy->AnisotropyDirection))
-            return false;
-        
-        if (!ParseTextureInfo(jAnisotropy, "anisotropyTexture", outAnisotropy->AnisotropyTexture))
-            return false;
-            
-        return true;
-    }
-    
-    bool JsonParser::ParsePrimitives(simdjson::fallback::ondemand::array& jPrimitives, Mesh& mesh)
-    {
-        size_t i = 0;
-        for (auto rJPrimitive : jPrimitives)
-        {
-            ondemand::object jPrimitive;
-            OCASI_FAIL_ON_SIMDJSON_ERROR(rJPrimitive.get(jPrimitive), "Failed to get mesh primitive");
-            Primitive& primitive = mesh.Primitives.emplace_back(i);
-            
-            ondemand::object jAttributes;
-            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jPrimitive, "attributes", jAttributes, "Required 'primitives' property in mesh primitive is not present, though mandatory");
-
-            if (!ParseVertexAttributes(jAttributes, primitive.Attributes))
-                return false;
-            
-            OCASI_SET_PROPERTY_IF_EXISTS(jPrimitive, "indices", primitive.Indices);
-            OCASI_SET_PROPERTY_IF_EXISTS(jPrimitive, "material", primitive.MaterialIndex);
-            size_t mode;
-            OCASI_SET_PROPERTY_IF_EXISTS(jPrimitive, "mode", mode);
-            primitive.Type = (PrimitiveType) mode;
-            
-            ondemand::array jTargets;
-            OCASI_HAS_PROPERTY(jPrimitive, "targets", jTargets)
-            {
-                
-                size_t j = 0;
-                for (auto rJTarget : jTargets)
-                {
-                    ondemand::object jTarget;
-                    OCASI_FAIL_ON_SIMDJSON_ERROR(rJTarget.get(jTarget), "Failed to get morph target");
-                    
-                    if (!ParseVertexAttributes(jTarget, primitive.MorphTargets.emplace_back(j)))
-                        return false;
-                    j++;
-                }
-            }
-        }
-        return true;
+        ParseVec3(jAnisotropy, "anisotropyDirection", outAnisotropy->AnisotropyDirection);
+        ParseTextureInfo(jAnisotropy, "anisotropyTexture", outAnisotropy->AnisotropyTexture);
     }
 
-    bool JsonParser::ParseVertexAttributes(simdjson::fallback::ondemand::object& jVertexAttributes, VertexAttributes& outAttributes)
+    void JsonParser::ParseVertexAttributes(simdjson::fallback::ondemand::object& jVertexAttributes, VertexAttributes& outAttributes)
     {
         size_t vertexAttributeCount;
         
@@ -898,11 +769,9 @@ namespace OCASI::GLTF {
             OCASI_FAIL_ON_SIMDJSON_ERROR(attribute.escaped_key().get(key), "Failed to get vertex attribute key");
             OCASI_FAIL_ON_SIMDJSON_ERROR(attribute.value().get(outAttributes[std::string(key)]), "Failed to get vertex attribute value");
         }
-        
-        return true;
     }
     
-    bool JsonParser::ParseVec3(simdjson::fallback::ondemand::object& jObject, std::string_view name, glm::vec3& out)
+    void JsonParser::ParseVec3(simdjson::fallback::ondemand::object& jObject, std::string_view name, glm::vec3& out)
     {
         ondemand::array jVec;
         OCASI_HAS_PROPERTY(jObject, name, jVec)
@@ -919,10 +788,9 @@ namespace OCASI::GLTF {
             }
             OCASI_ASSERT(i == 3);
         }
-        return true;
     }
     
-    bool JsonParser::ParseVec4(simdjson::fallback::ondemand::object& jObject, std::string_view name, glm::vec4& out)
+    void JsonParser::ParseVec4(simdjson::fallback::ondemand::object& jObject, std::string_view name, glm::vec4& out)
     {
         ondemand::array jVec;
         OCASI_HAS_PROPERTY(jObject, name, jVec)
@@ -939,6 +807,5 @@ namespace OCASI::GLTF {
             }
             OCASI_ASSERT(i == 4);
         }
-        return true;
     }
 }

@@ -35,36 +35,32 @@ namespace OCASI {
 
     // OBJ files only support one set of texture coordinates
     constexpr uint8_t OBJ_TEXTURE_COORDINATE_ARRAY = 0;
-
-    ObjImporter::ObjImporter(FileReader& reader)
-        : m_FileReader(reader)
+    
+    bool ObjImporter::CanLoad(FileReader& reader)
     {
+        m_FileReader = &reader;
+        return Util::FindTokensInFirst100Lines(*m_FileReader, { "v", "vn", "vt", "mtlib", "f", "usemtl" });
     }
 
-    std::shared_ptr<Scene> ObjImporter::Load3DFile()
+    std::shared_ptr<Scene> ObjImporter::Load3DFile(FileReader& reader)
     {
-        OBJ::FileParser objParser(m_FileReader);
+        m_FileReader = &reader;
+        
+        OBJ::FileParser objParser(*m_FileReader);
         m_OBJModel = objParser.ParseOBJFile();
 
         if (!m_OBJModel)
             return nullptr;
 
-        Path folder = m_FileReader.GetParentPath();
+        Path folder = m_FileReader->GetParentPath();
 
         if(!m_OBJModel->MTLFilePath.empty())
         {
             OBJ::MtlParser mtlParser(m_OBJModel, folder / m_OBJModel->MTLFilePath);
-
-            if (!mtlParser.ParseMTLFile())
-                return nullptr;
+            mtlParser.ParseMTLFile();
         }
 
         return ConvertToOCASIScene(folder);
-    }
-
-    bool ObjImporter::CanLoad()
-    {
-        return Util::FindTokensInFirst100Lines(m_FileReader, { "v", "vn", "vt", "mtlib", "f", "usemtl" });
     }
 
     std::shared_ptr<Scene> ObjImporter::ConvertToOCASIScene(const Path& folder)
@@ -217,8 +213,8 @@ namespace OCASI {
     void ObjImporter::SortTextures(Material &newMat, const OBJ::Material &mat, const Path& folder, size_t i)
     {
         // This value is needed to convert the OBJ::TextureType to a OCASI::TextureOrientation
-        // for reflection textures. In OBJ each side of the cube map is provided using a single
-        // image. The value 8 is just the mapping value that needs to be subtracted from the TextureType
+        // for reflection textures. In OBJ, each side of the cube map is provided using a single
+        // image. Value 8 is just the mapping value that needs to be subtracted from the TextureType
         // to be able to cast the integer value of the enum to the integer value of the TextureOrientation.
         const uint8_t REFLECTION_TEXTURE_NORMALIZER = 8;
 
@@ -268,7 +264,7 @@ namespace OCASI {
             }
             case OBJ::TextureType::Diffuse:
             {
-                // Diffuse textures are classified as the objects base color
+                // Diffuse textures are classified as the object base color
                 auto image = MakeShared<Image>(folder / texturePath, settings);
                 newMat.SetTexture(MATERIAL_TEXTURE_ALBEDO, image);
                 break;
@@ -322,8 +318,7 @@ namespace OCASI {
                 break;
             }
             default:
-            OCASI_FAIL("Something went very wrong");
-                break;
+                throw FailedImportError(FORMAT("Invalid OBJ texture type {}", i));
         }
     }
 }

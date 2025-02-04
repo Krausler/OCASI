@@ -102,4 +102,5 @@ namespace OCASI::Util {
 
     uint8_t* DecodeBase64(const std::string& dataString, size_t& outSize);
     std::string URIUnescapedString(const std::string& input);
+    bool StartsWith(const std::string& s, const std::string& prefix);
 }
