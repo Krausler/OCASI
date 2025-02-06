@@ -45,11 +45,10 @@ namespace OCASI::GLTF {
 
     std::shared_ptr<Asset> JsonParser::ParseGLTFTextFile()
     {
-
         m_Asset = MakeShared<Asset>();
         ondemand::document& json = m_Json->Get();
 
-        // The order of how things are parsed doesn't really matter, however it does make sense
+        // The order of how things are parsed doesn't really matter, however, it does make sense
         // to first read in asset and extensions, followed by all data objects and ending with
         // the connecting objects, like meshes nodes and scenes, in order to simulate scenario
         // where the order of things would be fundamental.
@@ -82,7 +81,7 @@ namespace OCASI::GLTF {
         auto& json = m_Json->Get();
 
         ondemand::object jAsset;
-        OCASI_FAIL_IF_OBJ_NOT_EXISTS(json, ASSET_PROPERTY, jAsset, "Required 'jAsset' object not present in GLTF file, though mandatory")
+        OCASI_FAIL_IF_OBJ_NOT_EXISTS(json, ASSET_PROPERTY, jAsset, "Required 'asset' object not present in GLTF file, though mandatory")
         
         // The jAsset files version
         std::string_view strVersion;
@@ -148,15 +147,10 @@ namespace OCASI::GLTF {
         ondemand::array jBuffers;
         if (json[BUFFERS_PROPERTY].get(jBuffers))
             return;
-
-        size_t bufferCount;
-        OCASI_FAIL_ON_SIMDJSON_ERROR(jBuffers.count_elements().get(bufferCount), "Failed to get buffer count.");
         
-        for (size_t i = 0; i < bufferCount; i++)
+        size_t i = 0;
+        for (auto jBuffer : jBuffers)
         {
-            ondemand::object jBuffer;
-            OCASI_FAIL_ON_SIMDJSON_ERROR(jBuffers.at(i).get(jBuffer), "Failed to get buffer.");
-            
             size_t byteLength;
             OCASI_FAIL_IF_OBJ_NOT_EXISTS(jBuffer, "byteLength", byteLength, "Required 'byteLength' property in jBuffer is not present, though mandatory.");
             
@@ -179,6 +173,7 @@ namespace OCASI::GLTF {
             {
                 m_Asset->Buffers.emplace_back(i, byteLength);
             }
+            i++;
         }
     }
     
@@ -543,9 +538,11 @@ namespace OCASI::GLTF {
             
             OCASI_SET_PROPERTY_IF_EXISTS(jPrimitive, "indices", primitive.Indices);
             OCASI_SET_PROPERTY_IF_EXISTS(jPrimitive, "material", primitive.MaterialIndex);
-            size_t mode;
-            OCASI_SET_PROPERTY_IF_EXISTS(jPrimitive, "mode", mode);
-            primitive.Type = (PrimitiveType) mode;
+            size_t mode = 0;
+            OCASI_HAS_PROPERTY(jPrimitive, "mode", mode)
+            {
+                primitive.Type = (PrimitiveType) mode;
+            }
             
             ondemand::array jTargets;
             OCASI_HAS_PROPERTY(jPrimitive, "targets", jTargets)

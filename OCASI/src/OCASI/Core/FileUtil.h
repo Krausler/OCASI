@@ -14,10 +14,14 @@ namespace OCASI {
 
         bool NextLine(std::string& outLine);
         bool NextLineC(std::vector<char>& outChars);
+        
         void Close();
         void Reset();
+        void SetBinary();
+        
         bool HasReachedEOF() const { return m_FileReader.eof(); }
         bool IsOpen() const { return m_FileReader.is_open(); }
+        
         uint8_t* GetFileDataInBytes();
         std::string GetFileString();
         std::vector<uint8_t> GetBytes(size_t size);

@@ -66,6 +66,7 @@ namespace OCASI {
         Image(const Path& path, const ImageSettings& settings = {});
         Image(std::vector<uint8_t>&& imageData, uint8_t channels, uint32_t width, uint32_t height, const ImageSettings& settings = {});
         Image(std::vector<uint8_t>&& data, const ImageSettings& settings = {});
+        Image(const std::vector<uint8_t>& data, const ImageSettings& settings = {});
 
         // If the image is not a memory image, it's data can be loaded with this function;
         void LoadImageFromDisk();

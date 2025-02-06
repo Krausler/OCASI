@@ -5,7 +5,7 @@
 namespace OCASI {
 
     FileReader::FileReader(const Path &path, bool isBinary)
-        : m_Path(path), m_Binary(isBinary), m_FileReader(m_Path, m_Binary ? std::ios::binary : std::ios::in)
+        : m_Path(path), m_Binary(isBinary), m_FileReader(m_Path, std::ios::binary)//m_FileReader(m_Path, m_Binary ? std::ios::binary : std::ios::in)
     {
         m_FileReader.seekg(0, std::ios::end);
         m_FileSize = m_FileReader.tellg();
@@ -85,7 +85,14 @@ namespace OCASI {
     {
         m_FileReader.seekg(0, std::ios::beg);
     }
-
+    
+    void FileReader::SetBinary()
+    {
+        m_Binary = true;
+        m_FileReader.close();
+        m_FileReader.open(m_Path, std::ios::binary);
+    }
+    
     namespace Util {
 
         bool FindTokensInFirst100Lines(OCASI::FileReader& reader, const std::vector<std::string>& tokens)

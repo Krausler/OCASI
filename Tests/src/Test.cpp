@@ -6,14 +6,14 @@ int main()
     OCASI_LOG_ERROR("hi");
     std::filesystem::current_path("C:/Lauri/Dev/C++/Projekte/Octopus/Projekte/OCASI/Tests");
 
-    auto scene = OCASI::Importer::Load3DFile("Resources/OBJ/2_Cubes.obj", OCASI::PostProcessorOptions::None);
+    auto scene = OCASI::Importer::Load3DFile("Resources/GLTF/Mushroom.glb", OCASI::PostProcessorOptions::None);
 
     OCASI::Material& mat = scene->Materials.at(0);
 
     float roughness = mat.GetValue<float>(OCASI::MATERIAL_ROUGHNESS);
     OCASI_LOG_INFO("{}", roughness);
 
-    auto texture = mat.GetTexture(OCASI::MATERIAL_TEXTURE_ALBEDO);
+    auto texture = mat.GetTexture(OCASI::MATERIAL_TEXTURE_NORMAL);
     OCASI_ASSERT(texture);
 
     OCASI_LOG_INFO(texture->IsLoaded());

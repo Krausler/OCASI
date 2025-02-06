@@ -63,7 +63,8 @@ namespace OCASI::GLTF {
         
         std::vector<uint8_t> result;
         result.resize(byteLength);
-        std::memcpy(result.data(), m_Data + offset, byteLength);
+        void* data = m_Data + offset;
+        std::memcpy(result.data(), data, byteLength);
 
         return result;
     }

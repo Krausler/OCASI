@@ -66,7 +66,7 @@ namespace OCASI {
         catch (const FailedImportError& e)
         {
             Logger::ResetPattern();
-            OCASI_LOG_ERROR("Failed to import {}: {}", path.string(), e.what());
+            OCASI_LOG_ERROR("Failed to load {}: {}", path.string(), e.what());
             result = nullptr;
         }
         Logger::ResetPattern();

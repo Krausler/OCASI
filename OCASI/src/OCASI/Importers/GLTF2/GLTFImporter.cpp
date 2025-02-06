@@ -21,8 +21,10 @@ namespace OCASI {
     {
         m_FileReader = &reader;
         
-        if (m_FileReader->IsBinary())
+        if (m_FileReader->GetPath().extension() == ".glb")
         {
+            m_FileReader->SetBinary();
+            
             if (m_FileReader->GetFileSize() >= std::numeric_limits<uint32_t>::max())
                 return false;
 
@@ -84,7 +86,7 @@ namespace OCASI {
 
         // Checking whether there is a second chunk
 
-        // 2 * chunk info + minimum buffers size (data needs to be aligned to 4)
+        // 2 * chunk info + minimum buffers size (data needs to be aligned by 4)
         constexpr size_t byteSizeToAdd = sizeof(uint32_t) * 2 + 4;
         if (bReader.GetPointer() + byteSizeToAdd < m_FileReader->GetFileSize())
         {
@@ -431,10 +433,10 @@ namespace OCASI {
             settings.MagFilter = ConvertMinMagFilterToFilterOption(gltfSampler.MagFilter);
             settings.MinFilter = ConvertMinMagFilterToFilterOption(gltfSampler.MinFilter);
         }
-
+        
         if (gltfImage.BufferView != INVALID_ID)
         {
-            size_t unused;
+            size_t unused = 0;
             std::vector<uint8_t> data = GetBufferViewData(gltfImage.BufferView, 0, unused);
 
             // TODO: Maybe remove this as it is not used
@@ -442,7 +444,7 @@ namespace OCASI {
             OCASI_ASSERT(!gltfImage.MimeType.empty());
             ImageType type = ConvertMimeTypeToImagType(gltfImage.MimeType);
 
-            return std::make_unique<Image>(std::move(data), settings);
+            return MakeUnique<Image>(std::move(data), settings);
         }
         else if (!gltfImage.URI.empty())
         {

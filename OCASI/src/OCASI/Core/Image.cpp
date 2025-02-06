@@ -33,7 +33,14 @@ namespace OCASI {
         m_ImageData = {};
         m_ImageData.Data = std::move(data);
     }
-
+    
+    Image::Image(const std::vector<uint8_t>& data, const ImageSettings& settings)
+        : m_Settings(settings), m_MemoryImage(true)
+    {
+        m_ImageData = {};
+        m_ImageData.Data = data;
+    }
+    
     void Image::LoadImageFromDisk()
     {
         if (m_MemoryImage)
@@ -59,7 +66,7 @@ namespace OCASI {
             throw FailedImportError(FORMAT("Failed to load image {}: {}", m_ImagePath.string(), stbi_failure_reason()));
         
     }
-
+    
     void Image::LoadImageFromMemory()
     {
         if (!m_MemoryImage)
@@ -69,7 +76,8 @@ namespace OCASI {
         }
 
         stbi_set_flip_vertically_on_load(true);
-
+        
+        
         OCASI_ASSERT(!m_ImageData.Data.empty());
         stbi_uc* data = stbi_load_from_memory((stbi_uc*)m_ImageData.Data.data(), (int) m_ImageData.Data.size(), (int*) &m_ImageData.Width, (int*) &m_ImageData.Height, (int*) &m_ImageData.Channels, 0);
 
@@ -87,7 +95,7 @@ namespace OCASI {
             throw FailedImportError(FORMAT("Failed to load image from memory: {}", stbi_failure_reason()));
         
     }
-
+    
     const ImageData& Image::Load()
     {
         if (m_MemoryImage)
