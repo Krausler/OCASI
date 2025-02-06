@@ -13,7 +13,7 @@ namespace OCASI {
     public:
         static void NeedsProcessingDefault(BasePostProcess* process, SharedPtr<Scene> scene, SharedPtr<BaseImporter> importer)
         {
-            OCASI_FAIL(process && scene && importer);
+            OCASI_ASSERT(process && scene && importer);
             process->m_Scene = scene;
             process->m_Importer = importer;
         }

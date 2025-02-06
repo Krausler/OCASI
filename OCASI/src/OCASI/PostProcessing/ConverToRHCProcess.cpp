@@ -50,7 +50,6 @@ namespace OCASI {
         // Flipping the rotations
         for (auto& rootNodes : m_Scene->RootNodes)
             FlipRotation(rootNodes);
-        
     }
     
     void ConvertToRHCProcess::FlipRotation(SharedPtr<Node> node)

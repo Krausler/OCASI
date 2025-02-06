@@ -1,5 +1,7 @@
 #include "PostProcessor.h"
 
+#include "OCASI/PostProcessing/ConverToRHCProcess.h"
+
 namespace OCASI {
     
     std::vector<UniquePtr<BasePostProcess>> PostProcessor::s_PostProcessingProcesses;
@@ -8,6 +10,8 @@ namespace OCASI {
     {
         // TODO: Add Processes
         s_PostProcessingProcesses.reserve(5);
+        
+        s_PostProcessingProcesses.push_back(MakeUnique<ConvertToRHCProcess>());
     }
     
     PostProcessor::PostProcessor(SharedPtr<Scene> scene, SharedPtr<BaseImporter> importer, PostProcessorOptions options)
@@ -19,6 +23,9 @@ namespace OCASI {
     
     void PostProcessor::ExecutePostProcesses()
     {
+        if (m_Processes == PostProcessorOptions::None)
+            return;
+        
         for (auto& process : s_PostProcessingProcesses)
         {
             if (m_Processes & process->GetProcessType())
