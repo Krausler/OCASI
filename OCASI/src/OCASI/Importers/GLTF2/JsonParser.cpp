@@ -186,10 +186,8 @@ namespace OCASI::GLTF {
             return;
 
         size_t i = 0;
-        for (auto rJBufferView : jBufferViews)
+        for (auto jBufferView : jBufferViews)
         {
-            ondemand::object jBufferView;
-            OCASI_FAIL_ON_SIMDJSON_ERROR(rJBufferView.get(jBufferView), "Failed to get bufferView");
             
             BufferView& bufferView = m_Asset->BufferViews.emplace_back(i);
             
@@ -211,11 +209,8 @@ namespace OCASI::GLTF {
             return;
         
         size_t i = 0;
-        for (auto rJAccessor : jAccessors)
+        for (auto jAccessor : jAccessors)
         {
-            ondemand::object jAccessor;
-            OCASI_FAIL_ON_SIMDJSON_ERROR(rJAccessor.get(jAccessor), "Failed to get accessor");
-            
             Accessor& accessor = m_Asset->Accessors.emplace_back(i);
             
             OCASI_FAIL_IF_OBJ_NOT_EXISTS(jAccessor, "count", accessor.ElementCount, "Required 'byteLength' property in accessor is not present, though mandatory");
@@ -317,10 +312,8 @@ namespace OCASI::GLTF {
             return;
 
         size_t i = 0;
-        for (auto rJImage : jImages)
+        for (auto jImage : jImages)
         {
-            ondemand::object jImage;
-            OCASI_FAIL_ON_SIMDJSON_ERROR(rJImage.get(jImage), "Failed to get image");
             
             Image& image = m_Asset->Images.emplace_back(i);
             
@@ -343,11 +336,8 @@ namespace OCASI::GLTF {
             return;
         
         size_t i = 0;
-        for (auto rJSampler : jSamplers)
+        for (auto jSampler : jSamplers)
         {
-            ondemand::object jSampler;
-            OCASI_FAIL_ON_SIMDJSON_ERROR(rJSampler.get(jSampler), "Failed to get sampler");
-
             Sampler& sampler = m_Asset->Samplers.emplace_back(i);
             
             size_t val = 0;
@@ -373,10 +363,8 @@ namespace OCASI::GLTF {
             return;
         
         size_t i = 0;
-        for (auto rJTexture : jTextures)
+        for (auto jTexture : jTextures)
         {
-            ondemand::object jTexture;
-            OCASI_FAIL_ON_SIMDJSON_ERROR(rJTexture.get(jTexture), "Failed to get texture");
             
             Texture& texture = m_Asset->Textures.emplace_back(i);
             OCASI_SET_PROPERTY_IF_EXISTS(jTexture, "source", texture.Source);
@@ -411,10 +399,8 @@ namespace OCASI::GLTF {
             return;
         
         size_t i = 0;
-        for (auto rJMaterial : jMaterials)
+        for (auto jMaterial : jMaterials)
         {
-            ondemand::object jMaterial;
-            OCASI_FAIL_ON_SIMDJSON_ERROR(rJMaterial.get(jMaterial), "Failed to get material");
             Material& material = m_Asset->Materials.emplace_back(i);
             
             std::string_view name;
@@ -425,10 +411,12 @@ namespace OCASI::GLTF {
             OCASI_HAS_PROPERTY(jMaterial, "pbrMetallicRoughness", jPbrMetallicRoughness)
                 ParsePbrMetallicRoughness(jPbrMetallicRoughness, material.MetallicRoughness = PBRMetallicRoughness());
             
-            ParseTextureInfo(jMaterial, "normalTexture", material.NormalTexture);
-            ParseTextureInfo(jMaterial, "occlusionTexture", material.OcclusionTexture);
-            ParseTextureInfo(jMaterial, "emissiveTexture", material.EmissiveTexture);
-            ParseVec3(jMaterial, "emissiveFactor", material.EmissiveColour);
+            ondemand::object mat;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(jMaterial.get(mat), "Failed to get texture object");
+            ParseTextureInfo(mat, "normalTexture", material.NormalTexture);
+            ParseTextureInfo(mat, "occlusionTexture", material.OcclusionTexture);
+            ParseTextureInfo(mat, "emissiveTexture", material.EmissiveTexture);
+            ParseVec3(mat, "emissiveFactor", material.EmissiveColour);
             
             std::string_view alphaMode;
             OCASI_HAS_PROPERTY(jMaterial, "alphaMode", alphaMode)
@@ -454,38 +442,43 @@ namespace OCASI::GLTF {
             ondemand::array jExtensions;
             OCASI_HAS_PROPERTY(jMaterial, "extensions", jExtensions)
             {
-                ondemand::object jExt;
-                OCASI_FAIL_ON_SIMDJSON_ERROR(jExtensions.at(i).get(jExt), "Failed to get extension");
-                
-                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_pbrSpecularGlossiness", jExt)
-                    ParsePbrSpecularGlossiness(jExt, material.ExtSpecularGlossiness = KHRMaterialPbrSpecularGlossiness());
-                
-                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_specular", jExt)
-                    ParseSpecular(jExt, material.ExtSpecular = KHRMaterialSpecular());
-                
-                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_clearcoat", jExt)
-                    ParseClearcoat(jExt, material.ExtClearcoat = KHRMaterialClearcoat());
-                
-                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_sheen", jExt)
-                    ParseSheen(jExt, material.ExtSheen = KHRMaterialSheen());
-                
-                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_transmission", jExt)
-                    ParseTransmission(jExt, material.ExtTransmission = KHRMaterialTransmission());
-                
-                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_volume", jExt)
-                    ParseVolume(jExt, material.ExtVolume = KHRMaterialVolume());
-                
-                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_ior", jExt)
-                    ParseIOR(jExt, material.ExtIOR = KHRMaterialIOR());
-                
-                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_emissive_strength", jExt)
-                    ParseEmissiveStrength(jExt, material.ExtEmissiveStrength = KHRMaterialEmissiveStrength());
-                
-                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_iridescence", jExt)
-                    ParseIridescence(jExt, material.ExtIridescence = KHRMaterialIridescence());
-                
-                OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_anisotropy", jExt)
-                    ParseAnisotropy(jExt, material.ExtAnisotropy = KHRMaterialAnisotropy());
+                size_t j = 0;
+                for (auto rJExt : jExtensions)
+                {
+                    ondemand::object jExt;
+                    OCASI_FAIL_ON_SIMDJSON_ERROR(jExtensions.at(i).get(jExt), "Failed to get extension");
+                    
+                    OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_pbrSpecularGlossiness", jExt)
+                        ParsePbrSpecularGlossiness(jExt, material.ExtSpecularGlossiness = KHRMaterialPbrSpecularGlossiness());
+                    
+                    OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_specular", jExt)
+                        ParseSpecular(jExt, material.ExtSpecular = KHRMaterialSpecular());
+                    
+                    OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_clearcoat", jExt)
+                        ParseClearcoat(jExt, material.ExtClearcoat = KHRMaterialClearcoat());
+                    
+                    OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_sheen", jExt)
+                        ParseSheen(jExt, material.ExtSheen = KHRMaterialSheen());
+                    
+                    OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_transmission", jExt)
+                        ParseTransmission(jExt, material.ExtTransmission = KHRMaterialTransmission());
+                    
+                    OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_volume", jExt)
+                        ParseVolume(jExt, material.ExtVolume = KHRMaterialVolume());
+                    
+                    OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_ior", jExt)
+                        ParseIOR(jExt, material.ExtIOR = KHRMaterialIOR());
+                    
+                    OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_emissive_strength", jExt)
+                        ParseEmissiveStrength(jExt, material.ExtEmissiveStrength = KHRMaterialEmissiveStrength());
+                    
+                    OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_iridescence", jExt)
+                        ParseIridescence(jExt, material.ExtIridescence = KHRMaterialIridescence());
+                    
+                    OCASI_HAS_PROPERTY(jMaterial, "KHR_materials_anisotropy", jExt)
+                        ParseAnisotropy(jExt, material.ExtAnisotropy = KHRMaterialAnisotropy());
+                    j++;
+                }
             }
             i++;
         }
@@ -500,10 +493,8 @@ namespace OCASI::GLTF {
             return;
 
         size_t i = 0;
-        for (auto rJMesh : jMeshes)
+        for (auto jMesh : jMeshes)
         {
-            ondemand::object jMesh;
-            OCASI_FAIL_ON_SIMDJSON_ERROR(rJMesh.get(jMesh), "Failed to get mesh");
             Mesh& mesh = m_Asset->Meshes.emplace_back(i);
             
             ondemand::array jPrimitives;
@@ -526,10 +517,8 @@ namespace OCASI::GLTF {
     void JsonParser::ParsePrimitives(simdjson::fallback::ondemand::array& jPrimitives, Mesh& mesh)
     {
         size_t i = 0;
-        for (auto rJPrimitive : jPrimitives)
+        for (auto jPrimitive : jPrimitives)
         {
-            ondemand::object jPrimitive;
-            OCASI_FAIL_ON_SIMDJSON_ERROR(rJPrimitive.get(jPrimitive), "Failed to get mesh primitive");
             Primitive& primitive = mesh.Primitives.emplace_back(i);
             
             ondemand::object jAttributes;
@@ -553,7 +542,6 @@ namespace OCASI::GLTF {
                 {
                     ondemand::object jTarget;
                     OCASI_FAIL_ON_SIMDJSON_ERROR(rJTarget.get(jTarget), "Failed to get morph target");
-                    
                     ParseVertexAttributes(jTarget, primitive.MorphTargets.emplace_back(j));
                     j++;
                 }
@@ -570,10 +558,8 @@ namespace OCASI::GLTF {
             return;
 
         size_t i = 0;
-        for (auto rJNode : jNodes)
+        for (auto jNode : jNodes)
         {
-            ondemand::object jNode;
-            OCASI_FAIL_ON_SIMDJSON_ERROR(rJNode.get(jNode), "Failed to get node");
             Node& node = m_Asset->Nodes.emplace_back(i);
 
             // Cameras and animations are not supported
@@ -592,12 +578,15 @@ namespace OCASI::GLTF {
             
             OCASI_SET_PROPERTY_IF_EXISTS(jNode, "mesh", node.Mesh);
             
-            ParseVec3(jNode, "translation", node.TrsComponent.Translation);
+            
+            ondemand::object jNodeNotResult;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(jNode.get(jNodeNotResult), "Failed to get node");
+            ParseVec3(jNodeNotResult, "translation", node.TrsComponent.Translation);
             
             glm::vec4 rotVec;
-            ParseVec4(jNode, "rotation", rotVec);
+            ParseVec4(jNodeNotResult, "rotation", rotVec);
             node.TrsComponent.Rotation = glm::quat(rotVec.w, rotVec.x, rotVec.y, rotVec.z);
-            ParseVec3(jNode, "scale", node.TrsComponent.Scale);
+            ParseVec3(jNodeNotResult, "scale", node.TrsComponent.Scale);
             
             ondemand::array jMatrix;
             OCASI_HAS_PROPERTY(jNode, "matrix", jMatrix)
@@ -633,10 +622,8 @@ namespace OCASI::GLTF {
             return;
 
         size_t i = 0;
-        for (auto rJScene : jScenes)
+        for (auto jScene : jScenes)
         {
-            ondemand::object jScene;
-            OCASI_FAIL_ON_SIMDJSON_ERROR(rJScene.get(jScene), "Failed to get scene");
             Scene& scene = m_Asset->Scenes.emplace_back(i);
             
             std::string_view name;
@@ -646,12 +633,11 @@ namespace OCASI::GLTF {
             ondemand::array jRootNodes;
             OCASI_HAS_PROPERTY(jScene, "nodes", jRootNodes)
             {
-                size_t rootNodesCount;
-                OCASI_FAIL_ON_SIMDJSON_ERROR(jRootNodes.count_elements().get(rootNodesCount), "Failed to get root nodes count");
-                scene.RootNodes.resize(rootNodesCount);
-                for (size_t j = 0; j < rootNodesCount; j++)
+                size_t j = 0;
+                for (auto jNode : jRootNodes)
                 {
                     OCASI_FAIL_ON_SIMDJSON_ERROR(jRootNodes.at(j).get(scene.RootNodes.at(j)), "Failed to get root node");
+                    j++;
                 }
             }
             i++;
@@ -760,11 +746,11 @@ namespace OCASI::GLTF {
     {
         size_t vertexAttributeCount;
         
-        for (auto attribute : jVertexAttributes)
+        for (auto jAttribute : jVertexAttributes)
         {
             std::string_view key;
-            OCASI_FAIL_ON_SIMDJSON_ERROR(attribute.escaped_key().get(key), "Failed to get vertex attribute key");
-            OCASI_FAIL_ON_SIMDJSON_ERROR(attribute.value().get(outAttributes[std::string(key)]), "Failed to get vertex attribute value");
+            OCASI_FAIL_ON_SIMDJSON_ERROR(jAttribute.escaped_key().get(key), "Failed to get vertex jAttribute key");
+            OCASI_FAIL_ON_SIMDJSON_ERROR(jAttribute.value().get(outAttributes[std::string(key)]), "Failed to get vertex jAttribute value");
         }
     }
     
@@ -774,10 +760,10 @@ namespace OCASI::GLTF {
         OCASI_HAS_PROPERTY(jObject, name, jVec)
         {
             size_t i = 0;
-            for (auto rJVecVal : jVec) {
+            for (auto jVecVal : jVec) {
                 
                 float element;
-                OCASI_FAIL_ON_SIMDJSON_ERROR(rJVecVal.get<float>().get(element), "Failed to parse vec3 array element");
+                OCASI_FAIL_ON_SIMDJSON_ERROR(jVecVal.get<float>().get(element), "Failed to parse vec3 array element");
                 
                 out[(int)i] = element;
                 
@@ -793,10 +779,10 @@ namespace OCASI::GLTF {
         OCASI_HAS_PROPERTY(jObject, name, jVec)
         {
             size_t i = 0;
-            for (auto rJVecVal : jVec) {
+            for (auto jVecVal : jVec) {
                 
                 float element;
-                OCASI_FAIL_ON_SIMDJSON_ERROR(rJVecVal.get<float>().get(element), "Failed to parse vec4 array element");
+                OCASI_FAIL_ON_SIMDJSON_ERROR(jVecVal.get<float>().get(element), "Failed to parse vec4 array element");
                 
                 out[(int)i] = element;
                 
