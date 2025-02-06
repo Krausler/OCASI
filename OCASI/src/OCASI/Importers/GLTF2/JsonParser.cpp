@@ -399,8 +399,10 @@ namespace OCASI::GLTF {
             return;
         
         size_t i = 0;
-        for (auto jMaterial : jMaterials)
+        for (auto rJMaterial : jMaterials)
         {
+            ondemand::object jMaterial;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(rJMaterial.get(jMaterial), "Failed to get texture object");
             Material& material = m_Asset->Materials.emplace_back(i);
             
             std::string_view name;
@@ -411,12 +413,10 @@ namespace OCASI::GLTF {
             OCASI_HAS_PROPERTY(jMaterial, "pbrMetallicRoughness", jPbrMetallicRoughness)
                 ParsePbrMetallicRoughness(jPbrMetallicRoughness, material.MetallicRoughness = PBRMetallicRoughness());
             
-            ondemand::object mat;
-            OCASI_FAIL_ON_SIMDJSON_ERROR(jMaterial.get(mat), "Failed to get texture object");
-            ParseTextureInfo(mat, "normalTexture", material.NormalTexture);
-            ParseTextureInfo(mat, "occlusionTexture", material.OcclusionTexture);
-            ParseTextureInfo(mat, "emissiveTexture", material.EmissiveTexture);
-            ParseVec3(mat, "emissiveFactor", material.EmissiveColour);
+            ParseTextureInfo(jMaterial, "normalTexture", material.NormalTexture);
+            ParseTextureInfo(jMaterial, "occlusionTexture", material.OcclusionTexture);
+            ParseTextureInfo(jMaterial, "emissiveTexture", material.EmissiveTexture);
+            ParseVec3(jMaterial, "emissiveFactor", material.EmissiveColour);
             
             std::string_view alphaMode;
             OCASI_HAS_PROPERTY(jMaterial, "alphaMode", alphaMode)
@@ -536,7 +536,6 @@ namespace OCASI::GLTF {
             ondemand::array jTargets;
             OCASI_HAS_PROPERTY(jPrimitive, "targets", jTargets)
             {
-                
                 size_t j = 0;
                 for (auto rJTarget : jTargets)
                 {
@@ -558,8 +557,10 @@ namespace OCASI::GLTF {
             return;
 
         size_t i = 0;
-        for (auto jNode : jNodes)
+        for (auto rJNode : jNodes)
         {
+            ondemand::object jNode;
+            OCASI_FAIL_ON_SIMDJSON_ERROR(rJNode.get(jNode), "Failed to get node");
             Node& node = m_Asset->Nodes.emplace_back(i);
 
             // Cameras and animations are not supported
@@ -578,15 +579,11 @@ namespace OCASI::GLTF {
             
             OCASI_SET_PROPERTY_IF_EXISTS(jNode, "mesh", node.Mesh);
             
-            
-            ondemand::object jNodeNotResult;
-            OCASI_FAIL_ON_SIMDJSON_ERROR(jNode.get(jNodeNotResult), "Failed to get node");
-            ParseVec3(jNodeNotResult, "translation", node.TrsComponent.Translation);
-            
+            ParseVec3(jNode, "translation", node.TrsComponent.Translation);
             glm::vec4 rotVec;
-            ParseVec4(jNodeNotResult, "rotation", rotVec);
+            ParseVec4(jNode, "rotation", rotVec);
             node.TrsComponent.Rotation = glm::quat(rotVec.w, rotVec.x, rotVec.y, rotVec.z);
-            ParseVec3(jNodeNotResult, "scale", node.TrsComponent.Scale);
+            ParseVec3(jNode, "scale", node.TrsComponent.Scale);
             
             ondemand::array jMatrix;
             OCASI_HAS_PROPERTY(jNode, "matrix", jMatrix)
@@ -636,7 +633,7 @@ namespace OCASI::GLTF {
                 size_t j = 0;
                 for (auto jNode : jRootNodes)
                 {
-                    OCASI_FAIL_ON_SIMDJSON_ERROR(jRootNodes.at(j).get(scene.RootNodes.at(j)), "Failed to get root node");
+                    OCASI_FAIL_ON_SIMDJSON_ERROR(jNode.get(scene.RootNodes.emplace_back()), "Failed to get root node");
                     j++;
                 }
             }
