@@ -20,7 +20,7 @@ If you want to build OCASI from sources, consider that OCASI uses the libraries 
 ### Quick Start
 
 Loading a model using OCASI is extremely simple:
-```
+```c++
 #include "OCASI/Importer.h"
 
 #include <iostream>
@@ -46,7 +46,7 @@ which is an alias for a `std::shared_ptr`. The scene struct contains models, mes
 The models vector contains models loaded from the 3D file and is a collection of meshes, associated with a name. 
 If the only thing you want is to get the vertex data from the loaded meshes, you can do so by iterating over the models and their meshes:
 
-```
+```c++
     for (auto& model : scene->Models)
     {
         for (auto& mesh : model.Meshes)
@@ -66,7 +66,7 @@ Additionally, each mesh has a `MaterialIndex` project that is either a valid ind
 
 Materials describe how a mesh should be rendered. An OCASI material can be read as following:
 
-```
+```c++
     auto& material = scene->Materials.at(materialIndex); 
     
     float roughness = material.GetValue<float>(MATERIAL_ALBEDO_COLOUR);
@@ -88,7 +88,7 @@ When the image is memory only, the compressed image data is stored in the `Image
 is associated with a path the image data will be empty. However, when you load it using the inbuilt functionality `ImageData`
 will contain the correct number of channels, width and height. When loading fails, nullptr is returned.
 
-```
+```c++
     auto normalTexture = material.GetTexture(MATERIAL_TEXTURE_NORMAL);
     
     // Handle image loading yourself
