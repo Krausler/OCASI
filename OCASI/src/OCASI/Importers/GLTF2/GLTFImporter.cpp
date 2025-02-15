@@ -247,7 +247,7 @@ namespace OCASI {
                 std::vector<uint8_t> data = GetAccessorData(gltfPrimitive.Indices);
                 OCASI_ASSERT(!data.empty());
 
-                size_t indexDataTypeSize = GLTF::ComponentTypeToBytes(gltfAsset.Accessors.at(gltfPrimitive.Indices).ComponentType);
+                size_t indexDataTypeSize = GLTF::ComponentTypeToBytes(gltfAsset.Accessors.at(gltfPrimitive.Indices).CompType);
                 OCASI_ASSERT(data.size() % indexDataTypeSize == 0)
                 
                 ocasiMesh.Indices.resize(data.size() / indexDataTypeSize);
@@ -344,7 +344,7 @@ namespace OCASI {
             ocasiMaterial.SetValue(MATERIAL_EMISSIVE_COLOUR, gltfMaterial.EmissiveColour);
             ocasiMaterial.SetTexture(MATERIAL_TEXTURE_EMISSIVE, CreateTexture(gltfMaterial.EmissiveTexture));
 
-            // TODO: AlphaCutoff, AlphaMode, DoubleSided
+            // TODO: AlphaCutoff, AMode, DoubleSided
         }
 
         // Extension material parameters
@@ -500,7 +500,7 @@ namespace OCASI {
         OCASI_ASSERT_MSG(accessor.BufferView != INVALID_ID, "Don't know what to do with an accessor that does not contain a buffer view.");
 
         // This is the accessor offset, not the buffer view offset
-        size_t elementSize = GLTF::ComponentTypeToBytes(accessor.ComponentType) * (size_t) accessor.DataType;
+        size_t elementSize = GLTF::ComponentTypeToBytes(accessor.CompType) * (size_t) accessor.Type;
 
         size_t byteStride = 0;
         std::vector<uint8_t> data = GetBufferViewData(accessor.BufferView, accessor.ByteOffset, byteStride);
@@ -510,7 +510,7 @@ namespace OCASI {
         // the padding between an element, and it's neighbour including the elements size (stride = element size + padding).
         if (byteStride != 0 && byteStride != elementSize)
         {
-            OCASI_ASSERT(byteStride % GLTF::ComponentTypeToBytes(accessor.ComponentType) == 0);
+            OCASI_ASSERT(byteStride % GLTF::ComponentTypeToBytes(accessor.CompType) == 0);
             for (size_t i = 0; i < accessor.ElementCount; i++)
             {
                 std::memcpy(&data[i * elementSize], &data[i * byteStride], elementSize);
@@ -536,7 +536,7 @@ namespace OCASI {
             for (size_t i = 0; i < sparse.ElementCount; i++)
             {
                 uint32_t index = 0;
-                switch(sparse.Indices.ComponentType)
+                switch(sparse.Indices.CompType)
                 {
                     case GLTF::ComponentType::Short:
                     case GLTF::ComponentType::UnsignedShort:
@@ -550,7 +550,7 @@ namespace OCASI {
                         break;
                     }
                     default:
-                        throw FailedImportError(FORMAT("Unsupported component type used for sparse accessor {}.", (int) sparse.Indices.ComponentType));
+                        throw FailedImportError(FORMAT("Unsupported component type used for sparse accessor {}.", (int) sparse.Indices.CompType));
                 }
 
                 std::memcpy(&data[index * elementSize], &sparseValuesData[i * elementSize], elementSize);

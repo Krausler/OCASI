@@ -219,24 +219,24 @@ namespace OCASI::GLTF {
             size_t compType;
             OCASI_FAIL_IF_OBJ_NOT_EXISTS(jAccessor, "componentType", compType, "Required 'componentType' property in accessor is not present, though mandatory");
 
-            accessor.ComponentType = (ComponentType) compType;
+            accessor.CompType = (ComponentType) compType;
 
             // Reading the data type
             {
                 if (dataType == "SCALAR")
-                    accessor.DataType = DataType::Scalar;
+                    accessor.Type = DataType::Scalar;
                 else if (dataType == "VEC2")
-                    accessor.DataType = DataType::Vec2;
+                    accessor.Type = DataType::Vec2;
                 else if (dataType == "VEC3")
-                    accessor.DataType = DataType::Vec3;
+                    accessor.Type = DataType::Vec3;
                 else if (dataType == "VEC4")
-                    accessor.DataType = DataType::Vec4;
+                    accessor.Type = DataType::Vec4;
                 else if (dataType == "MAT2")
-                    accessor.DataType = DataType::Mat2;
+                    accessor.Type = DataType::Mat2;
                 else if (dataType == "MAT3")
-                    accessor.DataType = DataType::Mat3;
+                    accessor.Type = DataType::Mat3;
                 else if (dataType == "MAT4")
-                    accessor.DataType = DataType::Mat4;
+                    accessor.Type = DataType::Mat4;
                 else
                 {
                     throw FailedImportError(FORMAT("Unsupported accessor data type {}", dataType));
@@ -422,11 +422,11 @@ namespace OCASI::GLTF {
             OCASI_HAS_PROPERTY(jMaterial, "alphaMode", alphaMode)
             {
                 if (alphaMode == "OPAQUE")
-                    material.AlphaMode = AlphaMode::Opaque;
+                    material.AMode = AlphaMode::Opaque;
                 else if (alphaMode == "MASK")
-                    material.AlphaMode = AlphaMode::Mask;
+                    material.AMode = AlphaMode::Mask;
                 else if (alphaMode == "BLEND")
-                    material.AlphaMode = AlphaMode::Blend;
+                    material.AMode = AlphaMode::Blend;
                 else
                 {
                     throw FailedImportError(FORMAT("Unsupported alphaMode option {}.", alphaMode));

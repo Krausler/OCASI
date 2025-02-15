@@ -191,7 +191,7 @@ namespace OCASI {
             }
         }
 
-        outMesh.Dim = m.Dimension;
+        outMesh.Dim = m.Dim;
         outMesh.FaceMode = m.FaceType;
 
         return outMesh;

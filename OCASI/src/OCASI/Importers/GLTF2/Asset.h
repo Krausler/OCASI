@@ -134,7 +134,7 @@ namespace OCASI::GLTF {
         {
             size_t BufferView = INVALID_ID;
             size_t ByteOffset = 0;
-            ComponentType ComponentType = ComponentType::None;
+            ComponentType CompType = ComponentType::None;
         };
         
         struct Values
@@ -157,9 +157,9 @@ namespace OCASI::GLTF {
         size_t BufferView = INVALID_ID;
         size_t ElementCount = INVALID_ID;
         size_t ByteOffset = 0;
-        ComponentType ComponentType = ComponentType::None;
+        ComponentType CompType = ComponentType::None;
         bool Normalized = false;
-        DataType DataType = DataType::None;
+        DataType Type = DataType::None;
         std::array<double, MIN_MAX_ARRAY_SIZE> MinValues;
         std::array<double, MIN_MAX_ARRAY_SIZE> MaxValues;
         std::optional<Sparse> Sparse;
@@ -334,7 +334,7 @@ namespace OCASI::GLTF {
         glm::vec3 EmissiveColour = glm::vec3(0);
         std::optional<TextureInfo> EmissiveTexture;
 
-        AlphaMode AlphaMode = AlphaMode::Opaque;
+        AlphaMode AMode = AlphaMode::Opaque;
         float AlphaCutoff = 0.5f;
 
         /// Extensions

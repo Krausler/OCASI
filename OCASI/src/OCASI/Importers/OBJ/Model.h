@@ -105,7 +105,7 @@ namespace OCASI::OBJ {
         std::vector<Face> Faces;
 
         OCASI::FaceType FaceType = FaceType::None;
-        Dimension Dimension = Dimension::None;
+        Dimension Dim = Dimension::None;
     };
 
     struct Object
