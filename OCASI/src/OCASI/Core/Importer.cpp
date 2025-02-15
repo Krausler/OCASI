@@ -11,7 +11,7 @@
 namespace OCASI {
     
     std::vector<SharedPtr<BaseImporter>> Importer::s_Importers;
-    PostProcessorOptions Importer::s_GlobalPostProcessingOptions = PostProcessorOptions::ConvertToRHC;
+    PostProcessorOptions Importer::s_GlobalPostProcessingOptions = PostProcessorOptions::None;
 
     void Importer::SetImporters()
     {
