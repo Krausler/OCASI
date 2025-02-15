@@ -14,6 +14,9 @@ namespace OCASI {
         virtual void ExecuteProcess() override;
         
         PostProcessorOptions GetProcessType() const override { return PostProcessorOptions::Triangulate; }
+    private:
+        // Storing the index of the model along with it's mesh index
+        std::vector<std::pair<size_t, size_t>> m_ModelsWithProcessingNeed;
     };
     
 }
