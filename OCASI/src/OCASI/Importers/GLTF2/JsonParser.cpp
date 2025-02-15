@@ -271,7 +271,7 @@ namespace OCASI::GLTF {
             
             ondemand::object jSparse;
             OCASI_HAS_PROPERTY(jAccessor, "sparse", jSparse)
-                ParseSparseAccessor(jSparse, accessor.Sparse = Sparse());
+                ParseSparseAccessor(jSparse, accessor.SparseAccessor = Sparse());
             
             i++;
         }

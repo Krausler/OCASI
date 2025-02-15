@@ -162,7 +162,7 @@ namespace OCASI::GLTF {
         DataType Type = DataType::None;
         std::array<double, MIN_MAX_ARRAY_SIZE> MinValues;
         std::array<double, MIN_MAX_ARRAY_SIZE> MaxValues;
-        std::optional<Sparse> Sparse;
+        std::optional<Sparse> SparseAccessor;
     };
 
     using VertexAttributes = std::unordered_map<std::string, size_t>;

@@ -518,9 +518,9 @@ namespace OCASI {
             data.resize(elementSize * accessor.ElementCount);
         }
 
-        if (accessor.Sparse.has_value())
+        if (accessor.SparseAccessor.has_value())
         {
-            auto& sparse = accessor.Sparse.value();
+            auto& sparse = accessor.SparseAccessor.value();
             OCASI_ASSERT(sparse.Indices.BufferView < asset.BufferViews.size());
 
             size_t sparseIndicesByteStride; // ignored
