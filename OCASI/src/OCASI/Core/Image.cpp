@@ -41,12 +41,12 @@ namespace OCASI {
         m_ImageData.Data = data;
     }
     
-    void Image::LoadImageFromDisk()
+    bool Image::LoadImageFromDisk()
     {
         if (m_MemoryImage)
         {
             OCASI_LOG_INFO("Tried to load an image from disk that is memory only.");
-            return;
+            return false;
         }
 
         stbi_set_flip_vertically_on_load(true);
@@ -61,18 +61,17 @@ namespace OCASI {
             std::memcpy(m_ImageData.Data.data(), data, size);
 
             stbi_image_free(data);
+            return true;
         }
-        else
-            throw FailedImportError(FORMAT("Failed to load image {}: {}", m_ImagePath.string(), stbi_failure_reason()));
-        
+        return false;
     }
     
-    void Image::LoadImageFromMemory()
+    bool Image::LoadImageFromMemory()
     {
         if (!m_MemoryImage)
         {
             OCASI_LOG_INFO("Tried to load an image from memory that is not a memory only image.");
-            return;
+            return false;
         }
 
         stbi_set_flip_vertically_on_load(true);
@@ -90,19 +89,25 @@ namespace OCASI {
             std::memcpy(m_ImageData.Data.data(), data, size);
 
             stbi_image_free(data);
+            return true;
         }
-        else
-            throw FailedImportError(FORMAT("Failed to load image from memory: {}", stbi_failure_reason()));
-        
+        return false;
     }
     
-    const ImageData& Image::Load()
+    const ImageData* Image::Load()
     {
         if (m_MemoryImage)
-            LoadImageFromMemory();
-        else
-            LoadImageFromDisk();
+        {
+            if(!LoadImageFromMemory())
+            {
+                return nullptr;
+                
+            }
+            
+        }
+        else if(!LoadImageFromDisk())
+            return nullptr;
 
-        return m_ImageData;
+        return &m_ImageData;
     }
 }

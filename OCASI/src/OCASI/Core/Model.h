@@ -6,6 +6,7 @@
 namespace OCASI {
 
     const uint8_t TEXTURE_COORDINATE_ARRAY_SIZE = 5;
+    const size_t INVALID_ID = -1;
 
     enum class FaceType
     {
@@ -45,10 +46,10 @@ namespace OCASI {
         std::vector<glm::vec4> Tangents; // Optional
         std::vector<uint32_t> Indices;
 
-        size_t MaterialIndex;
+        size_t MaterialIndex = INVALID_ID;
 
-        FaceType FaceMode;
-        Dimension Dim;
+        FaceType FaceMode = FaceType::None;
+        Dimension Dim = Dimension::None;
     };
 
     struct Model

@@ -8,11 +8,11 @@
 namespace OCASI {
 
     // The index into the MATERIAL_VALUE_OBJECT_SIZES where the object's size is specified
-    const size_t MATERIAL_ALBEDO_COLOUR = 0; // Object size: glm::vec3
-    const size_t MATERIAL_DIFFUSE_COLOUR = 0; // Object size: glm::vec3
-    const size_t MATERIAL_AMBIENT_COLOUR = 1; // Object size: glm::vec3
-    const size_t MATERIAL_SPECULAR_COLOUR = 2; // Object size: glm::vec3
-    const size_t MATERIAL_EMISSIVE_COLOUR = 3; // Object size: glm::vec3
+    const size_t MATERIAL_ALBEDO_COLOUR = 0; // Object size: glm::vec4
+    const size_t MATERIAL_DIFFUSE_COLOUR = MATERIAL_ALBEDO_COLOUR; // Object size: glm::vec4
+    const size_t MATERIAL_AMBIENT_COLOUR = 1; // Object size: glm::vec4
+    const size_t MATERIAL_SPECULAR_COLOUR = 2; // Object size: glm::vec4
+    const size_t MATERIAL_EMISSIVE_COLOUR = 3; // Object size: glm::vec4
     const size_t MATERIAL_ROUGHNESS = 4; // Object size: float
     const size_t MATERIAL_METALLIC = 5; // Object size: float
     const size_t MATERIAL_ANISOTROPY = 6; // Object size: float
@@ -94,7 +94,7 @@ namespace OCASI {
     class Material
     {
     public:
-        Material() = default;
+        Material();
 
         template<typename Type>
         void SetValue(size_t index, const Type& value);

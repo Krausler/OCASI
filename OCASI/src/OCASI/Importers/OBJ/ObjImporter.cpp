@@ -93,7 +93,8 @@ namespace OCASI {
                 newMat.SetValue(MATERIAL_CLEARCOAT_ROUGHNESS, pbrExtension.ClearcoatRoughness);
             }
 
-            newMat.SetValue(MATERIAL_ALBEDO_COLOUR, mat.DiffuseColour);
+            newMat.SetValue(MATERIAL_DIFFUSE_COLOUR, mat.DiffuseColour);
+            newMat.SetValue(MATERIAL_AMBIENT_COLOUR, mat.AmbientColour);
             newMat.SetValue(MATERIAL_SPECULAR_COLOUR, mat.SpecularColour);
             newMat.SetValue(MATERIAL_SPECULAR_STRENGTH, mat.Shininess);
             newMat.SetValue(MATERIAL_EMISSIVE_COLOUR, mat.EmissiveColour);

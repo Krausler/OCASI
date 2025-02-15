@@ -5,8 +5,6 @@
 
 namespace OCASI {
 
-    const size_t INVALID_ID = -1;
-
     struct Node
     {
         Node()
