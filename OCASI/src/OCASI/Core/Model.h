@@ -47,8 +47,8 @@ namespace OCASI {
 
         size_t MaterialIndex;
 
-        FaceType FaceType;
-        Dimension Dimension;
+        FaceType FaceMode;
+        Dimension Dim;
     };
 
     struct Model

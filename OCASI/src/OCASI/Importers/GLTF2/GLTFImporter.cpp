@@ -240,7 +240,7 @@ namespace OCASI {
         {
             auto& ocasiMesh = ocasiModel.Meshes.emplace_back();
             ocasiMesh.MaterialIndex = gltfPrimitive.MaterialIndex;
-            ocasiMesh.FaceType = ConvertPrimitiveTypeToFaceType(gltfPrimitive.Type);
+            ocasiMesh.FaceMode = ConvertPrimitiveTypeToFaceType(gltfPrimitive.Type);
 
             if (gltfPrimitive.Indices != INVALID_ID)
             {

@@ -16,15 +16,15 @@ namespace OCASI {
                 const Mesh& mesh = m_Scene->Models.at(i).Meshes.at(j);
                 
                 // Triangulation of lines and points is not supported
-                if (mesh.FaceType & FaceType::Line || mesh.FaceType & FaceType::Point)
+                if (mesh.FaceMode & FaceType::Line || mesh.FaceMode & FaceType::Point)
                 {
-                    OCASI_LOG_INFO("Triangulation of meshes containing a FaceType, of either line or point, is not supported.");
+                    OCASI_LOG_INFO("Triangulation of meshes containing a FaceMode, of either line or point, is not supported.");
                     continue;
                 }
                 
-                // Only if the meshes FaceType exclusively matches Quad it
+                // Only if the meshes FaceMode exclusively matches Quad it
                 // is suitable for triangulation.
-                if (mesh.FaceType == FaceType::Quad)
+                if (mesh.FaceMode == FaceType::Quad)
                     m_ModelsWithProcessingNeed.emplace_back( i, j );
             }
         }
@@ -60,7 +60,7 @@ namespace OCASI {
                 newIndices.push_back(oldIndices.at(i + 3));
             }
             
-            mesh.FaceType == FaceType::Triangle;
+            mesh.FaceMode == FaceType::Triangle;
         }
     }
 }
