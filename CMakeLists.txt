@@ -59,4 +59,5 @@ add_subdirectory(OCASI)
 
 if (OCASI_BUILD_TESTS)
   add_subdirectory(Tests)
+  file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/Tests/Resources" DESTINATION "${CMAKE_BINARY_DIR}/Tests")
 endif ()

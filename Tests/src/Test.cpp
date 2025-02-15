@@ -3,9 +3,6 @@
 
 int main()
 {
-    OCASI_LOG_ERROR("hi");
-    std::filesystem::current_path("C:/Lauri/Dev/C++/Projekte/Octopus/Projekte/OCASI/Tests");
-
     auto scene = OCASI::Importer::Load3DFile("Resources/OBJ/TestObject.obj", OCASI::PostProcessorOptions::None);
 
     OCASI::Material& mat = scene->Materials.at(0);
