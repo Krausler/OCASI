@@ -6,16 +6,29 @@ It currently supports Windows and Linux with feature support for Linux in mind.
 
 OCASI is licensed under the [MIT](LICENSE) license.
 
-## Building OCASI
+Overview:
 
-Currently the easiest way to include OCASI into your project is by adding it to a submodule. To do so, follow these steps:
+- [Building OCASI](#building-ocasi)
+- [Using OCASI](#using-ocasi)
+
+Building OCASI
+--------------
+
+Currently, the easiest way to include OCASI into your project is by adding it to a submodule. To do so, follow these steps:
 1. Run `git submodule add https://github.com/Krausler/OCASI <desired folder>`.
 2. Add `add_subdirectory(<path/to/OCASI>)` to your cmake file.
 3. Add OCASI to your target executable / library using `target_link_libraries(<your target> PUBLIC/PRIVATE OCASI)`.
 
 If you want to build OCASI from sources, consider that OCASI uses the libraries GLM, simdjson, spdlog and stbimage.
 
-## Using OCASI
+Using OCASI
+-----------
+
+- [Quick Start](#quick-start)
+- [Models](#models)
+- [Materials](#materials)
+- [Images](#images)
+- [Nodes](#nodes)
 
 ### Quick Start
 
@@ -42,6 +55,8 @@ int main()
 
 When `OCASI::Importer::Load3DModel` returns a scene in form of a `SharedPtr<Scene>`, 
 which is an alias for a `std::shared_ptr`. The scene struct contains models, meshes and a collection of root nodes.
+
+### Models
 
 The models vector contains models loaded from the 3D file and is a collection of meshes, associated with a name. 
 If the only thing you want is to get the vertex data from the loaded meshes, you can do so by iterating over the models and their meshes:
