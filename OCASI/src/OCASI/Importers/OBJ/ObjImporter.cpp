@@ -161,6 +161,8 @@ namespace OCASI {
         // coordinate array) have to be checked against all already loaded indices. If there is a match, we just use the
         // index of that matching vertex in the indices array.
         std::unordered_map<VertexIndices, size_t> lookUpTable;
+        size_t newIndex = 0;
+        
         for (OBJ::Face f : m.Faces)
         {
             for (size_t i = 0; i < (size_t) f.Type; i++)
@@ -171,8 +173,8 @@ namespace OCASI {
 
                 if (lookUpTable.find(indices) == lookUpTable.end())
                 {
-                    CreateNewVertex(outMesh, indices);
-                    lookUpTable[indices] = outMesh.Indices.at(outMesh.Vertices.size() - 1);
+                    CreateNewVertex(outMesh, indices, newIndex);
+                    lookUpTable[indices] = outMesh.Indices.at(newIndex++);
                 }
                 else
                 {
@@ -196,7 +198,7 @@ namespace OCASI {
         return outMesh;
     }
 
-    void ObjImporter::CreateNewVertex(Mesh& mesh, const VertexIndices& indices) const
+    void ObjImporter::CreateNewVertex(Mesh& mesh, const VertexIndices& indices, size_t newIndex) const
     {
         mesh.Vertices.push_back(m_OBJModel->Vertices.at(indices.VertexIndex));
         if (!m_OBJModel->VertexColours.empty())
@@ -207,7 +209,7 @@ namespace OCASI {
         if (indices.NormalIndex != INVALID_ID)
             mesh.Normals.push_back(m_OBJModel->Normals.at(indices.NormalIndex));
 
-        mesh.Indices.push_back(mesh.Vertices.size() - 1);
+        mesh.Indices.push_back(newIndex);
     }
 
     void ObjImporter::SortTextures(Material &newMat, const OBJ::Material &mat, const Path& folder, size_t i)
