@@ -170,10 +170,10 @@ namespace OCASI {
                                           !f.TextureCoordinateIndices.empty() ? f.TextureCoordinateIndices.at(i) : INVALID_ID,
                                           !f.NormalIndices.empty() ? f.NormalIndices.at(i) : INVALID_ID };
 
-                if (lookUpTable.find(indices) == lookUpTable.end())
+                auto result = lookUpTable.try_emplace(indices, newIndex);
+                if (result.second)
                 {
-                    CreateNewVertex(outMesh, indices, newIndex);
-                    lookUpTable[indices] = outMesh.Indices.at(newIndex++);
+                    CreateNewVertex(outMesh, indices, newIndex++);
                 }
                 else
                 {
