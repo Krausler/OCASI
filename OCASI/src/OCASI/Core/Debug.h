@@ -4,7 +4,7 @@
 
     #define OCASI_DEBUGBREAK() __debugbreak();
 
-    #elif defined(__APPLE__) || defined(__MARCH__)
+    #elif defined(__linux__)
 
     #include "signal.h"
     #define OCASI_DEBUGBREAK() raise(SIGTRAP);

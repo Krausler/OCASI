@@ -3,6 +3,8 @@
 
 int main()
 {
+    OCASI_LOG_INFO("File Path: {}", std::filesystem::current_path().string());
+
     auto scene = OCASI::Importer::Load3DFile("Resources/GLTF/Mushroom.glb", OCASI::PostProcessorOptions::None);
 
     OCASI::Material& mat = scene->Materials.at(0);
