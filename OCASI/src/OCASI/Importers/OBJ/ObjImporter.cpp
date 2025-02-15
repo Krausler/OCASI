@@ -67,7 +67,6 @@ namespace OCASI {
     {
         m_OutputScene = MakeShared<Scene>();
 
-        // Converting from a RHCS to LHCS
 //        for (glm::vec3& v : m_OBJModel->Vertices)
 //            v = { v.x, v.y, -v.z };
 //

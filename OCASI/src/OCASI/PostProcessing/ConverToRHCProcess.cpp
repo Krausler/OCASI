@@ -28,7 +28,7 @@ namespace OCASI {
             for (auto& mesh : model.Meshes)
             {
                 // Flipping the vertices and normal z component, as in an RHC, the z axis points in the opposite
-                // direction of an LHC
+                // direction as an LHC
                 for (auto& vertex : mesh.Vertices)
                     vertex.z *= -1;
                 
