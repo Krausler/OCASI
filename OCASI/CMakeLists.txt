@@ -13,35 +13,35 @@ add_library(OCASI ${OCASI_LIBRARY_TYPE}
         "src/OCASI/Core/Image.cpp"
         "src/OCASI/Importers/OBJ/ObjImporter.cpp"
         "src/OCASI/Importers/OBJ/ObjImporter.h"
-        src/OCASI/Importers/OBJ/Model.h
-        src/OCASI/Core/FileUtil.cpp
-        src/OCASI/Core/FileUtil.h
-        src/OCASI/Importers/OBJ/FileParser.cpp
-        src/OCASI/Importers/OBJ/FileParser.h
-        src/OCASI/Core/StringUtil.cpp
-        src/OCASI/Core/StringUtil.h
-        src/OCASI/Importers/OBJ/MtlParser.cpp
-        src/OCASI/Importers/OBJ/MtlParser.h
-        src/OCASI/Importers/GLTF2/GLTFImporter.cpp
-        src/OCASI/Importers/GLTF2/GLTFImporter.h
-        src/OCASI/Importers/GLTF2/Asset.h
-        src/OCASI/Importers/GLTF2/Asset.cpp
-        src/OCASI/Importers/GLTF2/JsonParser.cpp
-        src/OCASI/Importers/GLTF2/JsonParser.h
-        src/OCASI/Core/BinaryReader.h
-        src/OCASI/Core/BinaryReader.cpp
-        src/OCASI/Core/Material.cpp
-        src/OCASI/Importers/GLTF2/Json.h
-        src/OCASI/Core/PostProcessor.cpp
-        src/OCASI/Core/PostProcessor.h
-        src/OCASI/Core/PostProcessorOptions.h
-        src/OCASI/Core/BasePostProcess.cpp
-        src/OCASI/Core/BasePostProcess.h
-        src/OCASI/PostProcessing/TriangulateProcess.cpp
-        src/OCASI/PostProcessing/TriangulateProcess.h
-        src/OCASI/Core/Error.h
-        src/OCASI/PostProcessing/ConverToRHCProcess.cpp
-        src/OCASI/PostProcessing/ConverToRHCProcess.h
+        "src/OCASI/Importers/OBJ/Model.h"
+        "src/OCASI/Core/FileUtil.cpp"
+        "src/OCASI/Core/FileUtil.h"
+        "src/OCASI/Importers/OBJ/FileParser.cpp"
+        "src/OCASI/Importers/OBJ/FileParser.h"
+        "src/OCASI/Core/StringUtil.cpp"
+        "src/OCASI/Core/StringUtil.h"
+        "src/OCASI/Importers/OBJ/MtlParser.cpp"
+        "src/OCASI/Importers/OBJ/MtlParser.h"
+        "src/OCASI/Importers/GLTF2/GLTFImporter.cpp"
+        "src/OCASI/Importers/GLTF2/GLTFImporter.h"
+        "src/OCASI/Importers/GLTF2/Asset.h"
+        "src/OCASI/Importers/GLTF2/Asset.cpp"
+        "src/OCASI/Importers/GLTF2/JsonParser.cpp"
+        "src/OCASI/Importers/GLTF2/JsonParser.h"
+        "src/OCASI/Core/BinaryReader.h"
+        "src/OCASI/Core/BinaryReader.cpp"
+        "src/OCASI/Core/Material.cpp"
+        "src/OCASI/Importers/GLTF2/Json.h"
+        "src/OCASI/Core/PostProcessor.cpp"
+        "src/OCASI/Core/PostProcessor.h"
+        "src/OCASI/Core/PostProcessorOptions.h"
+        "src/OCASI/Core/BasePostProcess.cpp"
+        "src/OCASI/Core/BasePostProcess.h"
+        "src/OCASI/PostProcessing/TriangulateProcess.cpp"
+        "src/OCASI/PostProcessing/TriangulateProcess.h"
+        "src/OCASI/Core/Error.h"
+        "src/OCASI/PostProcessing/ConverToRHCProcess.cpp"
+        "src/OCASI/PostProcessing/ConverToRHCProcess.h"
 )
 
 target_sources(OCASI PRIVATE vendor/simdjson/simdjson.cpp)
