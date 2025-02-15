@@ -3,7 +3,7 @@
 
 int main()
 {
-    auto scene = OCASI::Importer::Load3DFile("Resources/OBJ/TestObject.obj", OCASI::PostProcessorOptions::None);
+    auto scene = OCASI::Importer::Load3DFile("Resources/GLTF/Mushroom.glb", OCASI::PostProcessorOptions::None);
 
     OCASI::Material& mat = scene->Materials.at(0);
 

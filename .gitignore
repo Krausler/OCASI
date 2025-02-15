@@ -2,6 +2,10 @@
 .idea
 cmake-build-debug
 cmake-build-release
+build
 
-#VSCode
+# VSCode
 .vscode
+
+# Misc
+OCVK/cloc-2.02.exe
