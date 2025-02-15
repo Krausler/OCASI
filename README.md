@@ -47,15 +47,15 @@ The models vector contains models loaded from the 3D file and is a collection of
 If the only thing you want is to get the vertex data from the loaded meshes, you can do so by iterating over the models and their meshes:
 
 ```c++
-    for (auto& model : scene->Models)
+for (auto& model : scene->Models)
+{
+    for (auto& mesh : model.Meshes)
     {
-        for (auto& mesh : model.Meshes)
-        {
-            auto vertices = mesh.Vertices;
-            auto normals = mesh.Normals;
-            ...
-        }
+        auto vertices = mesh.Vertices;
+        auto normals = mesh.Normals;
+        ...
     }
+}
 ```
 
 A mesh contains its vertex positions, possibly vertex colours, normals, multiple sets of texture coordinates, tangents,
@@ -67,15 +67,15 @@ Additionally, each mesh has a `MaterialIndex` project that is either a valid ind
 Materials describe how a mesh should be rendered. An OCASI material can be read as following:
 
 ```c++
-    auto& material = scene->Materials.at(materialIndex); 
-    
-    float roughness = material.GetValue<float>(MATERIAL_ALBEDO_COLOUR);
-    
-    if (material.HasTexture(MATERIAL_TEXTURE_NORMAL))
-    {
-        auto normalTexture = material.GetTexture(MATERIAL_TEXTURE_NORMAL);
-        ...
-    }
+auto& material = scene->Materials.at(materialIndex); 
+
+float roughness = material.GetValue<float>(MATERIAL_ALBEDO_COLOUR);
+
+if (material.HasTexture(MATERIAL_TEXTURE_NORMAL))
+{
+    auto normalTexture = material.GetTexture(MATERIAL_TEXTURE_NORMAL);
+    ...
+}
 ```
 
 All available material values and texture indices can be found in the [Model.h](OCASI/src/OCASI/Core/Model.h) header.
@@ -89,26 +89,26 @@ is associated with a path the image data will be empty. However, when you load i
 will contain the correct number of channels, width and height. When loading fails, nullptr is returned.
 
 ```c++
-    auto normalTexture = material.GetTexture(MATERIAL_TEXTURE_NORMAL);
-    
-    // Handle image loading yourself
+auto normalTexture = material.GetTexture(MATERIAL_TEXTURE_NORMAL);
+
+// Handle image loading yourself
+{
+    if (!normalTexture->IsMemoryImage())
     {
-        if (!normalTexture->IsMemoryImage())
-        {
-            LoadFromPath(normalTexture->GetImagePath());
-        }
-        else
-        {
-            LoadFromMemory(normalTexture->GetImageData().Data);
-        }
+        LoadFromPath(normalTexture->GetImagePath());
     }
-    
+    else
     {
-        auto imageData = normalTexture->Load();
-        
-        if (!imageData)
-            std::cout << "Failed to load model"
+        LoadFromMemory(normalTexture->GetImageData().Data);
     }
+}
+
+{
+    auto imageData = normalTexture->Load();
+    
+    if (!imageData)
+        std::cout << "Failed to load model"
+}
 ```
 
 ### Nodes
