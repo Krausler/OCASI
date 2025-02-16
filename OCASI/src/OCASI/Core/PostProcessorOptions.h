@@ -7,8 +7,6 @@ namespace OCASI {
         None = 0,
         Triangulate,
         GenerateNormals,
-        GenerateTextureCoordinates,
-        CollapseChildNodes,
         ConvertToRHC
     };
     
