@@ -42,6 +42,8 @@ add_library(OCASI ${OCASI_LIBRARY_TYPE}
         "src/OCASI/Core/Error.h"
         "src/OCASI/PostProcessing/ConverToRHCProcess.cpp"
         "src/OCASI/PostProcessing/ConverToRHCProcess.h"
+        src/OCASI/PostProcessing/GenerateNormalsProcess.cpp
+        src/OCASI/PostProcessing/GenerateNormalsProcess.h
 )
 
 target_sources(OCASI PRIVATE vendor/simdjson/simdjson.cpp)

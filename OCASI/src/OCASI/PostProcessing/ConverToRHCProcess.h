@@ -14,7 +14,7 @@ namespace OCASI {
         virtual bool NeedsProcessing(SharedPtr<Scene> scene, SharedPtr<BaseImporter> importer) override;
         virtual void ExecuteProcess() override;
         
-        PostProcessorOptions GetProcessType() const override { return PostProcessorOptions::Triangulate; }
+        PostProcessorOptions GetProcessType() const override { return PostProcessorOptions::ConvertToRHC; }
     private:
         void FlipRotation(SharedPtr<Node> node);
     };

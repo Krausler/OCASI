@@ -18,7 +18,7 @@ namespace OCASI {
                 // Triangulation of lines and points is not supported
                 if (mesh.FaceMode & FaceType::Line || mesh.FaceMode & FaceType::Point)
                 {
-                    OCASI_LOG_INFO("Triangulation of meshes containing a FaceMode, of either line or point, is not supported.");
+                    OCASI_LOG_INFO("Triangulation of meshes with FaceType, of type line or point, is not supported.");
                     continue;
                 }
                 

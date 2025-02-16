@@ -2,6 +2,7 @@
 
 #include "OCASI/PostProcessing/ConverToRHCProcess.h"
 #include "OCASI/PostProcessing/TriangulateProcess.h"
+#include "OCASI/PostProcessing/GenerateNormalsProcess.h"
 
 namespace OCASI {
     
@@ -14,6 +15,7 @@ namespace OCASI {
         
         s_PostProcessingProcesses.push_back(MakeUnique<ConvertToRHCProcess>());
         s_PostProcessingProcesses.push_back(MakeUnique<TriangulateProcess>());
+        s_PostProcessingProcesses.push_back(MakeUnique<GenerateNormalsProcess>());
     }
     
     PostProcessor::PostProcessor(SharedPtr<Scene> scene, SharedPtr<BaseImporter> importer, PostProcessorOptions options)
