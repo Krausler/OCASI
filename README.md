@@ -44,7 +44,7 @@ int main()
 {
     using namespace OCASI;
     
-    auto scene = Importer::Load3DFile();
+    auto scene = Importer::Load3DFile("path/to/model", PostprocessorOptions::Triangulate | PostprocessorOptions::GenerateNormals);
     
     if (!scene)
         std::cout << "Failed to load model"
