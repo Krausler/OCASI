@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.6)
 
-set(OCASI_VERSION 1.0)
+set(OCASI_VERSION 1.1)
 project("Octopus Asset Importer" VERSION ${OCASI_VERSION})
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
