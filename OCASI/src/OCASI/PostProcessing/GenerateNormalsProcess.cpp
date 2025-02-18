@@ -13,12 +13,12 @@ namespace OCASI {
             {
                 const Mesh& mesh = m_Scene->Models.at(i).Meshes.at(j);
                 
-                // When the mesh has no normals it is registered for processing
+                // When the mesh has no normals, it is registered for processing
                 if (mesh.Normals.empty())
                     m_ModelsWithProcessingNeed.emplace_back(i, j);
                 
                 // Impossible to calculate normals for lines or points
-                if (mesh.FaceMode & FaceType::Point || mesh.FaceMode & FaceType::Line)
+                if (mesh.FaceMode == FaceType::Point || mesh.FaceMode == FaceType::Line)
                 {
                     OCASI_LOG_INFO("Normal generation of meshes with FaceType, of type line or point, is not supported.");
                     continue;

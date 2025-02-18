@@ -167,7 +167,7 @@ namespace OCASI::OBJ {
         {
             Vertex = 1,
             TexCoord = 2,
-            Normal = 3
+            NormalVec = 3
         };
         uint8_t stage = Stage::Vertex;
         uint8_t vertexCountPerFace = 0;
@@ -192,7 +192,7 @@ namespace OCASI::OBJ {
                 {
                     throw FailedImportError("Cannot request face indices for texture coordinates, when there are no texture coordinates defined.");
                 }
-                else if(stage == Stage::Normal && !hasNormals)
+                else if(stage == Stage::NormalVec && !hasNormals)
                 {
                     throw FailedImportError("Cannot request face indices for normals, when there are no normals defined.");
                 }
@@ -235,7 +235,7 @@ namespace OCASI::OBJ {
             m_Begin += iteratorStep;
         }
         face.Type = (FaceType) vertexCountPerFace;
-        m_CurrentMesh->FaceType = m_CurrentMesh->FaceType | ((FaceType) vertexCountPerFace);
+        m_CurrentMesh->FaceType = (FaceType) vertexCountPerFace;
     }
 
     void FileParser::ProcessObject()
