@@ -222,7 +222,7 @@ namespace OCASI::OBJ {
                         face.TextureCoordinateIndices.push_back(parsedIndex);
                         break;
                     }
-                    case Stage::Normal:
+                    case Stage::NormalVec:
                     {
                         face.NormalIndices.push_back(parsedIndex);
                         break;
