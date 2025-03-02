@@ -1,42 +1,56 @@
 #include "Logger.h"
 
-#include "spdlog/sinks/stdout_color_sinks.h"
-#include "spdlog/spdlog.h"
+#include <OCASI/Core/Base.h>
+
+#include <iostream>
 
 namespace OCASI {
-
-    const std::string DEFAULT_PATTERN = "%^[%T] %n: %v%$";
-
-    std::shared_ptr<spdlog::logger> Logger::s_Logger;
-    std::string Logger::s_CurrentPattern;
-
-    void Logger::Init()
+    
+    // VT100 colour codes
+    const std::string_view BLUE = "\x1b[34m";
+    const std::string_view YELLOW = "\x1b[33m";
+    const std::string_view RED = "\x1b[31m";
+    
+    void DefaultLoggerFunction(LogLevel level, const std::string& msg)
     {
-		spdlog::set_pattern(DEFAULT_PATTERN);
-        s_CurrentPattern = "OCASI";
-        s_Logger = spdlog::stdout_color_mt(s_CurrentPattern);
-    }
-
-    void Logger::SetFileFormatPattern(const std::string& fileFormatName)
-    {
-        s_CurrentPattern = fileFormatName;
-        spdlog::set_pattern(fmt::format("%^[%T] %n {}: %v%$", s_CurrentPattern));
-    }
-
-    void Logger::ResetPattern()
-    {
-        spdlog::set_pattern(DEFAULT_PATTERN);
+        switch (level) {
+            case LogLevel::Info:
+                std::cout << BLUE << msg << std::endl;
+                break;
+            case LogLevel::Warn:
+                std::cout << YELLOW << msg << std::endl;
+                break;
+            case LogLevel::Error:
+                std::cout << RED << msg << std::endl;
+                break;
+            default:
+                std::cout << "Invalid LogLevel" << std::endl;
+        }
     }
     
-    std::shared_ptr<spdlog::logger> Logger::GetLogger()
+    const std::string_view STATIC_PREFIX = "OCVK";
+    
+    std::string Logger::s_LoggerPrefix = std::string(STATIC_PREFIX);
+    Logger::LoggerFunc Logger::s_LoggerFunction = DefaultLoggerFunction;
+    
+    void Logger::SetLoggerName(const std::string& loggerName)
     {
-        if (!s_Logger)
-            Init();
-        return s_Logger;
+        s_LoggerPrefix = FORMAT("{} {}", STATIC_PREFIX, loggerName);
     }
     
-    const std::string& Logger::GetPattern()
+    void Logger::ResetLoggerName()
     {
-        return s_CurrentPattern;
+        s_LoggerPrefix = STATIC_PREFIX;
+    }
+    
+    void Logger::Log(LogLevel level, const std::string& msg)
+    {
+        if (!s_LoggerFunction)
+        {
+            std::cout << "OCVK: No logger function. This should not happen!" << std::endl;
+            return;
+        }
+        
+        s_LoggerFunction(level, std::format("{}: {}", s_LoggerPrefix, msg));
     }
 }

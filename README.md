@@ -6,8 +6,6 @@ It currently supports Windows and Linux with feature support for Linux in mind.
 
 OCASI is licensed under the [MIT](LICENSE) license.
 
-From the 25 of February 2025 active development will be moved to version branches. The `master` branch will only contain, more or less tested, complete versions.
-
 Overview:
 
 - [Building OCASI](#building-ocasi)

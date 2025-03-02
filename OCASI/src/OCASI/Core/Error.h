@@ -10,7 +10,7 @@ namespace OCASI {
     {
     public:
         FailedImportError(const std::string& msg)
-            : std::runtime_error(FORMAT("{}: {}", Logger::GetPattern(), msg))
+            : std::runtime_error(msg)
         {}
         
         FailedImportError(std::string_view& msg)

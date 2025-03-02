@@ -49,7 +49,7 @@ namespace OCASI {
             if (!importer)
                 throw FailedImportError(FORMAT("Could not find importer supporting {} file extension.", fExtension));
             
-            Logger::SetFileFormatPattern(std::string(importer->GetLoggerPattern()));
+            Logger::SetLoggerName(std::string(importer->GetLoggerPattern()));
             
             FileReader reader(path);
             
@@ -61,15 +61,15 @@ namespace OCASI {
             PostProcessor postProcessor(result, importer, options | s_GlobalPostProcessingOptions);
             postProcessor.ExecutePostProcesses();
             
-            Logger::ResetPattern();
+            Logger::ResetLoggerName();
         }
         catch (const FailedImportError& e)
         {
-            Logger::ResetPattern();
-            OCASI_LOG_ERROR("Failed to load {}: {}", path.string(), e.what());
+            Logger::ResetLoggerName();
+            OCASI_LOG_ERROR(FORMAT("Failed to load {}: {}", path.string(), e.what()));
             result = nullptr;
         }
-        Logger::ResetPattern();
+        Logger::ResetLoggerName();
         
         OCASI_ASSERT(result);
 

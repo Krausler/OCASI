@@ -1,7 +1,10 @@
 #pragma once
 
 #include "OCASI/Core/Base.h"
+
 #include "glm/glm.hpp"
+
+#include <array>
 
 namespace OCASI {
 

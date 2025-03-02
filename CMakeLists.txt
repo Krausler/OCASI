@@ -45,7 +45,7 @@ message(STATUS "OCASI: Building OCASI with library type ${OCASI_LIBRARY_TYPE}")
 # Global compile/link settings
 #------------------------------------------------------------------------------
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")

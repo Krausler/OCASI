@@ -8,6 +8,7 @@
 #include "glm/ext/quaternion_float.hpp"
 
 #include <optional>
+#include <array>
 
 namespace OCASI {
     class GLTFImporter;

@@ -60,7 +60,7 @@ namespace OCASI {
                 newIndices.push_back(oldIndices.at(i + 3));
             }
             
-            mesh.FaceMode == FaceType::Triangle;
+            mesh.FaceMode = FaceType::Triangle;
         }
     }
 }

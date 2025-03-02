@@ -92,7 +92,7 @@ namespace OCASI::OBJ {
 
                         break;
                         default:
-                            OCASI_LOG_WARN("Unknown parameter: K{}", *(m_Begin - 2));
+                            OCASI_LOG_WARN(FORMAT("Unknown parameter: K{}", *(m_Begin - 2)));
                         break;
                     }
                 }
@@ -114,7 +114,7 @@ namespace OCASI::OBJ {
                     else
                         m_CurrentMaterial->Shininess = ParseFloat();
                 } else {
-                    OCASI_LOG_WARN("Unknown parameter: N{}", *(m_Begin - 2));
+                    OCASI_LOG_WARN(FORMAT("Unknown parameter: N{}", *(m_Begin - 2)));
                 }
                 break;
             }
@@ -185,12 +185,12 @@ namespace OCASI::OBJ {
                             else
                                 m_CurrentMaterial->PBRExtension->Clearcoat = ParseFloat();
                         } else {
-                            OCASI_LOG_WARN("Unknown parameter: Pc{}", *(m_Begin - 1));
+                            OCASI_LOG_WARN(FORMAT("Unknown parameter: Pc{}", *(m_Begin - 1)));
                         }
                         break;
                     }
                     default:
-                        OCASI_LOG_WARN("Unknown parameter: P{}", *(m_Begin - 2));
+                        OCASI_LOG_WARN(FORMAT("Unknown parameter: P{}", *(m_Begin - 2)));
                         break;
                 }
                 break;
@@ -212,9 +212,9 @@ namespace OCASI::OBJ {
                     m_Begin += charactersToNextSpace;
                     m_CurrentMaterial->PBRExtension->AnisotropyRotation = ParseFloat();
                 } else {
-                    OCASI_LOG_WARN(
+                    OCASI_LOG_WARN(FORMAT(
                             "Unknown parameter: Parameter starts with 'a' but does not fulfill the length requirements. Length is {}.",
-                            charactersToNextSpace);
+                            charactersToNextSpace));
                 }
                 break;
             }
@@ -227,8 +227,7 @@ namespace OCASI::OBJ {
                 else
                 {
                     m_Begin++;
-                    OCASI_LOG_WARN("Unkown parameter: o{} is not a map",
-                    Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End));
+                    OCASI_LOG_WARN(FORMAT("Unknown parameter: o{} is not a map", Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End)));
                 }
                 break;
             }

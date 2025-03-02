@@ -5,6 +5,8 @@
 
 #include "glm/glm.hpp"
 
+#include <array>
+
 namespace OCASI {
 
     // The index into the MATERIAL_VALUE_OBJECT_SIZES where the object's size is specified
