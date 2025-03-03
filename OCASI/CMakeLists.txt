@@ -50,7 +50,10 @@ target_sources(OCASI PRIVATE vendor/simdjson/simdjson.cpp)
 
 target_include_directories(OCASI PUBLIC
         src
-        vendor/spdlog/include
+        vendor/glm
+)
+
+target_include_directories(OCASI PRIVATE
         vendor/stbimage
         vendor/glm
         vendor/simdjson
