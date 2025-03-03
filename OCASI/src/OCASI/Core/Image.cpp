@@ -34,13 +34,6 @@ namespace OCASI {
         m_ImageData.Data = std::move(data);
     }
     
-    Image::Image(const std::vector<uint8_t>& data, const ImageSettings& settings)
-        : m_Settings(settings), m_MemoryImage(true)
-    {
-        m_ImageData = {};
-        m_ImageData.Data = data;
-    }
-    
     bool Image::LoadImageFromDisk()
     {
         if (m_MemoryImage)

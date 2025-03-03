@@ -227,7 +227,7 @@ namespace OCASI {
             return;
 
         ImageSettings settings = {};
-        settings.Clamp = mat.TextureClamps.at(i) ? ClampOption::ClampToEdge : ClampOption::ClampRepeat;
+        settings.Clamp = mat.TextureClamps.at(i) ? ClampOption::ClampToEdge : ClampOption::Repeat;
 
         switch (type)
         {

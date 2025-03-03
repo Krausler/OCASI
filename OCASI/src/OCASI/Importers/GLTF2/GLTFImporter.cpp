@@ -428,7 +428,7 @@ namespace OCASI {
 
             // For implementation and ease of use, the clamp option
             // will be using the UVWrapT value.
-            settings.Clamp = gltfSampler.WrapT == GLTF::UVWrap::Repeat ? ClampOption::ClampRepeat : (gltfSampler.WrapT == GLTF::UVWrap::ClampToEdge ? ClampOption::ClampToEdge : ClampOption::ClampMirroredRepeat);
+            settings.Clamp = gltfSampler.WrapT == GLTF::UVWrap::Repeat ? ClampOption::Repeat : (gltfSampler.WrapT == GLTF::UVWrap::ClampToEdge ? ClampOption::ClampToEdge : ClampOption::MirroredRepeat);
 
             settings.MagFilter = ConvertMinMagFilterToFilterOption(gltfSampler.MagFilter);
             settings.MinFilter = ConvertMinMagFilterToFilterOption(gltfSampler.MinFilter);
