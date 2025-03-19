@@ -32,7 +32,7 @@ namespace OCASI {
     glm::vec3 Material::GetValue(size_t index)
     {
         glm::vec3 val;
-        std::memcpy(&val, Get(index), sizeof(glm::vec3));
+        memcpy(&val, Get(index), sizeof(glm::vec3));
         return val;
     }
     
@@ -40,7 +40,7 @@ namespace OCASI {
     glm::vec4 Material::GetValue(size_t index)
     {
         glm::vec4 val;
-        std::memcpy(&val, Get(index), sizeof(glm::vec4));
+        memcpy(&val, Get(index), sizeof(glm::vec4));
         return val;
     }
     
@@ -48,7 +48,7 @@ namespace OCASI {
     float Material::GetValue(size_t index)
     {
         float val;
-        std::memcpy(&val, Get(index), sizeof(float));
+        memcpy(&val, Get(index), sizeof(float));
         return val;
     }
     
@@ -56,7 +56,7 @@ namespace OCASI {
     bool Material::GetValue(size_t index)
     {
         bool val;
-        std::memcpy(&val, Get(index), sizeof(bool));
+        memcpy(&val, Get(index), sizeof(bool));
         return val;
     }
     
@@ -98,7 +98,7 @@ namespace OCASI {
         size_t offset = CalculateOffset(index);
         OCASI_ASSERT(offset != -1);
 
-        std::memcpy(m_MaterialValues.data() + offset, value, size);
+        memcpy(m_MaterialValues.data() + offset, value, size);
     }
     
     constexpr size_t Material::CalculateOffset(size_t index)

@@ -33,7 +33,7 @@ namespace OCASI {
         {
             auto data = GetBytes(sizeof(T));
             T out;
-            std::memcpy(&out, data.data(), sizeof(T));
+            memcpy(&out, data.data(), sizeof(T));
             return out;
         }
 

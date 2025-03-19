@@ -51,7 +51,7 @@ namespace OCASI {
             uint32_t size = m_ImageData.Width * m_ImageData.Height * m_ImageData.Channels;
             m_ImageData.Data.resize(size);
 
-            std::memcpy(m_ImageData.Data.data(), data, size);
+            memcpy(m_ImageData.Data.data(), data, size);
 
             stbi_image_free(data);
             return true;
@@ -79,7 +79,7 @@ namespace OCASI {
             m_ImageData.Data.clear();
             m_ImageData.Data.resize(size);
 
-            std::memcpy(m_ImageData.Data.data(), data, size);
+            memcpy(m_ImageData.Data.data(), data, size);
 
             stbi_image_free(data);
             return true;

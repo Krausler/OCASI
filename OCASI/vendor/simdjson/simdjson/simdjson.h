@@ -635,7 +635,7 @@ SIMDJSON_PUSH_DISABLE_ALL_WARNINGS
 // For more information see https://github.com/martinmoene/string-view-lite
 //
 // Distributed under the Boost Software License, Version 1.0.
-// (See accompanying file LICENSE.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+// (See accompanying file LICENSE.txt.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 
 #ifndef NONSTD_SV_LITE_H_INCLUDED

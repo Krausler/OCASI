@@ -252,7 +252,7 @@ namespace OCASI {
                 
                 ocasiMesh.Indices.resize(data.size() / indexDataTypeSize);
                 for (size_t i = 0; i < data.size(); i += indexDataTypeSize)
-                    std::memcpy(&ocasiMesh.Indices[(i == 0 ? 0 : i / indexDataTypeSize)], &data[i], indexDataTypeSize);
+                    memcpy(&ocasiMesh.Indices[(i == 0 ? 0 : i / indexDataTypeSize)], &data[i], indexDataTypeSize);
             }
 
             for (auto& [attributeName, accessor] : gltfPrimitive.Attributes)
@@ -264,7 +264,7 @@ namespace OCASI {
                     OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec3) == 0);
 
                     ocasiMesh.Vertices.resize(data.size() / sizeof(glm::vec3));
-                    std::memcpy(ocasiMesh.Vertices.data(), data.data(), data.size());
+                    memcpy(ocasiMesh.Vertices.data(), data.data(), data.size());
                 }
                 else if (attributeName == "NORMAL")
                 {
@@ -272,7 +272,7 @@ namespace OCASI {
                     OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec3) == 0);
 
                     ocasiMesh.Normals.resize(data.size() / sizeof(glm::vec3));
-                    std::memcpy(ocasiMesh.Normals.data(), data.data(), data.size());
+                    memcpy(ocasiMesh.Normals.data(), data.data(), data.size());
                 }
                 else if (attributeName == "TANGENT")
                 {
@@ -280,7 +280,7 @@ namespace OCASI {
                      OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec4) == 0);
 
                     ocasiMesh.Tangents.resize(data.size() / sizeof(glm::vec4));
-                    std::memcpy(ocasiMesh.Tangents.data(), data.data(), data.size());
+                    memcpy(ocasiMesh.Tangents.data(), data.data(), data.size());
                 }
                 else if (Util::StartsWith(attributeName, "TEXCOORD_"))
                 {
@@ -294,7 +294,7 @@ namespace OCASI {
                     OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec2) == 0);
 
                     texCoords.resize(data.size() / sizeof(glm::vec2));
-                    std::memcpy(texCoords.data(), data.data(), data.size());
+                    memcpy(texCoords.data(), data.data(), data.size());
                 }
                 else if (Util::StartsWith(attributeName, "COLOR_"))
                 {
@@ -305,7 +305,7 @@ namespace OCASI {
                     OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec4) == 0);
 
                     ocasiMesh.VertexColours.resize(data.size() / sizeof(glm::vec4));
-                    std::memcpy(ocasiMesh.VertexColours.data(), data.data(), data.size());
+                    memcpy(ocasiMesh.VertexColours.data(), data.data(), data.size());
                 }
             }
         }
@@ -459,7 +459,7 @@ namespace OCASI {
                 
                 std::vector<uint8_t> binaryDataVector(readSize);
 
-                std::memcpy(binaryDataVector.data(), binaryData, readSize);
+                memcpy(binaryDataVector.data(), binaryData, readSize);
 
                 return std::make_unique<Image>(std::move(binaryDataVector), settings);
             }
@@ -513,7 +513,7 @@ namespace OCASI {
             OCASI_ASSERT(byteStride % GLTF::ComponentTypeToBytes(accessor.CompType) == 0);
             for (size_t i = 0; i < accessor.ElementCount; i++)
             {
-                std::memcpy(&data[i * elementSize], &data[i * byteStride], elementSize);
+                memcpy(&data[i * elementSize], &data[i * byteStride], elementSize);
             }
             data.resize(elementSize * accessor.ElementCount);
         }
@@ -541,19 +541,19 @@ namespace OCASI {
                     case GLTF::ComponentType::Short:
                     case GLTF::ComponentType::UnsignedShort:
                     {
-                        std::memcpy(&index, &sparseIndicesData[i * sizeof(uint16_t)], sizeof(uint16_t));
+                        memcpy(&index, &sparseIndicesData[i * sizeof(uint16_t)], sizeof(uint16_t));
                         break;
                     }
                     case GLTF::ComponentType::UnsignedInt:
                     {
-                        std::memcpy(&index, &sparseIndicesData[i * sizeof(uint32_t)], sizeof(uint32_t));
+                        memcpy(&index, &sparseIndicesData[i * sizeof(uint32_t)], sizeof(uint32_t));
                         break;
                     }
                     default:
                         throw FailedImportError(FORMAT("Unsupported component type used for sparse accessor {}.", (int) sparse.Indices.CompType));
                 }
 
-                std::memcpy(&data[index * elementSize], &sparseValuesData[i * elementSize], elementSize);
+                memcpy(&data[index * elementSize], &sparseValuesData[i * elementSize], elementSize);
             }
         }
 

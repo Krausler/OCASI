@@ -17,7 +17,7 @@ namespace OCASI {
         {
             OCASI_ASSERT(m_Pointer < m_DataSize);
             T type;
-            std::memcpy(&type, m_Data + m_Pointer, sizeof(T));
+            memcpy(&type, m_Data + m_Pointer, sizeof(T));
             m_Pointer += sizeof(T);
             return type;
         }
