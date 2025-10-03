@@ -12,8 +12,8 @@ namespace OCASI {
         FileReader(const Path& path, bool isBinary = false);
         ~FileReader();
 
-        bool NextLine(std::string& outLine);
-        bool NextLineC(std::vector<char>& outChars);
+        bool NextLine(String& outLine);
+        bool NextLineC(Vector<char>& outChars);
         
         void Close();
         void Reset();
@@ -23,8 +23,8 @@ namespace OCASI {
         bool IsOpen() const { return m_FileReader.is_open(); }
         
         uint8_t* GetFileDataInBytes();
-        std::string GetFileString();
-        std::vector<uint8_t> GetBytes(size_t size);
+        String GetFileString();
+        Vector<uint8_t> GetBytes(size_t size);
         void GetBytes(void* outData, size_t size);
         void Set0();
 
@@ -56,7 +56,7 @@ namespace OCASI {
     
     namespace Util {
         
-        bool FindTokensInFirst100Lines(OCASI::FileReader& reader, const std::vector<std::string>& tokens);
+        bool FindTokensInFirst100Lines(OCASI::FileReader& reader, const Vector<std::string>& tokens);
         
     }
 

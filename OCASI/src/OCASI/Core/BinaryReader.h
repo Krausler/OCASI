@@ -9,7 +9,7 @@ namespace OCASI {
     public:
         BinaryReader(FileReader& reader);
         BinaryReader(uint8_t* data, size_t dataSize);
-        BinaryReader(std::vector<uint8_t>& data);
+        BinaryReader(Vector<uint8_t>& data);
         ~BinaryReader();
 
         template<typename T>

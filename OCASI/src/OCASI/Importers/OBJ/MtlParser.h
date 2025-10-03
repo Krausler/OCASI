@@ -17,7 +17,7 @@ namespace OCASI::OBJ {
 
     private:
         void ParseParameter(bool isMap);
-        void CreateNewMaterial(const std::string& name);
+        void CreateNewMaterial(const String& name);
         void ParseTexture(TextureType type);
 
         float ParseFloat();
@@ -27,7 +27,7 @@ namespace OCASI::OBJ {
         void CheckMaterial();
         void CreatePBRMaterialExtension();
     private:
-        using FileDataIterator = std::vector<char>::iterator;
+        using FileDataIterator = Vector<char>::iterator;
 
         FileReader m_Reader;
         FileDataIterator m_Begin, m_End;

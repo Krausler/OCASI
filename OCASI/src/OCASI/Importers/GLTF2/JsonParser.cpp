@@ -49,9 +49,9 @@ namespace OCASI::GLTF {
         ondemand::document& json = m_Json->Get();
 
         // The order of how things are parsed doesn't really matter, however, it does make sense
-        // to first read in asset and extensions, followed by all data objects and ending with
-        // the connecting objects, like meshes nodes and scenes, in order to simulate scenario
-        // where the order of things would be fundamental.
+        // to first read in the 'asset' and 'extensions', followed by all data objects and ending
+        // with the connecting objects, like meshes nodes and scenes, in order to simulate a
+        // scenario where the order of things would be mandatory.
 
         // Read the project generator and version
         ParseAssetDescription();
@@ -87,7 +87,7 @@ namespace OCASI::GLTF {
         std::string_view strVersion;
         OCASI_FAIL_IF_OBJ_NOT_EXISTS(jAsset, "version", strVersion, "Required 'version' property in jAsset is not present, though mandatory");
 
-        std::string version(strVersion);
+        String version(strVersion);
         m_Asset->AssetVersion = {};
         m_Asset->AssetVersion.Major = std::stoi(version.substr(0, version.find('.')));
         m_Asset->AssetVersion.Minor = std::stoi(version.substr(version.find('.') + 1));
@@ -96,7 +96,7 @@ namespace OCASI::GLTF {
         std::string_view minVersionStr;
         OCASI_HAS_PROPERTY(jAsset, "version", minVersionStr)
         {
-            std::string minVersion(minVersionStr);
+            String minVersion(minVersionStr);
             m_Asset->MinimumRequiredVersion.Major = std::stoi(minVersion.substr(0, minVersion.find('.')));
             m_Asset->MinimumRequiredVersion.Minor = std::stoi(minVersion.substr(minVersion.find('.') + 1));
         }
@@ -118,7 +118,7 @@ namespace OCASI::GLTF {
     {
         auto& json = m_Json->Get();
 
-        // Return when there are no jExtensions required
+        // Return when there are no extensions required
         ondemand::array jExtensions;
         if (json[EXTENSIONS_USED_PROPERTY].get(jExtensions))
             return;
@@ -135,7 +135,8 @@ namespace OCASI::GLTF {
 
         }
 
-        // OCASI currently does not support any jExtensions that are required, so we return when there is an 'extensionRequired' section
+        // OCASI currently does not support any extensions REQUIRED,
+        // so we return when there is an 'extensionRequired' section.
         if (!json[EXTENSIONS_REQUIRED_PROPERTY].error())
             throw FailedImportError("The GLTF importer currently does not support any extensions that are mandatory for parsing.");
     }
@@ -157,10 +158,10 @@ namespace OCASI::GLTF {
             std::string_view data;
             OCASI_HAS_PROPERTY(jBuffer, "uri", data)
             {
-                std::string s(data);
+                String s(data);
                 if (Util::StartsWith(s, "data:"))
                 {
-                    std::string uri = s.substr(s.find(':'));
+                    String uri = s.substr(s.find(':'));
                     m_Asset->Buffers.emplace_back(i, uri, byteLength);
                 }
                 else
@@ -170,9 +171,8 @@ namespace OCASI::GLTF {
                 }
             }
             else
-            {
                 m_Asset->Buffers.emplace_back(i, byteLength);
-            }
+            
             i++;
         }
     }
@@ -213,7 +213,7 @@ namespace OCASI::GLTF {
         {
             Accessor& accessor = m_Asset->Accessors.emplace_back(i);
             
-            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jAccessor, "count", accessor.ElementCount, "Required 'byteLength' property in accessor is not present, though mandatory");
+            OCASI_FAIL_IF_OBJ_NOT_EXISTS(jAccessor, "count", accessor.ElementCount, "Required 'count' property in accessor is not present, though mandatory");
             std::string_view dataType;
             OCASI_FAIL_IF_OBJ_NOT_EXISTS(jAccessor, "type", dataType, "Required 'type' property in accessor is not present, though mandatory");
             size_t compType;
@@ -277,6 +277,7 @@ namespace OCASI::GLTF {
         }
     }
     
+    // A sparse accessor specifies that a part of an 'accessors' data is replaced with data from a different 'bufferView'.
     void JsonParser::ParseSparseAccessor(simdjson::ondemand::object& jSparse, std::optional<Sparse>& outSparse)
     {
         auto& json = m_Json->Get();
@@ -287,7 +288,7 @@ namespace OCASI::GLTF {
         ondemand::object jSparseValues;
         OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparse, "values", jSparseValues, "Required 'values' property in sparse accessor is not present, though mandatory.");
         
-        // Indices
+        // Indices: Specifies the range of values to be replaced.
         {
             OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparseIndices, "bufferView", outSparse->Indices.BufferView, "Required 'bufferView' property in sparse accessor indices is not present, though mandatory.")
             size_t compType;
@@ -296,7 +297,7 @@ namespace OCASI::GLTF {
             OCASI_SET_PROPERTY_IF_EXISTS(jSparseIndices, "byteOffset", outSparse->Indices.ByteOffset);
         }
         
-        // Values
+        // Values: Specifies the values, used to override the values of 'indices'.
         {
             OCASI_FAIL_IF_OBJ_NOT_EXISTS(jSparseValues, "bufferView", outSparse->Values.BufferView, "Required 'bufferView' property in sparse accessor values is not present, though mandatory.")
             OCASI_SET_PROPERTY_IF_EXISTS(jSparseValues, "byteOffset", outSparse->Values.ByteOffset);
@@ -365,7 +366,6 @@ namespace OCASI::GLTF {
         size_t i = 0;
         for (auto jTexture : jTextures)
         {
-            
             Texture& texture = m_Asset->Textures.emplace_back(i);
             OCASI_SET_PROPERTY_IF_EXISTS(jTexture, "source", texture.Source);
             OCASI_SET_PROPERTY_IF_EXISTS(jTexture, "sampler", texture.Sampler);

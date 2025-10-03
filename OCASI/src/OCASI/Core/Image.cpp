@@ -17,7 +17,7 @@ namespace OCASI {
     {
     }
 
-    Image::Image(std::vector<uint8_t>&& imageData, uint8_t channels, uint32_t width, uint32_t height, const ImageSettings& settings)
+    Image::Image(Vector<uint8_t>&& imageData, uint8_t channels, uint32_t width, uint32_t height, const ImageSettings& settings)
         : m_MemoryImage(true), m_Settings(settings)
     {
         m_ImageData = {};
@@ -27,7 +27,7 @@ namespace OCASI {
         m_ImageData.Height = height;
     }
 
-    Image::Image(std::vector<uint8_t>&& data, const ImageSettings& settings)
+    Image::Image(Vector<uint8_t>&& data, const ImageSettings& settings)
         : m_Settings(settings), m_MemoryImage(true)
     {
         m_ImageData = {};

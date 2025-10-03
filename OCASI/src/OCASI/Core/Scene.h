@@ -33,7 +33,7 @@ namespace OCASI {
         bool IsEmpty() const { return ModelIndex == INVALID_ID; }
 
         SharedPtr<Node> Parent;
-        std::vector<SharedPtr<Node>> Children;
+        Vector<SharedPtr<Node>> Children;
 
         size_t ModelIndex = INVALID_ID;
         glm::mat4 LocalTransform = glm::mat4(1.0f);
@@ -47,9 +47,9 @@ namespace OCASI {
      */
     struct Scene
     {
-        std::vector<Model> Models;
-        std::vector<Material> Materials;
-        std::vector<SharedPtr<Node>> RootNodes;
+        Vector<Model> Models;
+        Vector<Material> Materials;
+        Vector<SharedPtr<Node>> RootNodes;
     };
 
 }

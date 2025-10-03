@@ -1,11 +1,8 @@
 add_library(OCASI ${OCASI_LIBRARY_TYPE}
         "src/OCASI/Core/Base.h"
-        "src/OCASI/Core/Debug.h"
         "src/OCASI/Core/Importer.h"
         "src/OCASI/Core/Importer.cpp"
         "src/OCASI/Core/BaseImporter.h"
-        "src/OCASI/Core/Logger.cpp"
-        "src/OCASI/Core/Logger.h"
         "src/OCASI/Core/Model.h"
         "src/OCASI/Core/Material.h"
         "src/OCASI/Core/Scene.h"
@@ -47,6 +44,7 @@ add_library(OCASI ${OCASI_LIBRARY_TYPE}
 )
 
 target_sources(OCASI PRIVATE vendor/simdjson/simdjson.cpp)
+target_link_libraries(OCASI PUBLIC OCBase)
 
 target_include_directories(OCASI PUBLIC
         src
@@ -54,15 +52,7 @@ target_include_directories(OCASI PUBLIC
 )
 
 target_include_directories(OCASI PRIVATE
-        vendor/stbimage
-        vendor/glm
         vendor/simdjson
 )
 
-target_compile_definitions(OCASI PUBLIC ${OCASI_PLATFORM_MACRO} SIMDJSON_EXCEPTIONS=OFF)
-
-if (OCASI_CONFIGURATION STREQUAL "Debug")
-        target_compile_definitions(OCASI PUBLIC "OCASI_DEBUG")
-elseif(OCASI_CONFIGURATION STREQUAL "Release")
-        target_compile_definitions(OCASI PUBLIC "OCASI_RELEASE")
-endif()
+GenerateCompileTimeDefinitions(OCASI OCVK)

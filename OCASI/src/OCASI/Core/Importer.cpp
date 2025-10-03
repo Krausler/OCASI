@@ -6,11 +6,9 @@
 
 #include <unordered_map>
 
-#define CAN_LOAD(x, fName) if(!x.CanLoad()) { OCASI_LOG_ERROR("Can't load file as CanLoad() for {} did not succeed.", fName); return nullptr; }
-
 namespace OCASI {
     
-    std::vector<SharedPtr<BaseImporter>> Importer::s_Importers;
+    Vector<SharedPtr<BaseImporter>> Importer::s_Importers;
     PostProcessorOptions Importer::s_GlobalPostProcessingOptions = PostProcessorOptions::None;
 
     void Importer::SetImporters()
@@ -27,13 +25,12 @@ namespace OCASI {
             SetImporters();
         
         if(!exists(path))
-        {
-            OCASI_FAIL("Requested file does not exist. Verify the 3D model path.");
             return nullptr;
-        }
 
-        std::string fExtension = path.extension().string();
+        String fExtension = path.extension().string();
         std::shared_ptr<Scene> result = nullptr;
+        
+        OCASI_LOG_INFO("Importing {}", path.string());
 
         try
         {
@@ -49,8 +46,6 @@ namespace OCASI {
             if (!importer)
                 throw FailedImportError(FORMAT("Could not find importer supporting {} file extension.", fExtension));
             
-            Logger::SetLoggerName(std::string(importer->GetLoggerPattern()));
-            
             FileReader reader(path);
             
             if (!importer->CanLoad(reader))
@@ -60,16 +55,12 @@ namespace OCASI {
             
             PostProcessor postProcessor(result, importer, options | s_GlobalPostProcessingOptions);
             postProcessor.ExecutePostProcesses();
-            
-            Logger::ResetLoggerName();
         }
         catch (const FailedImportError& e)
         {
-            Logger::ResetLoggerName();
-            OCASI_LOG_ERROR(FORMAT("Failed to load {}: {}", path.string(), e.what()));
+            OCASI_LOG_ERROR("Failed to load {}: {}", path.string(), e.what());
             result = nullptr;
         }
-        Logger::ResetLoggerName();
         
         OCASI_ASSERT(result);
 

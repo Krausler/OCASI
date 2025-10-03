@@ -26,14 +26,14 @@ namespace OCASI::OBJ {
         void ProcessObject();
         void ProcessMaterialAssignment();
 
-        size_t CreateObject(const std::string& name);
-        size_t CreateMesh(const std::string& name);
+        size_t CreateObject(const String& name);
+        size_t CreateMesh(const String& name);
 //        void CreateNewVertex(Vertex& v);
 
         glm::vec3 ParseVec3();
         glm::vec2 ParseVec2();
     private:
-        using FileDataIterator = std::vector<char>::iterator;
+        using FileDataIterator = Vector<char>::iterator;
 
         FileReader& m_FileReader;
         std::shared_ptr<Model> m_OBJModel;

@@ -17,7 +17,7 @@ namespace OCASI {
         PostProcessor(SharedPtr<Scene> scene, SharedPtr<BaseImporter> importer, PostProcessorOptions options);
         void ExecutePostProcesses();
     private:
-        static std::vector<UniquePtr<BasePostProcess>> s_PostProcessingProcesses;
+        static Vector<UniquePtr<BasePostProcess>> s_PostProcessingProcesses;
     private:
         SharedPtr<Scene> m_Scene = nullptr;
         SharedPtr<BaseImporter> m_Importer = nullptr;

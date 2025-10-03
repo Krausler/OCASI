@@ -5,7 +5,7 @@
 namespace OCASI::Util {
 
     template<class Iterator>
-    std::string GetToNextToken(Iterator& iter, const Iterator& end, std::initializer_list<char> tokens)
+    String GetToNextToken(Iterator& iter, const Iterator& end, std::initializer_list<char> tokens)
     {
         OCASI_ASSERT(iter != end);
         for (auto it = iter; it != end; it++)
@@ -14,7 +14,7 @@ namespace OCASI::Util {
             {
                 if (it == end || *it == token)
                 {
-                    std::string result(iter, it);
+                    String result(iter, it);
                     iter = it;
                     return result;
                 }
@@ -24,14 +24,14 @@ namespace OCASI::Util {
     }
 
     template<class Iterator>
-    std::string GetToNextToken(Iterator& iter, const Iterator& end, char token)
+    String GetToNextToken(Iterator& iter, const Iterator& end, char token)
     {
         OCASI_ASSERT(iter != end);
         for (auto it = iter; it != end; it++)
         {
             if (it == end || *it == token)
             {
-                std::string result(iter, it);
+                String result(iter, it);
                 iter = it;
                 return result;
             }
@@ -40,7 +40,7 @@ namespace OCASI::Util {
     }
 
     template<class Iterator>
-    std::string GetToNextTokenOrEndOfIterator(Iterator& iter, const Iterator& end, char token)
+    String GetToNextTokenOrEndOfIterator(Iterator& iter, const Iterator& end, char token)
     {
         OCASI_ASSERT(iter != end);
 
@@ -53,7 +53,7 @@ namespace OCASI::Util {
         {
             if (it == end || *it == token)
             {
-                std::string result(iter, it);
+                String result(iter, it);
                 iter = it;
                 return result;
             }
@@ -62,7 +62,7 @@ namespace OCASI::Util {
     }
 
     template<class Iterator>
-    std::string GetToNextSpaceOrEndOfLine(Iterator& iter, const Iterator& end)
+    String GetToNextSpaceOrEndOfLine(Iterator& iter, const Iterator& end)
     {
         return GetToNextTokenOrEndOfIterator<Iterator>(iter, end, ' ');
     }
@@ -97,10 +97,10 @@ namespace OCASI::Util {
         return (IsSpace(c) || IsLineEnd(c));
     }
 
-    std::vector<std::string> Split(const std::string& target, char token);
-    std::vector<std::string> Split(const std::string& target, char token, uint32_t& outTokenCount);
+    Vector<std::string> Split(const String& target, char token);
+    Vector<std::string> Split(const String& target, char token, uint32_t& outTokenCount);
 
-    uint8_t* DecodeBase64(const std::string& dataString, size_t& outSize);
-    std::string URIUnescapedString(const std::string& input);
-    bool StartsWith(const std::string& s, const std::string& prefix);
+    uint8_t* DecodeBase64(const String& dataString, size_t& outSize);
+    String URIUnescapedString(const String& input);
+    bool StartsWith(const String& s, const String& prefix);
 }

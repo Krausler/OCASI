@@ -16,7 +16,7 @@ namespace OCASI {
         memcpy(m_Data, data, m_DataSize);
     }
 
-    BinaryReader::BinaryReader(std::vector<uint8_t> &data)
+    BinaryReader::BinaryReader(Vector<uint8_t> &data)
         : m_DataSize(data.size())
     {
         OCASI_ASSERT(!data.empty());

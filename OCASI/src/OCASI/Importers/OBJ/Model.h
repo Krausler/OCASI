@@ -65,7 +65,7 @@ namespace OCASI::OBJ {
     };
 
     struct Material {
-        std::string Name;
+        String Name;
 
         // Basic material colors
         glm::vec3 AmbientColour = glm::vec3(1);   // Ambient color (Ka)
@@ -86,23 +86,23 @@ namespace OCASI::OBJ {
 
     struct Face
     {
-        std::vector<size_t> VertexIndices;
-        std::vector<size_t> TextureCoordinateIndices;
-        std::vector<size_t> NormalIndices;
+        Vector<size_t> VertexIndices;
+        Vector<size_t> TextureCoordinateIndices;
+        Vector<size_t> NormalIndices;
 
         FaceType Type;
     };
 
     struct Mesh
     {
-        Mesh(std::string name = "Model")
+        Mesh(String name = "Model")
             : Name(std::move(name))
         {}
 
-        std::string Name;
-        std::string MaterialName;
+        String Name;
+        String MaterialName;
 
-        std::vector<Face> Faces;
+        Vector<Face> Faces;
 
         OCASI::FaceType FaceType = FaceType::None;
         Dimension Dim = Dimension::None;
@@ -110,24 +110,24 @@ namespace OCASI::OBJ {
 
     struct Object
     {
-        std::string Name;
+        String Name;
 
-        std::vector<size_t> Meshes; // This vector is the equivalent of OCASI::Model
-        std::vector<size_t> Groups; // A group is a single mesh.
+        Vector<size_t> Meshes; // This vector is the equivalent of OCASI::Model
+        Vector<size_t> Groups; // A group is a single mesh.
     };
 
     struct Model
     {
-        std::string Name;
-        std::string MTLFilePath;
+        String Name;
+        String MTLFilePath;
 
-        std::unordered_map<std::string, Material> Materials;
-        std::vector<Mesh> Meshes;
-        std::vector<Object> RootObjects;
+        HashMap<std::string, Material> Materials;
+        Vector<Mesh> Meshes;
+        Vector<Object> RootObjects;
 
-        std::vector<glm::vec3> Vertices;
-        std::vector<glm::vec3> VertexColours;
-        std::vector<glm::vec3> Normals;
-        std::vector<glm::vec2> TexCoords;
+        Vector<glm::vec3> Vertices;
+        Vector<glm::vec3> VertexColours;
+        Vector<glm::vec3> Normals;
+        Vector<glm::vec2> TexCoords;
     };
 }

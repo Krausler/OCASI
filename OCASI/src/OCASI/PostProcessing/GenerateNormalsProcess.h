@@ -15,7 +15,7 @@ namespace OCASI {
         virtual PostProcessorOptions GetProcessType() const override { return PostProcessorOptions::GenerateNormals; }
     private:
         // Storing the index of the model along with its mesh index
-        std::vector<std::pair<size_t, size_t>> m_ModelsWithProcessingNeed;
+        Vector<std::pair<size_t, size_t>> m_ModelsWithProcessingNeed;
     };
     
 }

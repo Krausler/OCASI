@@ -10,7 +10,7 @@ namespace OCASI::OBJ {
 
     std::shared_ptr<Model> FileParser::ParseOBJFile()
     {
-        std::vector<char> line;
+        Vector<char> line;
         size_t vertexCount = 0;
         while (m_FileReader.NextLineC(line))
         {
@@ -66,7 +66,7 @@ namespace OCASI::OBJ {
                         }
 
                         default:
-                            OCASI_ASSERT_MSG(false, "Invalid line character");
+                            OCASI_ASSERT(false, "Invalid line character");
                     }
                     break;
                 }
@@ -199,7 +199,7 @@ namespace OCASI::OBJ {
             }
             else
             {
-                std::string toBeParsedString(m_Begin, m_End);
+                String toBeParsedString(m_Begin, m_End);
                 size_t parsedIndex = std::atof(toBeParsedString.c_str());
 
                 OCASI_ASSERT(parsedIndex != 0 || parsedIndex <= m_OBJModel->Vertices.size());
@@ -247,7 +247,7 @@ namespace OCASI::OBJ {
         if (m_CurrentObject && m_CurrentObject->Meshes.empty())
             return;
 
-        std::string name = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+        String name = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
         CreateObject(name);
         m_GroupActive = false;
     }
@@ -267,7 +267,7 @@ namespace OCASI::OBJ {
     {
         Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
         m_Begin++;
-        std::string name = std::string(m_Begin, m_End);
+        String name = std::string(m_Begin, m_End);
 
         if (m_GroupActive && m_CurrentMesh->Faces.empty())
         {
@@ -283,7 +283,7 @@ namespace OCASI::OBJ {
         }
     }
 
-    size_t FileParser::CreateObject(const std::string& name)
+    size_t FileParser::CreateObject(const String& name)
     {
         size_t index = m_OBJModel->RootObjects.size();
 
@@ -294,7 +294,7 @@ namespace OCASI::OBJ {
         return index;
     }
 
-    size_t FileParser::CreateMesh(const std::string& name)
+    size_t FileParser::CreateMesh(const String& name)
     {
         m_CurrentMesh = &m_OBJModel->Meshes.emplace_back();
         m_CurrentMesh->Name = name;
@@ -303,13 +303,13 @@ namespace OCASI::OBJ {
     }
 
     glm::vec3 FileParser::ParseVec3() {
-        std::string s1 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+        String s1 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
         float f1 = std::stof(s1);
 
-        std::string s2 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+        String s2 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
         float f2 = std::stof(s2);
 
-        std::string s3 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+        String s3 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
         float f3 = std::stof(s3);
 
         return { f1, f2, f3 };
@@ -317,10 +317,10 @@ namespace OCASI::OBJ {
 
     glm::vec2 FileParser::ParseVec2()
     {
-        std::string s1 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+        String s1 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
         float f1 = std::stof(s1);
 
-        std::string s2 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+        String s2 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
         float f2 = std::stof(s2);
 
         return { f1, f2 };

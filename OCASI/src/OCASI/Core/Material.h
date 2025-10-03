@@ -111,12 +111,12 @@ namespace OCASI {
         std::shared_ptr<Image> GetTexture(size_t index);
         bool HasTexture(size_t index);
 
-        void SetName(const std::string& name);
-        const std::string& GetName() const { return m_Name; }
+        void SetName(const String& name);
+        const String& GetName() const { return m_Name; }
     private:
         static constexpr size_t CalculateOffset(size_t index);
     private:
-        std::string m_Name;
+        String m_Name;
 
         std::array<uint8_t, MATERIAL_BUFFER_BYTE_SIZE> m_MaterialValues;
         std::array<std::shared_ptr<Image>, MATERIAL_TEXTURE_ARRAY_SIZE> m_MaterialTextures;

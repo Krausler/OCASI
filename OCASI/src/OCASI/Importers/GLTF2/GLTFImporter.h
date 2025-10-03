@@ -30,7 +30,7 @@ namespace OCASI {
         virtual SharedPtr<Scene> Load3DFile(FileReader& reader) override;
         
         virtual std::string_view GetLoggerPattern()  const override { return "GLTF"; }
-        virtual const std::vector<std::string_view> GetSupportedFileExtensions() const override { return { ".gltf", ".glb" }; }
+        virtual const Vector<std::string_view> GetSupportedFileExtensions() const override { return { ".gltf", ".glb" }; }
         virtual ImporterType GetImporterType() const override { return ImporterType::GLTF; }
     private:
         bool LoadBinary();
@@ -44,12 +44,12 @@ namespace OCASI {
         void CreateMesh(size_t meshIndex);
         void CreateMaterial(size_t materialIndex);
         std::unique_ptr<Image> CreateTexture(std::optional<GLTF::TextureInfo>& texInfo);
-        std::vector<uint8_t> GetAccessorData(size_t accessorIndex);
-        std::vector<uint8_t> GetBufferViewData(size_t bufferViewIndex, size_t accessorOffset, size_t& outByteStride);
+        Vector<uint8_t> GetAccessorData(size_t accessorIndex);
+        Vector<uint8_t> GetBufferViewData(size_t bufferViewIndex, size_t accessorOffset, size_t& outByteStride);
 
         FilterOption ConvertMinMagFilterToFilterOption(GLTF::MinMagFilter filter);
         FaceType ConvertPrimitiveTypeToFaceType(GLTF::PrimitiveType primitive);
-        ImageType ConvertMimeTypeToImagType(const std::string& mimeType);
+        ImageType ConvertMimeTypeToImagType(const String& mimeType);
     private:
         FileReader* m_FileReader = nullptr;
         GLTF::Json* m_Json = nullptr;

@@ -33,7 +33,7 @@ namespace OCASI {
     private:
         static void SetImporters();
     private:
-        static std::vector<SharedPtr<BaseImporter>> s_Importers;
+        static Vector<SharedPtr<BaseImporter>> s_Importers;
         static PostProcessorOptions s_GlobalPostProcessingOptions;
     };
 }

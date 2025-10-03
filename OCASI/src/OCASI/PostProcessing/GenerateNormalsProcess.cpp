@@ -38,9 +38,14 @@ namespace OCASI {
             size_t verticesPerFace = (size_t) mesh.FaceMode;
             OCASI_ASSERT(verticesPerFace >= 3 && verticesPerFace <= 4);
             
-            // Stores the normal per vertex and all its surrounding neighbors normals added to it,
-            // with the number of adjacent faces to that vertex
-            std::vector<std::pair<glm::vec3, size_t>> vertexNormals(mesh.Vertices.size(), { glm::vec3(0), 0 });
+            // Stores the sum of all calculated normals per vertex, alongside the number of summed up normals.
+            // When normals for every face have been calculated, they are averaged out by the count of faces.
+            Vector<std::pair<glm::vec3, size_t>> vertexNormals(mesh.Vertices.size(), { glm::vec3(0), 0 });
+            
+            // Iterate through all faces inside a mesh and calculates the normals.
+            // The result is stored for each vertex in that mesh. Should that vertex
+            // be used in another face, the normal of the new face will be added
+            // to the previous one.
             for (size_t i = 0; i < mesh.Indices.size(); i += verticesPerFace)
             {
                 // Calculates the normal of a face, by taking the cross-product of two face edges,
@@ -50,7 +55,7 @@ namespace OCASI {
                 glm::vec3 edge2 = mesh.Vertices.at(mesh.Indices.at(i + 2)) - mesh.Vertices.at(mesh.Indices.at(i + 0));
                 glm::vec3 normal = glm::normalize(glm::cross(edge1, edge2));
                 
-                // For every vertex, the normal gets added on top and the total count of added normals
+                // For each vertex, the normal gets added on top and the total count of added normals
                 // increased by 1.
                 for (size_t j = 0; j < verticesPerFace; j++)
                 {
@@ -61,6 +66,8 @@ namespace OCASI {
             }
             
             mesh.Normals.resize(mesh.Vertices.size());
+            
+            // Averaging out the combined normals.
             for (size_t i = 0; i < mesh.Vertices.size(); i++)
             {
                 auto& [normals, count] = vertexNormals.at(i);

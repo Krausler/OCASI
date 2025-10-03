@@ -20,7 +20,7 @@ namespace OCASI::GLTF {
     const float INVALID_ID_FLOAT = -1;
     const size_t MIN_MAX_ARRAY_SIZE = 16;
 
-    const std::vector<std::string> SUPPORTED_EXTENSIONS =
+    const Vector<std::string> SUPPORTED_EXTENSIONS =
     {
                 "KHR_materials_anisotropy",
                 "KHR_materials_clearcoat",
@@ -166,7 +166,7 @@ namespace OCASI::GLTF {
         std::optional<Sparse> SparseAccessor;
     };
 
-    using VertexAttributes = std::unordered_map<std::string, size_t>;
+    using VertexAttributes = HashMap<std::string, size_t>;
 
     // The primitive structs holds indices into the bufferView array
     struct Primitive : public Object
@@ -180,7 +180,7 @@ namespace OCASI::GLTF {
         VertexAttributes Attributes;
         size_t MaterialIndex;
         size_t Indices; // The accessor corresponding to the indices
-        std::vector<VertexAttributes> MorphTargets;
+        Vector<VertexAttributes> MorphTargets;
     };
 
     struct Mesh : public Object
@@ -189,8 +189,8 @@ namespace OCASI::GLTF {
             : Object(index)
         {}
 
-        std::vector<Primitive> Primitives;
-        std::vector<float> Weights; // Morph target weights
+        Vector<Primitive> Primitives;
+        Vector<float> Weights; // Morph target weights
     };
 
     struct Image : public Object
@@ -199,10 +199,10 @@ namespace OCASI::GLTF {
             : Object(index)
         {}
 
-        std::string URI;
+        String URI;
 
         size_t BufferView = INVALID_ID;
-        std::string MimeType;
+        String MimeType;
     };
 
     struct Sampler : public Object
@@ -326,7 +326,7 @@ namespace OCASI::GLTF {
             : Object(index)
         {}
 
-        std::string Name;
+        String Name;
         std::optional<PBRMetallicRoughness> MetallicRoughness;
 
         bool IsDoubleSided = false;
@@ -358,10 +358,10 @@ namespace OCASI::GLTF {
 
         Buffer(size_t id, size_t bufferSize);
         Buffer(size_t id, FileReader& reader, size_t bufferSize);
-        Buffer(size_t id, const std::string& URIData, size_t bufferSize);
+        Buffer(size_t id, const String& URIData, size_t bufferSize);
         ~Buffer();
 
-        std::vector<uint8_t> Get(size_t byteLength, size_t offset);
+        Vector<uint8_t> Get(size_t byteLength, size_t offset);
 
         void SetData(uint8_t* data) { m_Data = data; }
 
@@ -386,13 +386,13 @@ namespace OCASI::GLTF {
             : Object(index)
         {}
 
-        std::string Name;
+        String Name;
         size_t Mesh = INVALID_ID;
-        std::vector<size_t> Children;
+        Vector<size_t> Children;
 
         TRS TrsComponent;
         glm::mat4 LocalTranslationMatrix = glm::mat4(1.0f); // This is only local, when this node is not a root node
-        std::vector<float> Weights;
+        Vector<float> Weights;
     };
 
     struct Scene : public Object
@@ -401,8 +401,8 @@ namespace OCASI::GLTF {
             : Object(index)
         {}
 
-        std::string Name;
-        std::vector<size_t> RootNodes;
+        String Name;
+        Vector<size_t> RootNodes;
 
     };
 
@@ -411,7 +411,7 @@ namespace OCASI::GLTF {
         size_t Major = INVALID_ID;
         size_t Minor = INVALID_ID;
 
-        std::string AsString() const
+        String AsString() const
         {
             return FORMAT("{0}.{1}", Major, Minor);
         }
@@ -420,25 +420,25 @@ namespace OCASI::GLTF {
     struct Asset
     {
         Version AssetVersion;
-        std::string CopyRight;
-        std::string Generator;
+        String CopyRight;
+        String Generator;
         Version MinimumRequiredVersion;
 
         size_t DefaultSceneIndex = INVALID_ID;
 
-        std::vector<Mesh> Meshes;
-        std::vector<Accessor> Accessors;
-        std::vector<BufferView> BufferViews;
-        std::vector<Material> Materials;
-        std::vector<Texture> Textures;
-        std::vector<Image> Images;
-        std::vector<Sampler> Samplers;
-        std::vector<Node> Nodes;
-        std::vector<Buffer> Buffers;
-        std::vector<Scene> Scenes;
-        std::vector<std::string> ExtensionsUsed;
-        std::vector<std::string> SupportedExtensionsUsed;
-        std::vector<std::string> ExtensionsRequired; // Always empty as I don't support any extensions, that are required
+        Vector<Mesh> Meshes;
+        Vector<Accessor> Accessors;
+        Vector<BufferView> BufferViews;
+        Vector<Material> Materials;
+        Vector<Texture> Textures;
+        Vector<Image> Images;
+        Vector<Sampler> Samplers;
+        Vector<Node> Nodes;
+        Vector<Buffer> Buffers;
+        Vector<Scene> Scenes;
+        Vector<std::string> ExtensionsUsed;
+        Vector<std::string> SupportedExtensionsUsed;
+        Vector<std::string> ExtensionsRequired; // Always empty as I don't support any extensions, that are required
 
         // TODO: Animations
     };

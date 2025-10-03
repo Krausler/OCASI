@@ -6,7 +6,7 @@
 
 namespace OCASI {
     
-    std::vector<UniquePtr<BasePostProcess>> PostProcessor::s_PostProcessingProcesses;
+    Vector<UniquePtr<BasePostProcess>> PostProcessor::s_PostProcessingProcesses;
     
     void PostProcessor::SetPostProcesses()
     {

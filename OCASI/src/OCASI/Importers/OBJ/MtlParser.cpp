@@ -14,7 +14,7 @@ namespace OCASI::OBJ {
         if (!m_Reader.IsOpen())
             throw FailedImportError(FORMAT("Cannot open MTL file {}", m_Reader.GetPath().string()));
 
-        std::vector<char> line;
+        Vector<char> line;
         while (m_Reader.NextLineC(line))
         {
             m_Begin = line.begin();
@@ -38,7 +38,7 @@ namespace OCASI::OBJ {
             // New material
             case 'b':
             case 'n': {
-                std::string statement = Util::GetToNextToken(m_Begin, m_End, ' ');
+                String statement = Util::GetToNextToken(m_Begin, m_End, ' ');
                 if (statement == "newmtl")
                     CreateNewMaterial(Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End));
                 else if (statement == "norm" || statement == "bump")
@@ -92,7 +92,7 @@ namespace OCASI::OBJ {
 
                         break;
                         default:
-                            OCASI_LOG_WARN(FORMAT("Unknown parameter: K{}", *(m_Begin - 2)));
+                            OCASI_LOG_WARN("Unknown parameter: K{}", *(m_Begin - 2));
                         break;
                     }
                 }
@@ -114,7 +114,7 @@ namespace OCASI::OBJ {
                     else
                         m_CurrentMaterial->Shininess = ParseFloat();
                 } else {
-                    OCASI_LOG_WARN(FORMAT("Unknown parameter: N{}", *(m_Begin - 2)));
+                    OCASI_LOG_WARN("Unknown parameter: N{}", *(m_Begin - 2));
                 }
                 break;
             }
@@ -185,12 +185,12 @@ namespace OCASI::OBJ {
                             else
                                 m_CurrentMaterial->PBRExtension->Clearcoat = ParseFloat();
                         } else {
-                            OCASI_LOG_WARN(FORMAT("Unknown parameter: Pc{}", *(m_Begin - 1)));
+                            OCASI_LOG_WARN("Unknown parameter: Pc{}", *(m_Begin - 1));
                         }
                         break;
                     }
                     default:
-                        OCASI_LOG_WARN(FORMAT("Unknown parameter: P{}", *(m_Begin - 2)));
+                        OCASI_LOG_WARN("Unknown parameter: P{}", *(m_Begin - 2));
                         break;
                 }
                 break;
@@ -212,9 +212,9 @@ namespace OCASI::OBJ {
                     m_Begin += charactersToNextSpace;
                     m_CurrentMaterial->PBRExtension->AnisotropyRotation = ParseFloat();
                 } else {
-                    OCASI_LOG_WARN(FORMAT(
+                    OCASI_LOG_WARN(
                             "Unknown parameter: Parameter starts with 'a' but does not fulfill the length requirements. Length is {}.",
-                            charactersToNextSpace));
+                            charactersToNextSpace);
                 }
                 break;
             }
@@ -227,7 +227,7 @@ namespace OCASI::OBJ {
                 else
                 {
                     m_Begin++;
-                    OCASI_LOG_WARN(FORMAT("Unknown parameter: o{} is not a map", Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End)));
+                    OCASI_LOG_WARN("Unknown parameter: o{} is not a map", Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End));
                 }
                 break;
             }
@@ -237,7 +237,7 @@ namespace OCASI::OBJ {
         }
     }
 
-    void MtlParser::CreateNewMaterial(const std::string& name)
+    void MtlParser::CreateNewMaterial(const String& name)
     {
         m_Model->Materials[name] = {};
         m_CurrentMaterial = &m_Model->Materials.at(name);
@@ -246,19 +246,19 @@ namespace OCASI::OBJ {
 
     float MtlParser::ParseFloat()
     {
-        std::string s = std::string(m_Begin, m_End);
+        String s = std::string(m_Begin, m_End);
         return std::stof(s);
     }
 
     glm::vec3 MtlParser::ParseVec3()
     {
-        std::string s1 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+        String s1 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
         float f1 = std::stof(s1);
 
-        std::string s2 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+        String s2 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
         float f2 = std::stof(s2);
 
-        std::string s3 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+        String s3 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
         float f3 = std::stof(s3);
 
         return { f1, f2, f3 };
@@ -266,16 +266,16 @@ namespace OCASI::OBJ {
 
     glm::vec4 MtlParser::ParseVec4()
     {
-        std::string s1 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+        String s1 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
         float f1 = std::stof(s1);
 
-        std::string s2 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+        String s2 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
         float f2 = std::stof(s2);
 
-        std::string s3 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+        String s3 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
         float f3 = std::stof(s3);
 
-        std::string s4 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+        String s4 = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
         float f4 = std::stof(s4);
 
         return { f1, f2, f3, f4 };
@@ -301,7 +301,7 @@ namespace OCASI::OBJ {
 
             auto begin = m_Begin;
             // Acquire the next argument or texture name
-            std::string tokenSequence = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+            String tokenSequence = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
 
             if (tokenSequence.at(0) == '-')
             {
@@ -315,7 +315,7 @@ namespace OCASI::OBJ {
                 }
                 else if (tokenSequence == "type" && type == Reflection)
                 {
-                    std::string orientation = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+                    String orientation = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
 
                     if (orientation == "cube_top")
                     {
@@ -348,7 +348,7 @@ namespace OCASI::OBJ {
                 }
                 else if (tokenSequence == "clamp")
                 {
-                    std::string option = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
+                    String option = Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End);
                     if (option == "on")
                     {
                         m_CurrentMaterial->TextureClamps.at(type) = true;

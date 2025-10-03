@@ -51,14 +51,14 @@ namespace OCASI {
      */
     struct Mesh
     {
-        std::string Name;
+        String Name;
 
-        std::vector<glm::vec3> Vertices;
-        std::vector<glm::vec3> VertexColours;
-        std::vector<glm::vec3> Normals;
-        std::array<std::vector<glm::vec2>, TEXTURE_COORDINATE_ARRAY_SIZE> TexCoords;
-        std::vector<glm::vec4> Tangents; // Optional
-        std::vector<uint32_t> Indices;
+        Vector<glm::vec3> Vertices;
+        Vector<glm::vec3> VertexColours;
+        Vector<glm::vec3> Normals;
+        std::array<Vector<glm::vec2>, TEXTURE_COORDINATE_ARRAY_SIZE> TexCoords;
+        Vector<glm::vec4> Tangents; // Optional
+        Vector<uint32_t> Indices;
 
         size_t MaterialIndex = INVALID_ID;
 
@@ -78,9 +78,9 @@ namespace OCASI {
      */
     struct Model
     {
-        std::string Name;
+        String Name;
 
-        std::vector<Mesh> Meshes;
+        Vector<Mesh> Meshes;
     };
 
 }

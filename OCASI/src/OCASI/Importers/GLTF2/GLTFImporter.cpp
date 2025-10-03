@@ -86,7 +86,7 @@ namespace OCASI {
 
         // Checking whether there is a second chunk
 
-        // 2 * chunk info + minimum buffers size (data needs to be aligned by 4)
+        // 2 * chunk info + minimum buffer size (data needs to be aligned by 4)
         constexpr size_t byteSizeToAdd = sizeof(uint32_t) * 2 + 4;
         if (bReader.GetPointer() + byteSizeToAdd < m_FileReader->GetFileSize())
         {
@@ -178,7 +178,7 @@ namespace OCASI {
         // When there are multiple scenes, each scene has a root node
         SharedPtr<Node> ocasiRootNode = nullptr;
         if (m_Asset->Scenes.size() > 1)
-            ocasiRootNode = m_Scene->RootNodes.emplace_back();;
+            ocasiRootNode = m_Scene->RootNodes.emplace_back();
 
         for (size_t& gltfRootNodeIndex : gltfScene.RootNodes)
         {
@@ -244,7 +244,7 @@ namespace OCASI {
 
             if (gltfPrimitive.Indices != INVALID_ID)
             {
-                std::vector<uint8_t> data = GetAccessorData(gltfPrimitive.Indices);
+                Vector<uint8_t> data = GetAccessorData(gltfPrimitive.Indices);
                 OCASI_ASSERT(!data.empty());
 
                 size_t indexDataTypeSize = GLTF::ComponentTypeToBytes(gltfAsset.Accessors.at(gltfPrimitive.Indices).CompType);
@@ -260,7 +260,7 @@ namespace OCASI {
                 // TODO: Currently the data types are fixed, make these dynamic or something
                 if (attributeName == "POSITION")
                 {
-                    std::vector<uint8_t> data = GetAccessorData(accessor);
+                    Vector<uint8_t> data = GetAccessorData(accessor);
                     OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec3) == 0);
 
                     ocasiMesh.Vertices.resize(data.size() / sizeof(glm::vec3));
@@ -268,7 +268,7 @@ namespace OCASI {
                 }
                 else if (attributeName == "NORMAL")
                 {
-                    std::vector<uint8_t> data = GetAccessorData(accessor);
+                    Vector<uint8_t> data = GetAccessorData(accessor);
                     OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec3) == 0);
 
                     ocasiMesh.Normals.resize(data.size() / sizeof(glm::vec3));
@@ -276,7 +276,7 @@ namespace OCASI {
                 }
                 else if (attributeName == "TANGENT")
                 {
-                     std::vector<uint8_t> data = GetAccessorData(accessor);
+                     Vector<uint8_t> data = GetAccessorData(accessor);
                      OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec4) == 0);
 
                     ocasiMesh.Tangents.resize(data.size() / sizeof(glm::vec4));
@@ -290,7 +290,7 @@ namespace OCASI {
                     OCASI_ASSERT(texCoordIndex < ocasiMesh.TexCoords.size());
                     auto& texCoords = ocasiMesh.TexCoords.at(texCoordIndex);
 
-                    std::vector<uint8_t> data = GetAccessorData(accessor);
+                    Vector<uint8_t> data = GetAccessorData(accessor);
                     OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec2) == 0);
 
                     texCoords.resize(data.size() / sizeof(glm::vec2));
@@ -301,7 +301,7 @@ namespace OCASI {
                     const size_t COLOR_STRING = 6;
                     size_t colorIndex = std::atoi(&attributeName.at(COLOR_STRING));
 
-                    std::vector<uint8_t> data = GetAccessorData(accessor);
+                    Vector<uint8_t> data = GetAccessorData(accessor);
                     OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec4) == 0);
 
                     ocasiMesh.VertexColours.resize(data.size() / sizeof(glm::vec4));
@@ -416,7 +416,7 @@ namespace OCASI {
         OCASI_ASSERT(gltfInfo.Texture < gltfAsset.Textures.size());
         GLTF::Texture& gltfTexture = gltfAsset.Textures.at(gltfInfo.Texture);
 
-        OCASI_ASSERT_MSG(gltfTexture.Source != INVALID_ID, FORMAT("Do not know what to do with a texture that does not contain an image source. Texture json index: {}", texInfo->Texture));
+        OCASI_ASSERT(gltfTexture.Source != INVALID_ID, "Do not know what to do with a texture that does not contain an image source. Texture json index: {}", texInfo->Texture);
         OCASI_ASSERT(gltfTexture.Source < gltfAsset.Images.size());
         GLTF::Image& gltfImage = gltfAsset.Images.at(gltfTexture.Source);
 
@@ -437,7 +437,7 @@ namespace OCASI {
         if (gltfImage.BufferView != INVALID_ID)
         {
             size_t unused = 0;
-            std::vector<uint8_t> data = GetBufferViewData(gltfImage.BufferView, 0, unused);
+            Vector<uint8_t> data = GetBufferViewData(gltfImage.BufferView, 0, unused);
 
             // TODO: Maybe remove this as it is not used
             // When bufferView is defined, mimeType must also be defined
@@ -448,16 +448,16 @@ namespace OCASI {
         }
         else if (!gltfImage.URI.empty())
         {
-            std::string uri = Util::URIUnescapedString(gltfImage.URI);
+            String uri = Util::URIUnescapedString(gltfImage.URI);
             if (Util::StartsWith(uri, "data:"))
             {
-                std::string data = gltfImage.URI.substr(uri.find(':'));
+                String data = gltfImage.URI.substr(uri.find(':'));
                 size_t readSize = 0;
                 uint8_t* binaryData = Util::DecodeBase64(data, readSize);
                 if (!binaryData)
                     throw FailedImportError("Could not read Base64 encoded string.");
                 
-                std::vector<uint8_t> binaryDataVector(readSize);
+                Vector<uint8_t> binaryDataVector(readSize);
 
                 memcpy(binaryDataVector.data(), binaryData, readSize);
 
@@ -478,7 +478,7 @@ namespace OCASI {
         }
     }
 
-    std::vector<uint8_t> GLTFImporter::GetBufferViewData(size_t bufferViewIndex, size_t accessorOffset, size_t& outByteStride)
+    Vector<uint8_t> GLTFImporter::GetBufferViewData(size_t bufferViewIndex, size_t accessorOffset, size_t& outByteStride)
     {
         auto& asset = *m_Asset;
         OCASI_ASSERT(bufferViewIndex < asset.BufferViews.size());
@@ -491,23 +491,22 @@ namespace OCASI {
         return buffer.Get(bufferView.ByteLength, bufferView.ByteOffset + accessorOffset);
     }
 
-    std::vector<uint8_t> GLTFImporter::GetAccessorData(size_t accessorIndex)
+    Vector<uint8_t> GLTFImporter::GetAccessorData(size_t accessorIndex)
     {
         auto& asset = *m_Asset;
 
         OCASI_ASSERT(accessorIndex < asset.Accessors.size());
         auto& accessor = asset.Accessors.at(accessorIndex);
-        OCASI_ASSERT_MSG(accessor.BufferView != INVALID_ID, "Don't know what to do with an accessor that does not contain a buffer view.");
+        OCASI_ASSERT(accessor.BufferView != INVALID_ID, "Don't know what to do with an accessor that does not contain a buffer view.");
 
         // This is the accessor offset, not the buffer view offset
         size_t elementSize = GLTF::ComponentTypeToBytes(accessor.CompType) * (size_t) accessor.Type;
 
         size_t byteStride = 0;
-        std::vector<uint8_t> data = GetBufferViewData(accessor.BufferView, accessor.ByteOffset, byteStride);
+        Vector<uint8_t> data = GetBufferViewData(accessor.BufferView, accessor.ByteOffset, byteStride);
         OCASI_ASSERT(!data.empty());
 
-        // The byte stride specifies the number of bytes for each element. It is not the element size, but
-        // the padding between an element, and it's neighbour including the elements size (stride = element size + padding).
+        // The byteStride specifies the number of bytes for each element. This includes both element size and padding.
         if (byteStride != 0 && byteStride != elementSize)
         {
             OCASI_ASSERT(byteStride % GLTF::ComponentTypeToBytes(accessor.CompType) == 0);
@@ -524,11 +523,11 @@ namespace OCASI {
             OCASI_ASSERT(sparse.Indices.BufferView < asset.BufferViews.size());
 
             size_t sparseIndicesByteStride; // ignored
-            std::vector<uint8_t> sparseIndicesData = GetBufferViewData(sparse.Indices.BufferView, sparse.Indices.ByteOffset, sparseIndicesByteStride);
+            Vector<uint8_t> sparseIndicesData = GetBufferViewData(sparse.Indices.BufferView, sparse.Indices.ByteOffset, sparseIndicesByteStride);
             OCASI_ASSERT(!sparseIndicesData.empty());
 
             size_t sparseValuesByteStride; // ignored
-            std::vector<uint8_t> sparseValuesData = GetBufferViewData(sparse.Values.BufferView, sparse.Values.ByteOffset, sparseValuesByteStride);
+            Vector<uint8_t> sparseValuesData = GetBufferViewData(sparse.Values.BufferView, sparse.Values.ByteOffset, sparseValuesByteStride);
             OCASI_ASSERT(!sparseValuesData.empty());
 
             // TODO: Create a new vector, copying over the indices
@@ -598,7 +597,7 @@ namespace OCASI {
         }
     }
     
-    ImageType GLTFImporter::ConvertMimeTypeToImagType(const std::string& mimeType)
+    ImageType GLTFImporter::ConvertMimeTypeToImagType(const String& mimeType)
     {
         if (mimeType == "image/png")
             return ImageType::PNG;

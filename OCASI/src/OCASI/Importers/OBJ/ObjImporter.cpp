@@ -160,7 +160,7 @@ namespace OCASI {
         // This means that for every face, the indices into the global vertex arrays (vertex array, normal array, texture
         // coordinate array) have to be checked against all already loaded indices. If there is a match, we just use the
         // index of that matching vertex in the indices array.
-        std::unordered_map<VertexIndices, size_t> lookUpTable;
+        HashMap<VertexIndices, size_t> lookUpTable;
         size_t newIndex = 0;
         
         for (OBJ::Face f : m.Faces)
@@ -221,7 +221,7 @@ namespace OCASI {
         const uint8_t REFLECTION_TEXTURE_NORMALIZER = 8;
 
         OBJ::TextureType type = (OBJ::TextureType) i;
-        std::string texturePath = mat.Textures.at(type);
+        String texturePath = mat.Textures.at(type);
 
         if (texturePath.empty())
             return;

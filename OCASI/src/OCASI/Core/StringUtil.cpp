@@ -4,15 +4,15 @@
 
 namespace OCASI::Util {
 
-    std::vector<std::string> Split(const std::string& target, char token)
+    Vector<std::string> Split(const String& target, char token)
     {
-        std::vector<std::string> result;
+        Vector<std::string> result;
         uint32_t lastIndex = 0;
         for (uint32_t i = 0; i < target.size(); i++)
         {
             if(target[i] == token)
             {
-                if (std::string s = target.substr(lastIndex, i - lastIndex); !s.empty())
+                if (String s = target.substr(lastIndex, i - lastIndex); !s.empty())
                     result.push_back(s);
                 lastIndex = i + 1;
             }
@@ -26,9 +26,9 @@ namespace OCASI::Util {
         return result;
     }
 
-    std::vector<std::string> Split(const std::string& target, char token, uint32_t& outTokenCount)
+    Vector<std::string> Split(const String& target, char token, uint32_t& outTokenCount)
     {
-        std::vector<std::string> result;
+        Vector<std::string> result;
         uint32_t lastIndex = 0;
         outTokenCount = 0;
         for (uint32_t i = 0; i < target.size(); i++)
@@ -36,7 +36,7 @@ namespace OCASI::Util {
             if(target[i] == token)
             {
                 outTokenCount++;
-                if (std::string s = target.substr(lastIndex, i - lastIndex); !s.empty())
+                if (String s = target.substr(lastIndex, i - lastIndex); !s.empty())
                     result.push_back(s);
                 lastIndex = i + 1;
             }
@@ -51,7 +51,7 @@ namespace OCASI::Util {
     }
 
 
-    uint8_t* DecodeBase64(const std::string& dataString, size_t& outSize)
+    uint8_t* DecodeBase64(const String& dataString, size_t& outSize)
     {
         // Base 64 splits binary data into 3 bytes (24 bits) each which then get decomposed into groups of 4 (6 bits each)
         constexpr size_t BASE64_BYTE_CHUNK_SIZE = 3;
@@ -115,7 +115,7 @@ namespace OCASI::Util {
     }
 
     // Thank you, ChatGPT
-    std::string URIUnescapedString(const std::string& input)
+    String URIUnescapedString(const String& input)
     {
         std::basic_ostringstream<char> decoded;
         size_t i = 0;
@@ -143,7 +143,7 @@ namespace OCASI::Util {
         return decoded.str();
     }
     
-    bool StartsWith(const std::string& s, const std::string& prefix)
+    bool StartsWith(const String& s, const String& prefix)
     {
         return s.size() >= s.size() && s.substr(0, prefix.size()) == prefix;
     }

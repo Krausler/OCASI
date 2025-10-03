@@ -78,7 +78,7 @@ namespace OCASI {
         return m_MaterialTextures.at(index) != nullptr;
     }
     
-    void Material::SetName(const std::string& name)
+    void Material::SetName(const String& name)
     {
         m_Name = name;
     }

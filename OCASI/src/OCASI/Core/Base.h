@@ -1,32 +1,16 @@
 #pragma once
 
-#include <memory>
-#include <vector>
-#include <string>
 #include <cstdint>
-#include <filesystem>
 
-using Path = std::filesystem::path;
+#include "OCBase/OCBase.h"
+#include "OCBase/STDTypedefs.h"
 
-namespace OCASI {
-    template<typename T>
-    using SharedPtr = std::shared_ptr<T>;
-    
-    template<typename T, typename ...Args>
-    constexpr SharedPtr<T> MakeShared(Args&& ... args)
-    {
-        return std::make_shared<T>(std::forward<Args>(args)...);
-    }
-    
-    template<typename T>
-    using UniquePtr = std::unique_ptr<T>;
-    
-    template<typename T, typename ...Args>
-    constexpr UniquePtr<T> MakeUnique(Args&& ... args)
-    {
-        return std::make_unique<T>(std::forward<Args>(args)...);
-    }
-}
-#include "OCASI/Core/Logger.h"
-#include "OCASI/Core/Debug.h"
 #include "OCASI/Core/Error.h"
+
+#define OCASI_LOG_INFO(...) OCB_LOG_INFO_TEMPLATE("OCASI", __VA_ARGS__)
+#define OCASI_LOG_WARN(...) OCB_LOG_WARNING_TEMPLATE("OCASI", __VA_ARGS__)
+#define OCASI_LOG_ERROR(...) OCB_LOG_ERROR_TEMPLATE("OCASI", __VA_ARGS__)
+
+#define OCASI_ASSERT(...) OCB_ASSERT_TEMPLATE("OCASI", __VA_ARGS__)
+
+

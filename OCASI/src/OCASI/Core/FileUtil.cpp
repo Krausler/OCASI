@@ -17,14 +17,14 @@ namespace OCASI {
             Close();
     }
 
-    bool FileReader::NextLine(std::string& outLine)
+    bool FileReader::NextLine(String& outLine)
     {
         return std::getline(m_FileReader, outLine).operator bool();
     }
 
-    bool FileReader::NextLineC(std::vector<char>& outLine)
+    bool FileReader::NextLineC(Vector<char>& outLine)
     {
-        std::string line;
+        String line;
         bool r = std::getline(m_FileReader, line).operator bool();
         outLine.resize(line.size());
         outLine.assign(line.begin(), line.end());
@@ -51,22 +51,22 @@ namespace OCASI {
         return out;
     }
 
-    std::string FileReader::GetFileString()
+    String FileReader::GetFileString()
     {
         m_FileReader.unsetf(std::ios::skipws);
-        std::string out;
+        String out;
         out.resize(m_FileSize);
         m_FileReader.read(out.data(), m_FileSize);
 
         return out;
     }
 
-    std::vector<uint8_t> FileReader::GetBytes(size_t size) {
+    Vector<uint8_t> FileReader::GetBytes(size_t size) {
         m_FileReader.unsetf(std::ios::skipws);
         if (size < m_FileSize)
             return {};
 
-        std::vector<uint8_t > data;
+        Vector<uint8_t > data;
         data.resize(size);
         m_FileReader.read(reinterpret_cast<char*>(data.data()), size);
         return data;
@@ -95,9 +95,9 @@ namespace OCASI {
     
     namespace Util {
 
-        bool FindTokensInFirst100Lines(OCASI::FileReader& reader, const std::vector<std::string>& tokens)
+        bool FindTokensInFirst100Lines(OCASI::FileReader& reader, const Vector<std::string>& tokens)
         {
-            std::string currentLine;
+            String currentLine;
             for (size_t i = 0; i < 100 && !reader.HasReachedEOF(); i++)
             {
                 if(reader.NextLine(currentLine))

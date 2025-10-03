@@ -15,7 +15,7 @@ namespace OCASI {
         uint8_t Channels = 0;
         
         //! Either the output image data in bytes or the input data for loading the image.
-        std::vector<uint8_t> Data;
+        Vector<uint8_t> Data;
     };
 
     //! @brief Specifies how to react, if a meshes texture coordinate is not in the range 0.0f - 1.0f.
@@ -90,9 +90,9 @@ namespace OCASI {
         //! @brief Constructs a new image from the image file path and the settings.
         Image(const Path& path, const ImageSettings& settings = {});
         //! @brieg Constructs an image from the already decoded image data, channels, width and height and the settings.
-        Image(std::vector<uint8_t>&& imageData, uint8_t channels, uint32_t width, uint32_t height, const ImageSettings& settings = {});
+        Image(Vector<uint8_t>&& imageData, uint8_t channels, uint32_t width, uint32_t height, const ImageSettings& settings = {});
         //! @brieg Constructs an image from the none decoded data and the settings.
-        Image(std::vector<uint8_t>&& data, const ImageSettings& settings = {});
+        Image(Vector<uint8_t>&& data, const ImageSettings& settings = {});
 
         // If the image is not a memory image, it's data can be loaded with this function;
         /*! @brief Loads an image from disk and decodes the data, if the image is not a memory image.
