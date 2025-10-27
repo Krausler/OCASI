@@ -4,40 +4,21 @@
 
 namespace OCASI::GLTF {
 
-    size_t ComponentTypeToBytes(ComponentType type) {
-        switch (type) {
-            case ComponentType::None:
-                return INVALID_ID;
-            case ComponentType::Byte:
-            case ComponentType::UnsignedByte:
-                return 1;
-            case ComponentType::Short:
-            case ComponentType::UnsignedShort:
-                return 2;
-            case ComponentType::UnsignedInt:
-            case ComponentType::Float:
-                return 4;
-        }
-        return INVALID_ID;
-    }
-
     Buffer::Buffer(size_t id, size_t bufferSize)
         : Object(id), m_ByteSize(bufferSize)
     {
     }
 
-    Buffer::Buffer(size_t id, FileReader& reader, size_t bufferSize)
+    Buffer::Buffer(size_t id, OCBase::FileStreamReader& reader, size_t bufferSize)
         : Object(id), m_ByteSize(bufferSize)
     {
-        if (!reader.IsOpen())
-        {
-            throw FailedImportError(FORMAT("Cannot open .bin file at location {}", reader.GetPath().string()));
-        }
+        OCASI_ASSERT(reader.GetFile().IsOpen());
 
-        size_t fileSize = reader.GetFileSize();
-        m_Data = reader.GetFileDataInBytes();
+        size_t fileSize = reader.GetFile().GetSize();
+        reader.SetOffset(0);
+        m_Data = reader.Read(bufferSize);
 
-        OCASI_ASSERT(fileSize == bufferSize, "Specified byte size doe not match read byte size of glTF .bin file data. read size: {}, specified size: {}", fileSize, bufferSize);
+        OCASI_ASSERT(fileSize == bufferSize, "Specified byte size does not match read byte size of glTF .bin file data. read size: {}, specified size: {}", fileSize, bufferSize);
         m_ByteSize = fileSize;
     }
 
@@ -56,16 +37,14 @@ namespace OCASI::GLTF {
         delete m_Data;
     }
 
-    Vector<uint8_t> Buffer::Get(size_t byteLength, size_t offset)
+    ExpectedImportT<std::span<uint8_t>> Buffer::Get(size_t byteLength, size_t offset)
     {
         if (offset + byteLength > m_ByteSize)
-            throw FailedImportError("Cannot read data that lies outside the buffers memory.");
+            return UnexpectedF(ImportError(ImportError::Type::Buffer, FORMAT("The specified byte range exceeds the buffers length. Buffer = [{}]", GetIndex())));
         
-        Vector<uint8_t> result;
-        result.resize(byteLength);
-        void* data = m_Data + offset;
-        memcpy(result.data(), data, byteLength);
+        void* byteData = m_Data + offset;
+        std::span<uint8_t> data((uint8_t*)byteData, byteLength);
 
-        return result;
+        return data;
     }
 }

@@ -78,7 +78,7 @@ namespace OCASI::Util {
         }
         return numberOfTokens;
     }
-
+    
     template<typename char_t>
     bool IsLineEnd(char_t c)
     {

@@ -60,13 +60,13 @@ namespace OCASI {
         return val;
     }
     
-    void Material::SetTexture(size_t index, std::shared_ptr<Image> image)
+    void Material::SetTexture(size_t index, SharedPtr<Image> image)
     {
         OCASI_ASSERT(index < MATERIAL_TEXTURE_ARRAY_SIZE);
         m_MaterialTextures[index] = image;
     }
     
-    std::shared_ptr<Image> Material::GetTexture(size_t index)
+    SharedPtr<Image> Material::GetTexture(size_t index)
     {
         OCASI_ASSERT(index < MATERIAL_TEXTURE_ARRAY_SIZE);
         return m_MaterialTextures.at(index);

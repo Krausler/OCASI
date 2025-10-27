@@ -1,7 +1,7 @@
 #pragma once
 
-#include "OCASI/Core/FileUtil.h"
 #include "OCASI/Importers/OBJ/Model.h"
+#include "OCBase/IO/FileStream.h"
 
 namespace OCASI::OBJ {
 
@@ -10,17 +10,17 @@ namespace OCASI::OBJ {
     class FileParser
     {
     public:
-        FileParser(FileReader& reader);
+        FileParser(OCBase::FileStreamReader& reader);
         ~FileParser() = default;
 
-        std::shared_ptr<Model> ParseOBJFile();
+        ExpectedImportT<SharedPtr<Model>> ParseOBJFile();
     private:
         void ParseVertex2D();
         void ParseVertex3D();
         void ParseVertexColour();
         void ParseTextureCoordinate();
         void ParseNormal();
-        void ParseFace();
+        ExpectedImport ParseFace();
 
         void ProcessGroup();
         void ProcessObject();
@@ -34,9 +34,9 @@ namespace OCASI::OBJ {
         glm::vec2 ParseVec2();
     private:
         using FileDataIterator = Vector<char>::iterator;
-
-        FileReader& m_FileReader;
-        std::shared_ptr<Model> m_OBJModel;
+        
+        OCBase::FileStreamReader& m_FileReader;
+        SharedPtr<Model> m_OBJModel;
 
         FileDataIterator m_Begin, m_End;
 

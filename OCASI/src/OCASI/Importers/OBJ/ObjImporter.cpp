@@ -3,6 +3,8 @@
 #include "OCASI/Importers/OBJ/FileParser.h"
 #include "OCASI/Importers/OBJ/MtlParser.h"
 
+#include "OCBase/IO/IO.h"
+
 #include <fstream>
 
 namespace OCASI {
@@ -36,34 +38,79 @@ namespace OCASI {
     // OBJ files only support one set of texture coordinates
     constexpr uint8_t OBJ_TEXTURE_COORDINATE_ARRAY = 0;
     
-    bool ObjImporter::CanLoad(FileReader& reader)
+    bool ObjImporter::CanLoad(OCBase::FileStreamReader& reader)
     {
         m_FileReader = &reader;
-        return Util::FindTokensInFirst100Lines(*m_FileReader, { "v", "vn", "vt", "mtlib", "f", "usemtl" });
+        
+        // Check the first 100 lines of the OBJ file and search for valid tokens
+        const Vector<String> TOKENS = { "v ", "vn ", "vt ", "mtlib ", "f ", "usemtl " };
+        const uint32_t CHECKED_LINES = 100;
+        
+        bool found = false;
+        for (uint32_t i = 0; i < CHECKED_LINES; i++)
+        {
+            String line;
+            if (!m_FileReader->NextLine(line))
+                break;
+            
+            if (line.empty())
+                continue;
+            
+            for (const String& token : TOKENS)
+            {
+                if(line.starts_with(token))
+                {
+                    found = true;
+                    // Easiest way to break out of a nested for loop
+                    goto doubleLoopBreak;
+                }
+            }
+        }
+        // goto label
+        doubleLoopBreak:
+        
+        m_FileReader->SetOffset(0);
+        
+        return found;
     }
 
-    std::shared_ptr<Scene> ObjImporter::Load3DFile(FileReader& reader)
+    ExpectedImportT<SharedPtr<Scene>> ObjImporter::Load3DFile(OCBase::FileStreamReader& reader)
     {
         m_FileReader = &reader;
         
         OBJ::FileParser objParser(*m_FileReader);
-        m_OBJModel = objParser.ParseOBJFile();
+        auto e = objParser.ParseOBJFile()
+                .transform([this](const auto& model) { m_OBJModel = model; });
+        if (!e)
+            return UnexpectedF(e.error());
 
-        if (!m_OBJModel)
-            return nullptr;
-
-        Path folder = m_FileReader->GetParentPath();
+        Path folder = m_FileReader->GetFile().GetPath().parent_path();
 
         if(!m_OBJModel->MTLFilePath.empty())
         {
-            OBJ::MtlParser mtlParser(m_OBJModel, folder / m_OBJModel->MTLFilePath);
-            mtlParser.ParseMTLFile();
+            auto eMTL = OCBase::IO::Open(folder / m_OBJModel->MTLFilePath, OCBase::FileMode::Read)
+                    .transform([this](const OCBase::File& f)
+                    {
+                        OCBase::FileStreamReader reader(const_cast<OCBase::File&>(f));
+                        OBJ::MtlParser mtlParser(m_OBJModel, reader);
+                        auto e = mtlParser.ParseMTLFile();
+                        reader.GetFile().Close();
+                        return e;
+                    })
+                    .transform_error([this](const auto& error)
+                    {
+                        OCASI_LOG_ERROR("Couldn't load MTL file at relative location {}: {}. Omitting the MTL file.", m_OBJModel->MTLFilePath, error.GetErrorMessage());
+                        return error;
+                    });
+            
+            if (!eMTL)
+                return UnexpectedF(ImportError(ImportError::Type::ReadMalfunction, FORMAT("An error occurred in the MTL file: {}", eMTL.error().GetErrorMessage())));
         }
 
         return ConvertToOCASIScene(folder);
     }
 
-    std::shared_ptr<Scene> ObjImporter::ConvertToOCASIScene(const Path& folder)
+    SharedPtr<Scene> ObjImporter::ConvertToOCASIScene(const Path& folder)
     {
         m_OutputScene = MakeShared<Scene>();
 
@@ -117,9 +164,9 @@ namespace OCASI {
         return m_OutputScene;
     }
 
-    std::shared_ptr<Node> ObjImporter::CreateNodes(const OBJ::Object& o)
+    SharedPtr<Node> ObjImporter::CreateNodes(const OBJ::Object& o)
     {
-        std::shared_ptr<Node> node = std::make_unique<Node>();
+        SharedPtr<Node> node = std::make_unique<Node>();
         node->Parent = nullptr;
 
         if (!o.Meshes.empty())
@@ -136,7 +183,7 @@ namespace OCASI {
 
         for (size_t meshIndex : o.Groups)
         {
-            std::shared_ptr<Node> groupNode = std::make_unique<Node>();
+            SharedPtr<Node> groupNode = std::make_unique<Node>();
             node->Children.push_back(groupNode);
             groupNode->Parent = node;
             groupNode->ModelIndex = m_OutputScene->Models.size();
@@ -212,7 +259,7 @@ namespace OCASI {
         mesh.Indices.push_back(newIndex);
     }
 
-    void ObjImporter::SortTextures(Material &newMat, const OBJ::Material &mat, const Path& folder, size_t i)
+    ExpectedImport ObjImporter::SortTextures(Material &newMat, const OBJ::Material &mat, const Path& folder, size_t i)
     {
         // This value is needed to convert the OBJ::TextureType to a OCASI::TextureOrientation
         // for reflection textures. In OBJ, each side of the cube map is provided using a single
@@ -224,7 +271,7 @@ namespace OCASI {
         String texturePath = mat.Textures.at(type);
 
         if (texturePath.empty())
-            return;
+            return {};
 
         ImageSettings settings = {};
         settings.Clamp = mat.TextureClamps.at(i) ? ClampOption::ClampToEdge : ClampOption::Repeat;
@@ -320,7 +367,7 @@ namespace OCASI {
                 break;
             }
             default:
-                throw FailedImportError(FORMAT("Invalid OBJ texture type {}", i));
+                return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, FORMAT("Unknown texture type: {}", (size_t)type)));
         }
     }
 }

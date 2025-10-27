@@ -22,7 +22,7 @@ namespace OCASI {
          *                generations. In short post processing operations..
          * @return The imported scene. Nullptr if scene creation failed.
          */
-        static std::shared_ptr<Scene> Load3DFile(const Path& path, PostProcessorOptions options);
+        static ExpectedImportT<SharedPtr<Scene>> Load3DFile(const Path& path, PostProcessorOptions options);
         
         /*! @brief Sets a global constant to be applied to all meshes for importing with a specific set
          *         of post processing operations.

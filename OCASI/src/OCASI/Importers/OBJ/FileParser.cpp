@@ -4,15 +4,15 @@
 
 namespace OCASI::OBJ {
 
-    FileParser::FileParser(FileReader &reader)
+    FileParser::FileParser(OCBase::FileStreamReader& reader )
         : m_FileReader(reader), m_OBJModel(MakeShared<Model>())
     {}
 
-    std::shared_ptr<Model> FileParser::ParseOBJFile()
+    ExpectedImportT<SharedPtr<Model>> FileParser::ParseOBJFile()
     {
         Vector<char> line;
         size_t vertexCount = 0;
-        while (m_FileReader.NextLineC(line))
+        while (m_FileReader.NextLine(line))
         {
             m_Begin = line.begin();
             m_End = line.end();
@@ -66,7 +66,7 @@ namespace OCASI::OBJ {
                         }
 
                         default:
-                            OCASI_ASSERT(false, "Invalid line character");
+                            return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, FORMAT("Invalid parameter v{}", *m_Begin)));
                     }
                     break;
                 }
@@ -99,7 +99,8 @@ namespace OCASI::OBJ {
                         m_CurrentObject->Meshes.push_back(CreateMesh("Mesh"));
                     }
 
-                    ParseFace();
+                    if(auto e = ParseFace(); !e)
+                        return UnexpectedF(e.error());
                     break;
                 }
 
@@ -124,7 +125,7 @@ namespace OCASI::OBJ {
                 }
 
                 default:
-                    break;
+                    continue;
             }
         }
 
@@ -158,7 +159,7 @@ namespace OCASI::OBJ {
         m_OBJModel->Normals.push_back(ParseVec3());
     }
 
-    void FileParser::ParseFace()
+    ExpectedImport FileParser::ParseFace()
     {
         bool hasNormals = !m_OBJModel->Normals.empty();
         bool hasTexCoords = !m_OBJModel->TexCoords.empty();
@@ -188,14 +189,11 @@ namespace OCASI::OBJ {
             else if(*m_Begin == '/')
             {
                 stage++;
+                // TODO: Do NOT fail when one of the below is reached, as they may just be indicators to skip that specific stage.
                 if(stage == Stage::TexCoord && !hasTexCoords)
-                {
-                    throw FailedImportError("Cannot request face indices for texture coordinates, when there are no texture coordinates defined.");
-                }
+                    return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, "Cannot reference texture coordinates, when there are no texture coordinates defined."));
                 else if(stage == Stage::NormalVec && !hasNormals)
-                {
-                    throw FailedImportError("Cannot request face indices for normals, when there are no normals defined.");
-                }
+                    return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, "Cannot reference normals, when there are no normals defined."));
             }
             else
             {
@@ -208,7 +206,7 @@ namespace OCASI::OBJ {
                 while ((temp /= 10) != 0)
                     iteratorStep++;
 
-                parsedIndex--;
+                parsedIndex -= 1;
 
                 switch (stage)
                 {
@@ -228,7 +226,8 @@ namespace OCASI::OBJ {
                         break;
                     }
                     default:
-                        throw FailedImportError(FORMAT("Unsupported face assembly stage {}", stage));
+                        OCASI_ASSERT(false, "Invalid face parsing stage: {}", stage);
+                        break;
                 }
             }
 
@@ -236,6 +235,8 @@ namespace OCASI::OBJ {
         }
         face.Type = (FaceType) vertexCountPerFace;
         m_CurrentMesh->FaceType = (FaceType) vertexCountPerFace;
+        
+        return {};
     }
 
     void FileParser::ProcessObject()

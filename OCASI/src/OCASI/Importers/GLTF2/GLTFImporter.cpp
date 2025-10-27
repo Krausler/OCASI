@@ -1,8 +1,9 @@
 #include "GLTFImporter.h"
 
-#include "OCASI/Core/BinaryReader.h"
 #include "OCASI/Core/StringUtil.h"
-#include "Json.h"
+#include "OCASI/Importers/GLTF2/Json.h"
+
+#include "OCBase/IO/IO.h"
 
 #include "glm/gtc/quaternion.hpp"
 
@@ -11,22 +12,25 @@ using namespace simdjson;
 namespace OCASI {
 
     const size_t BINARY_HEADER_BYTE_SIZE = 12;
-    const uint32_t BINARY_HEADER_MAGIC_VALUE = 0x46546C67;
+    const uint32_t BINARY_HEADER_MAGIC_VALUE = 0x46546C67; // glTF in ASCII
     const uint32_t BINARY_HEADER_VERSION = 2;
 
     const uint32_t CHUNK_TYPE_JSON = 0x4E4F534A;
     const uint32_t CHUNK_TYPE_BINARY = 0x004E4942;
 
-    bool GLTFImporter::CanLoad(FileReader& reader)
+    bool GLTFImporter::CanLoad(OCBase::FileStreamReader& reader)
     {
         m_FileReader = &reader;
+        OCBase::File& f = m_FileReader->GetFile();
         
-        if (m_FileReader->GetPath().extension() == ".glb")
+        if (m_FileReader->GetFile().GetPath().extension() == ".glb")
         {
-            m_FileReader->SetBinary();
-            
-            if (m_FileReader->GetFileSize() >= std::numeric_limits<uint32_t>::max())
+            auto val = OCBase::IO::Reopen(f, f.GetMode() | OCBase::FileMode::Bin);
+            if(!val)
+            {
+                OCASI_LOG_ERROR("GLTF: {}", val.error().GetErrorMessage());
                 return false;
+            }
 
             if (CheckBinaryHeader())
                 return true;
@@ -34,7 +38,7 @@ namespace OCASI {
         else
         {
             m_Json = new GLTF::Json;
-            if(padded_string::load(m_FileReader->GetPath().string()).get(m_Json->PaddedJsonString))
+            if(padded_string::load(f.GetPath().string()).get(m_Json->PaddedJsonString))
                 return false;
             
             if (!m_Json->Parser.iterate(m_Json->PaddedJsonString).get(m_Json->Json))
@@ -43,83 +47,88 @@ namespace OCASI {
         return false;
     }
 
-    SharedPtr<Scene> GLTFImporter::Load3DFile(FileReader& reader)
+    ExpectedImportT<SharedPtr<Scene>> GLTFImporter::Load3DFile(OCBase::FileStreamReader& reader)
     {
         m_FileReader = &reader;
         
-        if (m_FileReader->IsBinary())
+        if (m_FileReader->GetFile().HasFileMode(OCBase::FileMode::Bin))
         {
-            if (!LoadBinary())
-                return nullptr;
+            auto eGLB = LoadBinary();
+            if (!eGLB)
+                return UnexpectedF(eGLB.error());
         }
         else
         {
             GLTF::JsonParser parser(*m_FileReader, m_Json);
-            if (!(m_Asset = parser.ParseGLTFTextFile()))
-                return nullptr;
+            auto eAsset = parser.ParseGLTFTextFile()
+                    .transform([this](const auto& asset) { m_Asset = asset; });
+            if (!eAsset)
+                return UnexpectedF(eAsset.error());
         }
 
-        ConvertToOCASIScene();
+        auto result = ConvertToOCASIScene();
+        if (!result)
+            return UnexpectedF(result.error());
 
         return m_Scene;
     }
 
-    bool GLTFImporter::LoadBinary()
+    ExpectedImport GLTFImporter::LoadBinary()
     {
-        BinaryReader bReader(*m_FileReader);
         // Skip the header, as it has already been checked to be valid in the CheckBinaryHeader function
-        bReader.SetPointer(BINARY_HEADER_BYTE_SIZE);
+        m_FileReader->SetOffset(BINARY_HEADER_BYTE_SIZE);
 
-        GLBChunk jsonChunk = LoadChunk(bReader);
+        GLBChunk jsonChunk = LoadChunk();
         if (jsonChunk.Type != CHUNK_TYPE_JSON)
-            throw FailedImportError("First binary chunk must be of type json.");
+            return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, "The first binary chunk must be of type json."));
             
         m_Json = new GLTF::Json;
         m_Json->PaddedJsonString = padded_string((char*)jsonChunk.Data, jsonChunk.ChunkLength);
         
         if (auto error = m_Json->Parser.iterate(m_Json->PaddedJsonString).get(m_Json->Json); error != error_code::SUCCESS)
-            throw FailedImportError(FORMAT("Can't read json file: {}", simdjson::error_message(error)));
+            return UnexpectedF(ImportError(ImportError::Type::ReadMalfunction, FORMAT("Failed to read json file successfully: {}", simdjson::error_message(error))));
 
         GLTF::JsonParser parser(*m_FileReader, m_Json);
-        if (!(m_Asset = parser.ParseGLTFTextFile()))
-            return false;
+        auto eAsset = parser.ParseGLTFTextFile()
+                .transform([this](const auto& asset) { m_Asset = asset; });
+        if (!eAsset)
+            return UnexpectedF(eAsset.error());
 
         // Checking whether there is a second chunk
 
-        // 2 * chunk info + minimum buffer size (data needs to be aligned by 4)
+        // 2 * 4 bytes for chunk info + minimum buffer size (data needs to be aligned by 4)
         constexpr size_t byteSizeToAdd = sizeof(uint32_t) * 2 + 4;
-        if (bReader.GetPointer() + byteSizeToAdd < m_FileReader->GetFileSize())
+        if (m_FileReader->GetOffset() + byteSizeToAdd < m_FileReader->GetFile().GetSize())
         {
-            GLBChunk bufferChunk = LoadChunk(bReader);
+            GLBChunk bufferChunk = LoadChunk();
             if (bufferChunk.Type != CHUNK_TYPE_BINARY)
-                throw FailedImportError("Second binary chunk must be of type binary.");
+                return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, "The second binary chunk must be of type binary/data."));
 
-            bool found = false;
             for (GLTF::Buffer& buffer : m_Asset->Buffers)
             {
-                if (!buffer.m_Data && !found)
+                if (!buffer.m_Data)
                 {
                     buffer.SetData(bufferChunk.Data);
-                    found = true;
+                    break;
                 }
                 else
                 {
-                    throw FailedImportError("GLB file defines more then one binary chunk.");
+                    return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, "The structure of the GLTF 2.0 GLB file format is strictly defined to ONLY have ONE GLB binary chunk, thus only ONE Json buffer with no data assigned to it is allowed."));
                 }
             }
         }
 
         delete jsonChunk.Data;
 
-        return true;
+        return {};
     }
 
-    GLBChunk GLTFImporter::LoadChunk(BinaryReader& bReader)
+    GLBChunk GLTFImporter::LoadChunk()
     {
         GLBChunk chunk = {};
-        chunk.ChunkLength = bReader.GetUint32();
-        chunk.Type = bReader.GetUint32();
-        chunk.Data = bReader.Get(chunk.ChunkLength);
+        chunk.ChunkLength = m_FileReader->Read<uint32_t>();
+        chunk.Type = m_FileReader->Read<uint32_t>();
+        chunk.Data = m_FileReader->Read(chunk.ChunkLength);
 
         // Remove trailing zeros
         for (uint32_t i = chunk.ChunkLength - 1; i > 0; i--)
@@ -135,18 +144,16 @@ namespace OCASI {
 
     bool GLTFImporter::CheckBinaryHeader()
     {
-        uint8_t data[BINARY_HEADER_BYTE_SIZE];
-        m_FileReader->GetBytes(data, BINARY_HEADER_BYTE_SIZE);
-        m_FileReader->Set0();
-        BinaryReader bReader(data, BINARY_HEADER_BYTE_SIZE);
-        GLBHeader header = bReader.GetType<GLBHeader>();
+        uint8_t* data = m_FileReader->Read(BINARY_HEADER_BYTE_SIZE);
+        m_FileReader->SetOffset(0);
+        GLBHeader* header = (GLBHeader*) data;
 
-        if (!(header.Magic == BINARY_HEADER_MAGIC_VALUE && header.Version == BINARY_HEADER_VERSION && header.FileLength == m_FileReader->GetFileSize()))
+        if (!(header->Magic == BINARY_HEADER_MAGIC_VALUE && header->Version == BINARY_HEADER_VERSION && header->FileLength == m_FileReader->GetFile().GetSize()))
             return false;
         return true;
     }
-
-    void GLTFImporter::ConvertToOCASIScene()
+    
+    ExpectedImport GLTFImporter::ConvertToOCASIScene()
     {
         m_Scene = MakeShared<Scene>();
 
@@ -159,16 +166,21 @@ namespace OCASI {
 
         for (auto& gltfMesh: gltfAsset.Meshes)
         {
-            CreateMesh(gltfMesh.GetIndex());
+            auto e = CreateMesh(gltfMesh.GetIndex());
+            if(!e)
+                return e;
         }
 
         for (auto& gltfMaterial : gltfAsset.Materials)
         {
-            CreateMaterial(gltfMaterial.GetIndex());
+            auto e = CreateMaterial(gltfMaterial.GetIndex());
+            if(!e)
+                return e;
         }
-
+        
+        return {};
     }
-
+    
     void GLTFImporter::CreateNodes(size_t sceneIndex)
     {
         auto& gltfAsset = *m_Asset;
@@ -204,7 +216,7 @@ namespace OCASI {
             TraverseNodes(gltfRootNode, ocasiNode);
         }
     }
-
+    
     void GLTFImporter::TraverseNodes(GLTF::Node& gltfNode, SharedPtr<Node> ocasiNode)
     {
         for (size_t child : gltfNode.Children)
@@ -225,8 +237,8 @@ namespace OCASI {
             TraverseNodes(childGltfNode, ocasiNode);
         }
     }
-
-    void GLTFImporter::CreateMesh(size_t meshIndex)
+    
+    ExpectedImport GLTFImporter::CreateMesh(size_t meshIndex)
     {
         auto& gltfAsset = *m_Asset;
         auto& ocasiScene = *m_Scene;
@@ -244,40 +256,61 @@ namespace OCASI {
 
             if (gltfPrimitive.Indices != INVALID_ID)
             {
-                Vector<uint8_t> data = GetAccessorData(gltfPrimitive.Indices);
-                OCASI_ASSERT(!data.empty());
-
-                size_t indexDataTypeSize = GLTF::ComponentTypeToBytes(gltfAsset.Accessors.at(gltfPrimitive.Indices).CompType);
-                OCASI_ASSERT(data.size() % indexDataTypeSize == 0)
+                Vector<uint8_t> data;
+                auto eData = GetAccessorData(gltfPrimitive.Indices)
+                        .transform([&data](const Vector<uint8_t>& val) { data = val; });
                 
-                ocasiMesh.Indices.resize(data.size() / indexDataTypeSize);
-                for (size_t i = 0; i < data.size(); i += indexDataTypeSize)
-                    memcpy(&ocasiMesh.Indices[(i == 0 ? 0 : i / indexDataTypeSize)], &data[i], indexDataTypeSize);
+                if (!eData)
+                    return UnexpectedF(eData.error());
+                    
+                GLTF::ComponentType cType = gltfAsset.Accessors.at(gltfPrimitive.Indices).CompType;
+                size_t indicesDataTypeSize = GLTF::ComponentTypeToBytes(cType);
+                
+                if(!(cType == GLTF::ComponentType::UnsignedInt | cType == GLTF::ComponentType::UnsignedShort))
+                    return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, FORMAT("When indices is defined, the referenced accessor must have a componentType of UnsignedInt. Primitive = [{}]", gltfPrimitive.GetIndex())));
+                
+                ocasiMesh.Indices.resize(data.size() / indicesDataTypeSize);
+                
+                if(cType != GLTF::ComponentType::UnsignedInt)
+                {
+                    for (size_t i = 0; i < data.size() / indicesDataTypeSize; i++)
+                    {
+                        memcpy(&ocasiMesh.Indices[i], &data[i * indicesDataTypeSize], indicesDataTypeSize);
+                    }
+                }
+                else
+                {
+                    memcpy(ocasiMesh.Indices.data(), data.data(), sizeof(uint32_t) * ocasiMesh.Indices.size());
+                }
             }
 
             for (auto& [attributeName, accessor] : gltfPrimitive.Attributes)
             {
+                Vector<uint8_t> data;
+                auto eData = GetAccessorData(accessor)
+                        .transform([&data](const Vector<uint8_t>& val) { data = val; });
+                
+                if (!eData)
+                    return UnexpectedF(eData.error());
+                
                 // TODO: Currently the data types are fixed, make these dynamic or something
                 if (attributeName == "POSITION")
                 {
-                    Vector<uint8_t> data = GetAccessorData(accessor);
-                    OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec3) == 0);
+                    OCASI_ASSERT(data.size() % sizeof(glm::vec3) == 0);
 
                     ocasiMesh.Vertices.resize(data.size() / sizeof(glm::vec3));
                     memcpy(ocasiMesh.Vertices.data(), data.data(), data.size());
                 }
                 else if (attributeName == "NORMAL")
                 {
-                    Vector<uint8_t> data = GetAccessorData(accessor);
-                    OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec3) == 0);
+                    OCASI_ASSERT(data.size() % sizeof(glm::vec3) == 0);
 
                     ocasiMesh.Normals.resize(data.size() / sizeof(glm::vec3));
                     memcpy(ocasiMesh.Normals.data(), data.data(), data.size());
                 }
                 else if (attributeName == "TANGENT")
                 {
-                     Vector<uint8_t> data = GetAccessorData(accessor);
-                     OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec4) == 0);
+                     OCASI_ASSERT(data.size() % sizeof(glm::vec4) == 0);
 
                     ocasiMesh.Tangents.resize(data.size() / sizeof(glm::vec4));
                     memcpy(ocasiMesh.Tangents.data(), data.data(), data.size());
@@ -290,8 +323,7 @@ namespace OCASI {
                     OCASI_ASSERT(texCoordIndex < ocasiMesh.TexCoords.size());
                     auto& texCoords = ocasiMesh.TexCoords.at(texCoordIndex);
 
-                    Vector<uint8_t> data = GetAccessorData(accessor);
-                    OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec2) == 0);
+                    OCASI_ASSERT(data.size() % sizeof(glm::vec2) == 0);
 
                     texCoords.resize(data.size() / sizeof(glm::vec2));
                     memcpy(texCoords.data(), data.data(), data.size());
@@ -300,18 +332,17 @@ namespace OCASI {
                 {
                     const size_t COLOR_STRING = 6;
                     size_t colorIndex = std::atoi(&attributeName.at(COLOR_STRING));
-
-                    Vector<uint8_t> data = GetAccessorData(accessor);
-                    OCASI_ASSERT(!data.empty() && data.size() % sizeof(glm::vec4) == 0);
+                    OCASI_ASSERT(data.size() % sizeof(glm::vec4) == 0);
 
                     ocasiMesh.VertexColours.resize(data.size() / sizeof(glm::vec4));
                     memcpy(ocasiMesh.VertexColours.data(), data.data(), data.size());
                 }
             }
         }
+        return {};
     }
 
-    void GLTFImporter::CreateMaterial(size_t materialIndex)
+    ExpectedImport GLTFImporter::CreateMaterial(size_t materialIndex)
     {
         auto& gltfAsset = *m_Asset;
         auto& ocasiScene = *m_Scene;
@@ -329,21 +360,46 @@ namespace OCASI {
             {
 
                 ocasiMaterial.SetValue(MATERIAL_ALBEDO_COLOUR, gltfMaterial.MetallicRoughness->BaseColour);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_ALBEDO, CreateTexture(gltfMaterial.MetallicRoughness->BaseColourTexture));
+                
+                auto eBaseColour = CreateTexture(gltfMaterial.MetallicRoughness->BaseColourTexture)
+                        .transform([&ocasiMaterial](const auto& image)
+                                   { ocasiMaterial.SetTexture(MATERIAL_TEXTURE_ALBEDO, image); });
+                if (!eBaseColour)
+                    return UnexpectedF(eBaseColour.error());
+                
 
                 ocasiMaterial.SetValue(MATERIAL_USE_COMBINED_METALLIC_ROUGHNESS_TEXTURE, true);
                 ocasiMaterial.SetValue(MATERIAL_METALLIC, gltfMaterial.MetallicRoughness->Metallic);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_METALLIC, CreateTexture(gltfMaterial.MetallicRoughness->MetallicRoughnessTexture));
-
                 ocasiMaterial.SetValue(MATERIAL_ROUGHNESS, gltfMaterial.MetallicRoughness->Roughness);
+                auto eMetallicRoughness = CreateTexture(gltfMaterial.MetallicRoughness->MetallicRoughnessTexture)
+                        .transform([&ocasiMaterial](const auto& image)
+                                   { ocasiMaterial.SetTexture(MATERIAL_TEXTURE_METALLIC, image); });
+                if (!eMetallicRoughness)
+                    return UnexpectedF(eMetallicRoughness.error());
             }
 
-            ocasiMaterial.SetTexture(MATERIAL_TEXTURE_NORMAL, CreateTexture(gltfMaterial.NormalTexture));
-            ocasiMaterial.SetTexture(MATERIAL_TEXTURE_OCCLUSION, CreateTexture(gltfMaterial.OcclusionTexture));
+            // Normal texture
+            auto eNormal = CreateTexture(gltfMaterial.NormalTexture)
+                    .transform([&ocasiMaterial](const auto& image)
+                               { ocasiMaterial.SetTexture(MATERIAL_TEXTURE_NORMAL, image); });
+            if (!eNormal)
+                return UnexpectedF(eNormal.error());
+            
+            // Occlusion texture
+            auto eOcclusion = CreateTexture(gltfMaterial.OcclusionTexture)
+                    .transform([&ocasiMaterial](const auto& image)
+                               { ocasiMaterial.SetTexture(MATERIAL_TEXTURE_OCCLUSION, image); });
+            if (!eOcclusion)
+                return UnexpectedF(eOcclusion.error());
 
             ocasiMaterial.SetValue(MATERIAL_EMISSIVE_COLOUR, gltfMaterial.EmissiveColour);
-            ocasiMaterial.SetTexture(MATERIAL_TEXTURE_EMISSIVE, CreateTexture(gltfMaterial.EmissiveTexture));
-
+            auto eEmissive = CreateTexture(gltfMaterial.EmissiveTexture)
+                    .transform([&ocasiMaterial](const auto& image)
+                               { ocasiMaterial.SetTexture(MATERIAL_EMISSIVE_COLOUR, image); });
+            if (!eEmissive)
+                return UnexpectedF(eEmissive.error());
+            
+            
             // TODO: AlphaCutoff, AMode, DoubleSided
         }
 
@@ -356,10 +412,20 @@ namespace OCASI {
             {
                 auto& extSpecular = gltfMaterial.ExtSpecular.value();
                 ocasiMaterial.SetValue(MATERIAL_SPECULAR_COLOUR, extSpecular.SpecularColourFactor);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_SPECULAR, CreateTexture(extSpecular.SpecularColourTexture));
+                auto eSpec = CreateTexture(extSpecular.SpecularColourTexture)
+                        .transform([&ocasiMaterial](const auto& image)
+                        { ocasiMaterial.SetTexture(MATERIAL_TEXTURE_SPECULAR, image); });
+                if (!eSpec)
+                    return UnexpectedF(eSpec.error());
+                
+                
 
                 ocasiMaterial.SetValue(MATERIAL_SPECULAR_STRENGTH, extSpecular.SpecularFactor);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_SPECULAR_STRENGTH, CreateTexture(extSpecular.SpecularTexture));
+                auto eSpecStrength = CreateTexture(extSpecular.SpecularTexture)
+                        .transform([&ocasiMaterial](const auto& image)
+                                   { ocasiMaterial.SetTexture(MATERIAL_TEXTURE_SPECULAR_STRENGTH, image); });
+                if (!eSpecStrength)
+                    return UnexpectedF(eSpecStrength.error());
             }
 
             if (gltfMaterial.ExtIOR)
@@ -369,10 +435,20 @@ namespace OCASI {
             {
                 auto& extPbrSpecular = gltfMaterial.ExtSpecularGlossiness.value();
                 ocasiMaterial.SetValue(MATERIAL_ALBEDO_COLOUR, extPbrSpecular.DiffuseFactor);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_ALBEDO, CreateTexture(extPbrSpecular.DiffuseTexture));
+                auto eDiffuse = CreateTexture(extPbrSpecular.DiffuseTexture)
+                        .transform([&ocasiMaterial](const auto& image)
+                                   { ocasiMaterial.SetTexture(MATERIAL_TEXTURE_ALBEDO, image); });
+                if(!eDiffuse)
+                    return UnexpectedF(eDiffuse.error());
+                
 
                 ocasiMaterial.SetValue(MATERIAL_SPECULAR_COLOUR, extPbrSpecular.SpecularFactor);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_SPECULAR, CreateTexture(extPbrSpecular.SpecularGlossinessTexture));
+                auto eSpecGlossiness = CreateTexture(extPbrSpecular.SpecularGlossinessTexture)
+                        .transform([&ocasiMaterial](const auto& image)
+                                   { ocasiMaterial.SetTexture(MATERIAL_TEXTURE_SPECULAR, image); });
+                if(!eSpecGlossiness)
+                    return UnexpectedF(eSpecGlossiness.error());
+                
 
                 ocasiMaterial.SetValue(MATERIAL_SPECULAR_STRENGTH, extPbrSpecular.GlossinessFactor);
             }
@@ -384,27 +460,47 @@ namespace OCASI {
                 ocasiMaterial.SetValue(MATERIAL_ANISOTROPY_ROTATION, extAnisotropy.AnisotropyDirection);
 
                 ocasiMaterial.SetValue(MATERIAL_USE_COMBINED_ANISOTROPY_ANISOTROPY_ROTATION_TEXTURE, true);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_ANISOTROPY, CreateTexture(extAnisotropy.AnisotropyTexture));
+                auto eAnisotropy = CreateTexture(extAnisotropy.AnisotropyTexture)
+                        .transform([&ocasiMaterial](const auto& image)
+                                   { ocasiMaterial.SetTexture(MATERIAL_TEXTURE_ANISOTROPY, image); });
+                if(!eAnisotropy)
+                    return UnexpectedF(eAnisotropy.error());
             }
 
             if (gltfMaterial.ExtClearcoat)
             {
                 auto& extClearcoat = gltfMaterial.ExtClearcoat.value();
                 ocasiMaterial.SetValue(MATERIAL_CLEARCOAT, extClearcoat.ClearcoatFactor);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_CLEARCOAT, CreateTexture(extClearcoat.ClearcoatTexture));
+                auto eClearCoat = CreateTexture(extClearcoat.ClearcoatTexture)
+                        .transform([&ocasiMaterial](const auto& image)
+                                   { ocasiMaterial.SetTexture(MATERIAL_TEXTURE_CLEARCOAT, image); });
+                if(!eClearCoat)
+                    return UnexpectedF(eClearCoat.error());
+                
 
                 ocasiMaterial.SetValue(MATERIAL_CLEARCOAT_ROUGHNESS, extClearcoat.ClearcoatRoughnessFactor);
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_CLEARCOAT_ROUGHNESS, CreateTexture(extClearcoat.ClearcoatRoughnessTexture));
+                auto eClearCoatRoughness = CreateTexture(extClearcoat.ClearcoatRoughnessTexture)
+                        .transform([&ocasiMaterial](const auto& image)
+                                   { ocasiMaterial.SetTexture(MATERIAL_TEXTURE_CLEARCOAT_ROUGHNESS, image); });
+                if(!eClearCoatRoughness)
+                    return UnexpectedF(eClearCoatRoughness.error());
 
-                ocasiMaterial.SetTexture(MATERIAL_TEXTURE_CLEARCOAT_NORMAL, CreateTexture(extClearcoat.ClearcoatNormalTexture));
+                
+                auto eClearCoatNormal = CreateTexture(extClearcoat.ClearcoatNormalTexture)
+                        .transform([&ocasiMaterial](const auto& image)
+                                   { ocasiMaterial.SetTexture(MATERIAL_TEXTURE_CLEARCOAT_NORMAL, image); });
+                if(!eClearCoatNormal)
+                    return UnexpectedF(eClearCoatNormal.error());
             }
 
             // TODO: Iridescence, Volume, Sheen, Transmission
 
         }
+        
+        return {};
     }
 
-    std::unique_ptr<Image> GLTFImporter::CreateTexture(std::optional<GLTF::TextureInfo>& texInfo)
+    ExpectedImportT<SharedPtr<Image>> GLTFImporter::CreateTexture(std::optional<GLTF::TextureInfo>& texInfo)
     {
         if (!texInfo.has_value())
             return nullptr;
@@ -437,14 +533,23 @@ namespace OCASI {
         if (gltfImage.BufferView != INVALID_ID)
         {
             size_t unused = 0;
-            Vector<uint8_t> data = GetBufferViewData(gltfImage.BufferView, 0, unused);
+            Vector<uint8_t> data;
+            auto eData = GetBufferViewData(gltfImage.BufferView, 0, unused)
+                    .transform([&data](const std::span<uint8_t>& val)
+                    {
+                        data.resize(val.size());
+                        std::memcpy(data.data(), val.data(), val.size());
+                    });
+            
+            if (!eData)
+                return UnexpectedF(eData.error());
 
             // TODO: Maybe remove this as it is not used
             // When bufferView is defined, mimeType must also be defined
             OCASI_ASSERT(!gltfImage.MimeType.empty());
             ImageType type = ConvertMimeTypeToImagType(gltfImage.MimeType);
 
-            return MakeUnique<Image>(std::move(data), settings);
+            return MakeShared<Image>(std::move(data), settings);
         }
         else if (!gltfImage.URI.empty())
         {
@@ -455,30 +560,31 @@ namespace OCASI {
                 size_t readSize = 0;
                 uint8_t* binaryData = Util::DecodeBase64(data, readSize);
                 if (!binaryData)
-                    throw FailedImportError("Could not read Base64 encoded string.");
+                    return UnexpectedF(ImportError(ImportError::Type::RequirementsNotMet, FORMAT("Failed to decode Base64 encoded string. Image = [{}]", gltfImage.GetIndex())));
                 
                 Vector<uint8_t> binaryDataVector(readSize);
 
                 memcpy(binaryDataVector.data(), binaryData, readSize);
 
-                return std::make_unique<Image>(std::move(binaryDataVector), settings);
+                return MakeShared<Image>(std::move(binaryDataVector), settings);
             }
-            else if (Path path = m_FileReader->GetParentPath() / uri; std::filesystem::exists(path))
+            else if (Path path = m_FileReader->GetFile().GetPath().parent_path() / uri; std::filesystem::exists(path))
             {
                 return std::make_unique<Image>(path, settings);
             }
             else
             {
-                throw FailedImportError("Image URI must either be a valid Base64 encoded string or a valid relative path to an image file.");
+                return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, FORMAT("When an image has a defined URI component, it must either be a valid Base64 encoded string or"
+                                                                                    "a valid relative path to an image. Image = [{}]", gltfImage.GetIndex())));
             }
         }
         else
         {
-            throw FailedImportError("Image must either define a valid buffer view or an URI property.");
+            return UnexpectedF(ImportError(ImportError::Type::MissingParameter, FORMAT("Image must either have an URI component or a reference to a bufferView. Image = [{}]", gltfImage.GetIndex())));
         }
     }
-
-    Vector<uint8_t> GLTFImporter::GetBufferViewData(size_t bufferViewIndex, size_t accessorOffset, size_t& outByteStride)
+    
+    ExpectedImportT<std::span<uint8_t>> GLTFImporter::GetBufferViewData(size_t bufferViewIndex, size_t accessorOffset, size_t& outByteStride)
     {
         auto& asset = *m_Asset;
         OCASI_ASSERT(bufferViewIndex < asset.BufferViews.size());
@@ -487,35 +593,48 @@ namespace OCASI {
 
         OCASI_ASSERT(bufferView.Buffer < asset.Buffers.size());
         auto& buffer = asset.Buffers.at(bufferView.Buffer);
-
+        
         return buffer.Get(bufferView.ByteLength, bufferView.ByteOffset + accessorOffset);
     }
-
-    Vector<uint8_t> GLTFImporter::GetAccessorData(size_t accessorIndex)
+    
+    ExpectedImportT<Vector<uint8_t>> GLTFImporter::GetAccessorData(size_t accessorIndex)
     {
         auto& asset = *m_Asset;
 
         OCASI_ASSERT(accessorIndex < asset.Accessors.size());
         auto& accessor = asset.Accessors.at(accessorIndex);
-        OCASI_ASSERT(accessor.BufferView != INVALID_ID, "Don't know what to do with an accessor that does not contain a buffer view.");
+        
+        // TODO: Figure out what to do in this case.
+        if (accessor.BufferView == INVALID_ID)
+            return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, "Accessor {} does not reference a valid bufferView, which is not supported."));
 
         // This is the accessor offset, not the buffer view offset
         size_t elementSize = GLTF::ComponentTypeToBytes(accessor.CompType) * (size_t) accessor.Type;
 
         size_t byteStride = 0;
-        Vector<uint8_t> data = GetBufferViewData(accessor.BufferView, accessor.ByteOffset, byteStride);
-        OCASI_ASSERT(!data.empty());
+        auto eData = GetBufferViewData(accessor.BufferView, accessor.ByteOffset, byteStride).
+                and_then([&byteStride, &elementSize, &accessor](std::span<uint8_t> data)
+                {
+                    // The byteStride specifies the number of bytes for each element. This includes both element size and padding.
+                    Vector<uint8_t> actualData(data.size());
+                    std::memcpy(actualData.data(), data.data(), data.size());
+                    if (byteStride != 0 && byteStride != elementSize)
+                    {
+                        for (size_t i = 0; i < accessor.ElementCount; i++)
+                        {
+                            memcpy(&data[i * elementSize], &data[i * byteStride], elementSize);
+                        }
+                        // Now the data tightly packed
+                        actualData.resize(elementSize * accessor.ElementCount);
+                    }
+                    
+                    return ExpectedImportT<Vector<uint8_t>>(actualData);
+                });
 
-        // The byteStride specifies the number of bytes for each element. This includes both element size and padding.
-        if (byteStride != 0 && byteStride != elementSize)
-        {
-            OCASI_ASSERT(byteStride % GLTF::ComponentTypeToBytes(accessor.CompType) == 0);
-            for (size_t i = 0; i < accessor.ElementCount; i++)
-            {
-                memcpy(&data[i * elementSize], &data[i * byteStride], elementSize);
-            }
-            data.resize(elementSize * accessor.ElementCount);
-        }
+        if (!eData)
+            return UnexpectedF(eData.error());
+        
+        Vector<uint8_t> data = eData.value();
 
         if (accessor.SparseAccessor.has_value())
         {
@@ -523,12 +642,20 @@ namespace OCASI {
             OCASI_ASSERT(sparse.Indices.BufferView < asset.BufferViews.size());
 
             size_t sparseIndicesByteStride; // ignored
-            Vector<uint8_t> sparseIndicesData = GetBufferViewData(sparse.Indices.BufferView, sparse.Indices.ByteOffset, sparseIndicesByteStride);
-            OCASI_ASSERT(!sparseIndicesData.empty());
-
+            std::span<uint8_t> sparseIndicesData;
+            auto eIndices = GetBufferViewData(sparse.Indices.BufferView, sparse.Indices.ByteOffset, sparseIndicesByteStride)
+                    .transform([&sparseIndicesData](const std::span<uint8_t>& indices) { sparseIndicesData = indices; });
+            
+            if (!eIndices)
+                return UnexpectedF(eIndices.error());
+                
             size_t sparseValuesByteStride; // ignored
-            Vector<uint8_t> sparseValuesData = GetBufferViewData(sparse.Values.BufferView, sparse.Values.ByteOffset, sparseValuesByteStride);
-            OCASI_ASSERT(!sparseValuesData.empty());
+            std::span<uint8_t> sparseValuesData;
+            auto eValues = GetBufferViewData(sparse.Values.BufferView, sparse.Values.ByteOffset, sparseValuesByteStride)
+                    .transform([&sparseValuesData](const std::span<uint8_t>& values) { sparseValuesData = values; });
+            
+            if (!eValues)
+                return UnexpectedF(eValues.error());
 
             // TODO: Create a new vector, copying over the indices
             // HACK: For indexing a conversion from bytes to a number is needed
@@ -549,7 +676,7 @@ namespace OCASI {
                         break;
                     }
                     default:
-                        throw FailedImportError(FORMAT("Unsupported component type used for sparse accessor {}.", (int) sparse.Indices.CompType));
+                        return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, FORMAT("Unsupported component type {} used for sparse accessor. Accessor = [{}]", (int) sparse.Indices.CompType, accessorIndex)));
                 }
 
                 memcpy(&data[index * elementSize], &sparseValuesData[i * elementSize], elementSize);
@@ -577,9 +704,8 @@ namespace OCASI {
             case GLTF::MinMagFilter::LinearMipMapLinear:
                 return FilterOption::LinearMipMapLinear;
             default:
-                throw FailedImportError("Image filter option has value None");
+                return FilterOption::Linear;
         }
-        return FilterOption::Linear;
     }
     
     FaceType GLTFImporter::ConvertPrimitiveTypeToFaceType(GLTF::PrimitiveType primitive)
@@ -593,7 +719,7 @@ namespace OCASI {
             case GLTF::PrimitiveType::Triangle:
                 return FaceType::Triangle;
             default:
-                throw FailedImportError(FORMAT("Unsupported primitive type: {}", (int) primitive));
+                return FaceType::None;
         }
     }
     

@@ -20,7 +20,7 @@ simdjson_inline simdjson::simdjson_result<float> simdjson::ondemand::value::get(
 {
     double val;
     auto error = get_double().get(val);
-    if (error)
+    if(!error)
         return error;
     return (float) val;
 }

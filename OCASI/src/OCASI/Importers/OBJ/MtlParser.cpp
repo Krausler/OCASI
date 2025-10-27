@@ -4,18 +4,15 @@
 
 namespace OCASI::OBJ {
 
-    MtlParser::MtlParser(const std::shared_ptr<Model>& model, const Path& relativePath)
-        : m_Reader(relativePath), m_Model(model)
+    MtlParser::MtlParser(const SharedPtr<Model>& model, OCBase::FileStreamReader& reader)
+        : m_Reader(reader), m_Model(model)
     {
     }
 
-    void MtlParser::ParseMTLFile()
+    ExpectedImport MtlParser::ParseMTLFile()
     {
-        if (!m_Reader.IsOpen())
-            throw FailedImportError(FORMAT("Cannot open MTL file {}", m_Reader.GetPath().string()));
-
         Vector<char> line;
-        while (m_Reader.NextLineC(line))
+        while (m_Reader.NextLine(line))
         {
             m_Begin = line.begin();
             m_End = line.end();
@@ -23,11 +20,14 @@ namespace OCASI::OBJ {
             if (m_Begin == m_End)
                 continue;
 
-            ParseParameter(*m_Begin == 'm');
+            auto e = ParseParameter(*m_Begin == 'm');
+            if (!e)
+                return e;
         }
+        return {};
     }
 
-    void MtlParser::ParseParameter(bool isMap)
+    ExpectedImport MtlParser::ParseParameter(bool isMap)
     {
         if (isMap)
         {
@@ -37,7 +37,8 @@ namespace OCASI::OBJ {
         switch (*m_Begin) {
             // New material
             case 'b':
-            case 'n': {
+            case 'n':
+            {
                 String statement = Util::GetToNextToken(m_Begin, m_End, ' ');
                 if (statement == "newmtl")
                     CreateNewMaterial(Util::GetToNextSpaceOrEndOfLine(m_Begin, m_End));
@@ -45,9 +46,11 @@ namespace OCASI::OBJ {
                     ParseTexture(TextureType::Normal);
                 break;
             }
-            case 'K': {
-                CheckMaterial();
-
+            case 'K':
+            {
+                if (CheckMaterial())
+                    return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, "Cannot insert data into a material, when none was declared previously."));
+                    
                 m_Begin += 3;
                 switch (*(m_Begin - 2))
                 {
@@ -99,8 +102,9 @@ namespace OCASI::OBJ {
                 break;
             }
             case 'N': {
-                CheckMaterial();
-
+                if (CheckMaterial())
+                    return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, "Cannot insert data into a material, when none was declared previously."));
+                
                 m_Begin += 2;
                 if (*(m_Begin - 1) == 'i')
                 {
@@ -120,8 +124,9 @@ namespace OCASI::OBJ {
             }
             case 'T':
             case 'd': {
-                CheckMaterial();
-
+                if (CheckMaterial())
+                    return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, "Cannot insert data into a material, when none was declared previously."));
+                
                 m_Begin += 2;
                 if (isMap)
                     ParseTexture(TextureType::Transparency);
@@ -130,16 +135,18 @@ namespace OCASI::OBJ {
                 break;
             }
             case 'i': {
-                CheckMaterial();
-
+                if (CheckMaterial())
+                    return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, "Cannot insert data into a material, when none was declared previously."));
+                
                 m_Begin += 5;
                 m_CurrentMaterial->Opacity = ParseFloat();
                 break;
             }
             // PBR optional extension
             case 'P': {
-                CheckMaterial();
-
+                if (CheckMaterial())
+                    return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, "Cannot insert data into a material, when none was declared previously."));
+                
                 CreatePBRMaterialExtension();
 
                 m_Begin += 3;
@@ -197,8 +204,9 @@ namespace OCASI::OBJ {
             }
             // ExtAnisotropy
             case 'a': {
-                CheckMaterial();
-
+                if (CheckMaterial())
+                    return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, "Cannot insert data into a material, when none was declared previously."));
+                
                 CreatePBRMaterialExtension();
                 size_t charactersToNextSpace = Util::GetToNextToken(m_Begin, m_End, ' ').size();
 
@@ -220,8 +228,9 @@ namespace OCASI::OBJ {
             }
                 // Occlusion map
             case 'o': {
-                CheckMaterial();
-
+                if (CheckMaterial())
+                    return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, "Cannot insert data into a material, when none was declared previously."));
+                
                 if (isMap)
                     ParseTexture(TextureType::Occlusion);
                 else
@@ -235,6 +244,8 @@ namespace OCASI::OBJ {
             default:
                 break;
         }
+        
+        return {};
     }
 
     void MtlParser::CreateNewMaterial(const String& name)
@@ -281,18 +292,18 @@ namespace OCASI::OBJ {
         return { f1, f2, f3, f4 };
     }
 
-    void MtlParser::CheckMaterial()
+    bool MtlParser::CheckMaterial()
     {
-        if (!m_CurrentMaterial)
-        {
-            throw FailedImportError("Cannot write to a material when there is no defined.");
-        }
+        return m_CurrentMaterial != nullptr;
     }
 
     void MtlParser::ParseTexture(TextureType type)
     {
         if (m_Begin == m_End)
-            throw FailedImportError("Cannot start parsing a texture when the end of line is already reached.");
+        {
+            OCASI_LOG_WARN("Cannot parse a texture when end of line has been reached.");
+            return;
+        }
 
         while (true)
         {

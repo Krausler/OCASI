@@ -53,7 +53,9 @@ namespace OCASI::Util {
 
     uint8_t* DecodeBase64(const String& dataString, size_t& outSize)
     {
-        // Base 64 splits binary data into 3 bytes (24 bits) each which then get decomposed into groups of 4 (6 bits each)
+        // Base 64 splits binary data into chunks of 3 bytes (24 bits). Each chunk of 24 bits is then
+        // further split into chunks of 6 bits each, resulting in 4 chunks of 6 bits per 3 bytes / 24 bits.
+        // For every 6-bit chunk, one character is used to represent its data.
         constexpr size_t BASE64_BYTE_CHUNK_SIZE = 3;
         constexpr size_t BASE64_GROUP_COUNT_PER_CHUNK = 4;
         constexpr size_t BASE64_BIT_GROUP_SIZE = 6;
@@ -70,14 +72,14 @@ namespace OCASI::Util {
         };
 
         if (dataString.size() % BASE64_GROUP_COUNT_PER_CHUNK > 0)
-            throw FailedImportError("Could not decode Base64 string, as data is not divisible by 4.");
+            return nullptr;
         
 
         size_t dataSize = dataString.size();
         size_t base64OutputByteSize = dataSize;
 
-        // Checking for padding character at the end the buffer
-        if (dataString.at(dataSize - 1 ) == '=')
+        // Checking for padding characters at the end of the buffer
+        if (dataString.at(dataSize - 1) == '=')
             base64OutputByteSize--;
         if (dataString.at(dataSize - 2) == '=')
             base64OutputByteSize--;
@@ -88,7 +90,7 @@ namespace OCASI::Util {
         for (int i = 0; i < dataSize;)
         {
             // Extract the binary data representation of each chunk of 6 bits. If the current processed character is a padding character 0 otherwise
-            // it gets decoded and an AND operation is performed for each of the read in data to clear the first bit of the ASCII decoding as ASCII only
+            // it gets decoded and an AND operation is performed for each of the read in data chunks, to clear the first bit of the ASCII decoded data, as ASCII only
             // uses 7 bits to identify characters (Some random binary value: 10101010 & 01111111 (0x7F) = 00101010)
             uint32_t bitGroup1 = dataString[i] == '=' ? 0 : base64DecodingTable[dataString.at(i)] & 0x7F;
             i++;

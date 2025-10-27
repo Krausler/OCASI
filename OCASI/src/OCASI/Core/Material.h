@@ -107,8 +107,8 @@ namespace OCASI {
         void* Get(size_t index);
         void Set(uint8_t* value, size_t index, size_t size);
 
-        void SetTexture(size_t index, std::shared_ptr<Image> image);
-        std::shared_ptr<Image> GetTexture(size_t index);
+        void SetTexture(size_t index, SharedPtr<Image> image);
+        SharedPtr<Image> GetTexture(size_t index);
         bool HasTexture(size_t index);
 
         void SetName(const String& name);
@@ -119,7 +119,7 @@ namespace OCASI {
         String m_Name;
 
         std::array<uint8_t, MATERIAL_BUFFER_BYTE_SIZE> m_MaterialValues;
-        std::array<std::shared_ptr<Image>, MATERIAL_TEXTURE_ARRAY_SIZE> m_MaterialTextures;
+        std::array<SharedPtr<Image>, MATERIAL_TEXTURE_ARRAY_SIZE> m_MaterialTextures;
     };
 
 }

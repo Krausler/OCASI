@@ -50,6 +50,8 @@ namespace OCASI {
         Vector<Model> Models;
         Vector<Material> Materials;
         Vector<SharedPtr<Node>> RootNodes;
+        
+        bool HasMaterials() const { return !Materials.empty(); }
     };
 
 }

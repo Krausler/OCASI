@@ -6,7 +6,7 @@ project("Octopus Asset Importer" VERSION ${OCASI_VERSION})
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(OCASI_BUILD_TESTS "Build the OCASI-Tests project" ON)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")

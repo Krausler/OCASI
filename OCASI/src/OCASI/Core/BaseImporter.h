@@ -2,7 +2,7 @@
 
 #include "OCASI/Core/Scene.h"
 
-#include "OCASI/Core/FileUtil.h"
+#include "OCBase/IO/FileStream.h"
 
 namespace OCASI {
     
@@ -18,11 +18,13 @@ namespace OCASI {
     public:
         virtual ~BaseImporter() = default;
         
-        virtual std::shared_ptr<Scene> Load3DFile(FileReader& reader) = 0;
-        virtual bool CanLoad(FileReader& reader) = 0;
+        virtual ExpectedImportT<SharedPtr<Scene>> Load3DFile(OCBase::FileStreamReader& reader) = 0;
+        virtual bool CanLoad(OCBase::FileStreamReader& reader) = 0;
         
-        virtual std::string_view GetLoggerPattern() const = 0;
         virtual const Vector<std::string_view> GetSupportedFileExtensions() const = 0;
         virtual ImporterType GetImporterType() const = 0;
+        
+    protected:
+        OCBase::FileStreamReader* m_FileReader = nullptr;
     };
 }

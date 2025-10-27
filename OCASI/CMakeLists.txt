@@ -11,8 +11,6 @@ add_library(OCASI ${OCASI_LIBRARY_TYPE}
         "src/OCASI/Importers/OBJ/ObjImporter.cpp"
         "src/OCASI/Importers/OBJ/ObjImporter.h"
         "src/OCASI/Importers/OBJ/Model.h"
-        "src/OCASI/Core/FileUtil.cpp"
-        "src/OCASI/Core/FileUtil.h"
         "src/OCASI/Importers/OBJ/FileParser.cpp"
         "src/OCASI/Importers/OBJ/FileParser.h"
         "src/OCASI/Core/StringUtil.cpp"
@@ -25,8 +23,6 @@ add_library(OCASI ${OCASI_LIBRARY_TYPE}
         "src/OCASI/Importers/GLTF2/Asset.cpp"
         "src/OCASI/Importers/GLTF2/JsonParser.cpp"
         "src/OCASI/Importers/GLTF2/JsonParser.h"
-        "src/OCASI/Core/BinaryReader.h"
-        "src/OCASI/Core/BinaryReader.cpp"
         "src/OCASI/Core/Material.cpp"
         "src/OCASI/Importers/GLTF2/Json.h"
         "src/OCASI/Core/PostProcessor.cpp"
@@ -39,8 +35,8 @@ add_library(OCASI ${OCASI_LIBRARY_TYPE}
         "src/OCASI/Core/Error.h"
         "src/OCASI/PostProcessing/ConverToRHCProcess.cpp"
         "src/OCASI/PostProcessing/ConverToRHCProcess.h"
-        src/OCASI/PostProcessing/GenerateNormalsProcess.cpp
-        src/OCASI/PostProcessing/GenerateNormalsProcess.h
+        "src/OCASI/PostProcessing/GenerateNormalsProcess.cpp"
+        "src/OCASI/PostProcessing/GenerateNormalsProcess.h"
 )
 
 target_sources(OCASI PRIVATE vendor/simdjson/simdjson.cpp)

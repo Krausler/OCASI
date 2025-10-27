@@ -2,13 +2,14 @@
 
 #include "OCASI/Core/Base.h"
 
-#include "OCASI/Core/FileUtil.h"
+#include "OCBase/IO/FileStream.h"
 
 #include "glm/glm.hpp"
 #include "glm/ext/quaternion_float.hpp"
 
 #include <optional>
 #include <array>
+#include <span>
 
 namespace OCASI {
     class GLTFImporter;
@@ -48,7 +49,23 @@ namespace OCASI::GLTF {
         Float = 5126
     };
 
-    size_t ComponentTypeToBytes(ComponentType type);
+    constexpr size_t ComponentTypeToBytes(ComponentType type)
+    {
+        switch (type) {
+            case ComponentType::None:
+                return INVALID_ID;
+            case ComponentType::Byte:
+            case ComponentType::UnsignedByte:
+                return 1;
+            case ComponentType::Short:
+            case ComponentType::UnsignedShort:
+                return 2;
+            case ComponentType::UnsignedInt:
+            case ComponentType::Float:
+                return 4;
+        }
+        return INVALID_ID;
+    }
 
     constexpr size_t ByteSize(ComponentType type);
 
@@ -357,11 +374,11 @@ namespace OCASI::GLTF {
     public:
 
         Buffer(size_t id, size_t bufferSize);
-        Buffer(size_t id, FileReader& reader, size_t bufferSize);
+        Buffer(size_t id, OCBase::FileStreamReader& reader, size_t bufferSize);
         Buffer(size_t id, const String& URIData, size_t bufferSize);
         ~Buffer();
 
-        Vector<uint8_t> Get(size_t byteLength, size_t offset);
+        ExpectedImportT<std::span<uint8_t>> Get(size_t byteLength, size_t offset);
 
         void SetData(uint8_t* data) { m_Data = data; }
 
