@@ -65,9 +65,22 @@ namespace OCASI {
         FaceType FaceMode = FaceType::None;
         Dimension Dim = Dimension::None;
         
+        bool HasMaterial() const { return MaterialIndex != INVALID_ID; }
         bool HasVertexColours() const { return !VertexColours.empty(); }
         bool HasNormals() const { return !Normals.empty(); }
         bool HasTangents() const { return !Tangents.empty(); }
+        bool HasIndices() const { return !Indices.empty(); }
+        bool HasTexCoords() const
+        {
+            // Checking the first entry would probably be enough
+            bool hasTextureCoordinates = true;
+            for (uint8_t i = 0; i < TEXTURE_COORDINATE_ARRAY_SIZE; i++)
+            {
+                if (!TexCoords.at(i).empty())
+                    hasTextureCoordinates = true;
+            }
+            return hasTextureCoordinates;
+        }
     };
 
     /*! @brief A model is a collection of multiple meshes, that belong together. When rendered, models should appear as one single

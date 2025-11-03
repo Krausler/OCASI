@@ -3,7 +3,7 @@
 namespace OCASI {
     
     //! @brief A bit flag enum for post processing steps, performed after 3D file importing.
-    enum class PostProcessorOptions
+    enum class PostProcessorOptions : size_t
     {
         None = 0,
         //! Triangulates meshes with FaceType Quad.
@@ -17,13 +17,13 @@ namespace OCASI {
         ConvertToRHC
     };
     
-    inline PostProcessorOptions operator|(PostProcessorOptions first, PostProcessorOptions second)
-    {
-        return (PostProcessorOptions)((int)first | (int) second);
-    }
-    
-    inline bool operator&(PostProcessorOptions first, PostProcessorOptions second)
-    {
-        return ((int)first & (int) second) == (int)second;
-    }
+//    inline PostProcessorOptions operator|(PostProcessorOptions first, PostProcessorOptions second)
+//    {
+//        return (PostProcessorOptions)((int)first | (int) second);
+//    }
+//
+//    inline bool operator&(PostProcessorOptions first, PostProcessorOptions second)
+//    {
+//        return ((int)first & (int) second) == (int)second;
+//    }
 }

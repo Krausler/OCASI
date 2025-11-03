@@ -88,23 +88,24 @@ namespace OCASI {
 
         if(!m_OBJModel->MTLFilePath.empty())
         {
-            auto eMTL = OCBase::IO::Open(folder / m_OBJModel->MTLFilePath, OCBase::FileMode::Read)
-                    .transform([this](const OCBase::File& f)
-                    {
-                        OCBase::FileStreamReader reader(const_cast<OCBase::File&>(f));
-                        OBJ::MtlParser mtlParser(m_OBJModel, reader);
-                        auto e = mtlParser.ParseMTLFile();
-                        reader.GetFile().Close();
-                        return e;
-                    })
+            auto eMTLFile = OCBase::IO::Open(folder / m_OBJModel->MTLFilePath, OCBase::FileMode::Read)
                     .transform_error([this](const auto& error)
                     {
                         OCASI_LOG_ERROR("Couldn't load MTL file at relative location {}: {}. Omitting the MTL file.", m_OBJModel->MTLFilePath, error.GetErrorMessage());
                         return error;
                     });
             
-            if (!eMTL)
-                return UnexpectedF(ImportError(ImportError::Type::ReadMalfunction, FORMAT("An error occurred in the MTL file: {}", eMTL.error().GetErrorMessage())));
+            if (!eMTLFile.has_value())
+                return UnexpectedF(ImportError(ImportError::Type::ReadMalfunction, FORMAT("An error occurred while loading a MTL file: {}", eMTLFile.error().GetErrorMessage())));
+            else
+            {
+                OCBase::FileStreamReader mtlReader(eMTLFile.value());
+                OBJ::MtlParser mtlParser(m_OBJModel, mtlReader);
+                auto eMTL = mtlParser.ParseMTLFile();
+                mtlReader.GetFile().Close();
+                if (!eMTL)
+                    return UnexpectedF(eMTL.error());
+            }
         }
 
         return ConvertToOCASIScene(folder);
@@ -234,7 +235,7 @@ namespace OCASI {
         {
             for (size_t i = 0; i < m_OutputScene->Materials.size(); i++)
             {
-                if (m_OutputScene->Materials.at(i).GetName() == outMesh.Name)
+                if (m_OutputScene->Materials.at(i).GetName() == m.MaterialName)
                     outMesh.MaterialIndex = i;
             }
         }
@@ -259,7 +260,7 @@ namespace OCASI {
         mesh.Indices.push_back(newIndex);
     }
 
-    ExpectedImport ObjImporter::SortTextures(Material &newMat, const OBJ::Material &mat, const Path& folder, size_t i)
+    ExpectedImport ObjImporter::SortTextures(Material& newMat, const OBJ::Material &mat, const Path& folder, size_t i)
     {
         // This value is needed to convert the OBJ::TextureType to a OCASI::TextureOrientation
         // for reflection textures. In OBJ, each side of the cube map is provided using a single

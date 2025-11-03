@@ -15,7 +15,9 @@ if (MSVC)
   add_compile_options(/utf-8 /Zc:preprocessor)
 endif ()
 
-add_subdirectory(OCASI/vendor/OCBase)
+if (NOT TARGET OCBase)
+  add_subdirectory(OCASI/vendor/OCBase)
+endif ()
 SetCMakeVariables(OCASI)
 
 add_subdirectory(OCASI)

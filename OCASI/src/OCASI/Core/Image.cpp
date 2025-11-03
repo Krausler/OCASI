@@ -92,10 +92,7 @@ namespace OCASI {
         if (m_MemoryImage)
         {
             if(!LoadImageFromMemory())
-            {
                 return nullptr;
-                
-            }
             
         }
         else if(!LoadImageFromDisk())

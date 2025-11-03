@@ -5,18 +5,6 @@
 
 namespace OCASI {
     
-    class FailedImportError : public std::runtime_error
-    {
-    public:
-        FailedImportError(const String& msg)
-            : std::runtime_error(std::format("OCASI: {}", msg))
-        {}
-        
-        FailedImportError(std::string_view& msg)
-            : FailedImportError(std::format("OCASI: {}", msg))
-        {}
-    };
-    
     struct ImportError
     {
         enum class Type
@@ -34,30 +22,36 @@ namespace OCASI {
         
         Type ErrorCode;
         String ErrorMsg;
+        String ImporterName;
         
         String GetMessage() const
         {
             switch (ErrorCode)
             {
                 case Type::Success:
-                    return "Success";
+                    return FORMAT("{}: Success", ImporterName);
                 case Type::MissingParameter:
-                    return FORMAT("ImportError (Type: MissingParameter): {}", ErrorMsg);
+                    return FORMAT("{}: ImportError (Type: MissingParameter): {}", ImporterName, ErrorMsg);
                 case Type::InvalidParameter:
-                    return FORMAT("ImportError (Type: InvalidParameter): {}", ErrorMsg);
+                    return FORMAT("{}: ImportError (Type: InvalidParameter): {}", ImporterName, ErrorMsg);
                 case Type::ReadMalfunction:
-                    return FORMAT("ImportError (Type: ReadMalfunction): {}", ErrorMsg);
+                    return FORMAT("{}: ImportError (Type: ReadMalfunction): {}", ImporterName, ErrorMsg);
                 case Type::UnsupportedFeature:
-                    return FORMAT("ImportError (Type: UnsupportedFeature): {}", ErrorMsg);
+                    return FORMAT("{}: ImportError (Type: UnsupportedFeature): {}", ImporterName, ErrorMsg);
                 case Type::RequirementsNotMet:
-                    return FORMAT("ImportError (Type: RequirementsNotMet): {}", ErrorMsg);
+                    return FORMAT("{}: ImportError (Type: RequirementsNotMet): {}", ImporterName, ErrorMsg);
                 case Type::NoImporterFound:
-                    return FORMAT("ImportError (Type: NoImporterFound): {}", ErrorMsg);
+                    return FORMAT("{}: ImportError (Type: NoImporterFound): {}", ImporterName, ErrorMsg);
                 case Type::Buffer:
-                    return FORMAT("ImportError (Type: Buffer): {}", ErrorMsg);
+                    return FORMAT("{}: ImportError (Type: Buffer): {}", ImporterName, ErrorMsg);
                 case Type::File:
-                    return FORMAT("ImportError (Type: File): {}", ErrorMsg);
+                    return FORMAT("{}: ImportError (Type: File): {}", ImporterName, ErrorMsg);
             }
+        }
+        
+        void SetImporterName(const String& name)
+        {
+            ImporterName = name;
         }
     };
     

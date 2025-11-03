@@ -29,6 +29,7 @@ namespace OCASI {
         
         virtual const Vector<std::string_view> GetSupportedFileExtensions() const override { return { ".gltf", ".glb" }; }
         virtual ImporterType GetImporterType() const override { return ImporterType::GLTF; }
+        virtual String GetImporterName() const override { return "GLTF"; }
     private:
         ExpectedImport LoadBinary();
         GLBChunk LoadChunk();
