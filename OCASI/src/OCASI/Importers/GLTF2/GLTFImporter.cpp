@@ -247,6 +247,7 @@ namespace OCASI {
         auto& gltfMesh = gltfAsset.Meshes.at(meshIndex);
         OCASI_ASSERT(meshIndex == ocasiScene.Models.size());
         auto& ocasiModel = ocasiScene.Models.emplace_back();
+        ocasiModel.Meshes.reserve(gltfMesh.Primitives.size());
 
         for (auto& gltfPrimitive : gltfMesh.Primitives)
         {
