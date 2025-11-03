@@ -32,7 +32,7 @@ namespace OCASI {
 
         String fExtension = path.extension().string();
         
-        OCASI_LOG_INFO("Importing {}", path.string());
+        OCASI_LOG_INFO("Importing Asset: Name = {}, Path = {}.", path.filename().string(), path.string());
         
         // Getting the model importer by checking for the supported importer file extensions
         SharedPtr<BaseImporter> importer = nullptr;
@@ -46,6 +46,10 @@ namespace OCASI {
         if (!importer)
             return UnexpectedF(ImportError(ImportError::Type::NoImporterFound, FORMAT("Could not find importer supporting the '{}' file extension.", fExtension)));
         
+        OCASI_LOG_INFO("Found importer compatible with file extension: Extension = {}, Importer = {}.", path.extension().string(), importer->GetImporterName());
+        
+        String importerName = importer->GetImporterName();
+        
         auto e = OCBase::IO::Open(path, OCBase::FileMode::Read);
         if (!e)
             return UnexpectedF(ImportError(ImportError::Type::File, e.error().GetErrorMessage()));
@@ -53,15 +57,25 @@ namespace OCASI {
         OCBase::FileStreamReader reader(file);
         
         if (!importer->CanLoad(reader))
-            return UnexpectedF(ImportError(ImportError::Type::RequirementsNotMet, "Cannot load file, as it failed to be validated."));
+            return UnexpectedF(ImportError(ImportError::Type::RequirementsNotMet, FORMAT("{}: Cannot load file, as it failed to be validated.", importerName)));
+        
+        OCASI_LOG_INFO("Validating file to be compatible with the importer.");
         
         auto loadError = importer->Load3DFile(reader);
         if (!loadError)
-            return UnexpectedF(loadError.error());
+        {
+            auto& lError = loadError.error();
+            lError.SetImporterName(importerName);
+            return UnexpectedF(lError);
+        }
         
         file.Close();
         
         auto scene = loadError.value();
+        
+        OCASI_LOG_INFO("Successfully loaded the asset: Path = {}, Scene = [ Models = {}, Materials = {}]", path.generic_string(), scene->Models.size(), scene->Materials.size());
+        
+        OCASI_LOG_INFO("");
         
         PostProcessor postProcessor(scene, importer, options | s_GlobalPostProcessingOptions);
         postProcessor.ExecutePostProcesses();

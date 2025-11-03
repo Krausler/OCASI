@@ -139,7 +139,8 @@ namespace OCASI::OBJ {
                     return UnexpectedF(ImportError(ImportError::Type::InvalidParameter, "Cannot insert data into a material, when none was declared previously."));
                 
                 m_Begin += 5;
-                m_CurrentMaterial->Opacity = ParseFloat();
+                // TODO: Figure out what to do with illum and if it's worth including it into the final material
+                // m_CurrentMaterial->Opacity = ParseFloat();
                 break;
             }
             // PBR optional extension
@@ -294,7 +295,7 @@ namespace OCASI::OBJ {
 
     bool MtlParser::CheckMaterial()
     {
-        return m_CurrentMaterial != nullptr;
+        return m_CurrentMaterial == nullptr;
     }
 
     void MtlParser::ParseTexture(TextureType type)
@@ -385,6 +386,7 @@ namespace OCASI::OBJ {
             else
             {
                 m_CurrentMaterial->Textures[type] = Util::GetToNextTokenOrEndOfIterator(begin, m_End, '\n');
+                break;
             }
         }
     }

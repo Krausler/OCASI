@@ -23,6 +23,7 @@ namespace OCASI {
         
         virtual const Vector<std::string_view> GetSupportedFileExtensions() const = 0;
         virtual ImporterType GetImporterType() const = 0;
+        virtual String GetImporterName() const = 0;
         
     protected:
         OCBase::FileStreamReader* m_FileReader = nullptr;

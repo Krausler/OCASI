@@ -13,6 +13,7 @@ namespace OCASI {
         
         virtual const Vector<std::string_view> GetSupportedFileExtensions() const override { return { ".obj" }; }
         virtual ImporterType GetImporterType() const override { return ImporterType::OBJ; }
+        virtual String GetImporterName() const override { return "OBJ"; }
     private:
         SharedPtr<Scene> ConvertToOCASIScene(const Path& folder);
         SharedPtr<Node> CreateNodes(const OBJ::Object& o);
