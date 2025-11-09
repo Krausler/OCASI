@@ -15,7 +15,7 @@ namespace OCASI {
             case ImporterType::GLTF:
                 return true;
             default:
-                throw FailedImportError("Invalid importer type.");
+                return false;
         }
     }
     
