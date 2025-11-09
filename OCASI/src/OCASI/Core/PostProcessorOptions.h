@@ -17,13 +17,13 @@ namespace OCASI {
         ConvertToRHC
     };
     
-//    inline PostProcessorOptions operator|(PostProcessorOptions first, PostProcessorOptions second)
-//    {
-//        return (PostProcessorOptions)((int)first | (int) second);
-//    }
-//
-//    inline bool operator&(PostProcessorOptions first, PostProcessorOptions second)
-//    {
-//        return ((int)first & (int) second) == (int)second;
-//    }
+    inline PostProcessorOptions operator|(PostProcessorOptions first, PostProcessorOptions second)
+    {
+        return (PostProcessorOptions)((int)first | (int) second);
+    }
+
+    inline bool operator&(PostProcessorOptions first, PostProcessorOptions second)
+    {
+        return ((int)first & (int) second) == (int)second;
+    }
 }

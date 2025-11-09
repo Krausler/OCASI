@@ -75,10 +75,12 @@ namespace OCASI {
         
         OCASI_LOG_INFO("Successfully loaded the asset: Path = {}, Scene = [ Models = {}, Materials = {}]", path.generic_string(), scene->Models.size(), scene->Materials.size());
         
-        OCASI_LOG_INFO("");
-        
-        PostProcessor postProcessor(scene, importer, options | s_GlobalPostProcessingOptions);
-        postProcessor.ExecutePostProcesses();
+        if ((options | s_GlobalPostProcessingOptions) != PostProcessorOptions::None)
+        {
+            OCASI_LOG_INFO("Starting post processing");
+            PostProcessor postProcessor(scene, importer, options | s_GlobalPostProcessingOptions);
+            postProcessor.ExecutePostProcesses();
+        }
         
         return scene;
     }
