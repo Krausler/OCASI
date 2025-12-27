@@ -891,6 +891,7 @@ namespace OCASI::GLTF {
         OCASI_SIMPLIFY_EXPECTED_ASSIGNMENT(ParseTextureInfo, jAnisotropy, "anisotropyTexture", anisotropy.AnisotropyTexture, &anisotropy);
         
         OCASI_SIMPLIFY_EXPECTED_ASSIGNMENT(ParseVec3, jAnisotropy, "anisotropyDirection", anisotropy.AnisotropyDirection, &anisotropy);
+        return anisotropy;
     }
     
     ExpectedImportT<VertexAttributes> JsonParser::ParseVertexAttributes(simdjson::fallback::ondemand::object& jVertexAttributes)
