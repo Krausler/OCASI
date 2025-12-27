@@ -20,7 +20,10 @@ if (NOT TARGET OCBase)
 endif ()
 SetCMakeVariables(OCASI)
 
-add_subdirectory(OCASI)
+if (NOT TARGET OCASI)
+  add_subdirectory(OCASI)
+endif ()
+
 if (OCASI_BUILD_TESTS)
   add_subdirectory(Tests)
 endif ()
