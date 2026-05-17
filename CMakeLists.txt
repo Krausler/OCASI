@@ -5,6 +5,7 @@ project("Octopus Asset Importer" VERSION ${OCASI_VERSION})
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(OCASI_BUILD_TESTS "Build the OCASI-Tests project" ON)
+option(OCASI_EXTERNAL_OCBASE "OCBase must be provided externally" OFF)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
@@ -15,14 +16,12 @@ if (MSVC)
   add_compile_options(/utf-8 /Zc:preprocessor)
 endif ()
 
-if (NOT TARGET OCBase)
+if (OCASI_EXTERNAL_OCBASE)
   add_subdirectory(OCASI/vendor/OCBase)
 endif ()
-SetCMakeVariables(OCASI)
 
-if (NOT TARGET OCASI)
-  add_subdirectory(OCASI)
-endif ()
+SetCMakeVariables(OCASI)
+add_subdirectory(OCASI)
 
 if (OCASI_BUILD_TESTS)
   add_subdirectory(Tests)
