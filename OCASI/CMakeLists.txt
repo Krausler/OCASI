@@ -51,4 +51,4 @@ target_include_directories(OCASI PRIVATE
         vendor/simdjson
 )
 
-GenerateCompileTimeDefinitions(OCASI OCVK)
+GenerateCompileTimeDefinitions(OCASI OCASI)
