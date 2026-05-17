@@ -16,7 +16,7 @@ if (MSVC)
   add_compile_options(/utf-8 /Zc:preprocessor)
 endif ()
 
-if (OCASI_EXTERNAL_OCBASE)
+if (NOT OCASI_EXTERNAL_OCBASE)
   add_subdirectory(OCASI/vendor/OCBase)
 endif ()
 
